@@ -1,0 +1,122 @@
+import type { AppRole } from "@prisma/client";
+
+export const AUTH_COOKIE_NAME = "pinnacle_session";
+export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AppRole;
+  locationId: string | null;
+}
+
+function getSecret(): string {
+  return process.env.AUTH_SECRET || "pinnacle-dev-secret-change-me";
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function importHmacKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(getSecret()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+async function signPayload(payload: string): Promise<string> {
+  const key = await importHmacKey();
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return toBase64Url(new Uint8Array(sig));
+}
+
+async function verifyPayload(payload: string, signature: string): Promise<boolean> {
+  try {
+    const key = await importHmacKey();
+    const sigBytes = Uint8Array.from(fromBase64Url(signature));
+    return crypto.subtle.verify(
+      "HMAC",
+      key,
+      sigBytes,
+      new TextEncoder().encode(payload)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function createSessionToken(user: SessionUser): Promise<string> {
+  const payload = toBase64Url(
+    new TextEncoder().encode(
+      JSON.stringify({
+        ...user,
+        exp: Date.now() + AUTH_COOKIE_MAX_AGE * 1000,
+      })
+    )
+  );
+  const sig = await signPayload(payload);
+  return `${payload}.${sig}`;
+}
+
+export async function parseSessionToken(token: string): Promise<SessionUser | null> {
+  try {
+    const [payload, sig] = token.split(".");
+    if (!payload || !sig) return null;
+    if (!(await verifyPayload(payload, sig))) return null;
+
+    const data = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as SessionUser & {
+      exp: number;
+    };
+    if (data.exp < Date.now()) return null;
+
+    return {
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      locationId: data.locationId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function sessionCookieOptions(token: string) {
+  return {
+    name: AUTH_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: AUTH_COOKIE_MAX_AGE,
+  };
+}
+
+export function clearSessionCookieOptions() {
+  return {
+    name: AUTH_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 0,
+  };
+}

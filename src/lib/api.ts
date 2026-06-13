@@ -1,0 +1,31 @@
+export async function apiFetch<T>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
+  const res = await fetch(url, options);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+  return data as T;
+}
+
+export async function apiPost<T>(url: string, body: unknown): Promise<T> {
+  return apiFetch<T>(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiPatch<T>(url: string, body: unknown): Promise<T> {
+  return apiFetch<T>(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete(url: string): Promise<void> {
+  await apiFetch(url, { method: "DELETE" });
+}

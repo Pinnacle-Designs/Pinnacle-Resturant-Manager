@@ -1,0 +1,422 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum PhotoCategory {
+  MENU_ITEM
+  INVENTORY
+  STAFF
+  FACILITY
+  RECEIPT
+  FOOD_PREP
+  MARKETING
+  MAINTENANCE
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+enum InsightSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InsightCategory {
+  INVENTORY
+  STAFFING
+  FINANCE
+  OPERATIONS
+  MENU
+  CUSTOMER
+  FACILITY
+  GENERAL
+}
+
+enum AppRole {
+  OWNER
+  MANAGER
+  SERVER
+  KITCHEN
+  HOST
+}
+
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  SNAPCHAT
+  X
+  YOUTUBE
+  LINKEDIN
+  PINTEREST
+}
+
+enum SocialPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  PARTIAL
+  FAILED
+}
+
+enum PublishStatus {
+  PENDING
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         AppRole
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Location {
+  id            String   @id @default(cuid())
+  name          String
+  address       String?
+  phone         String?
+  seatCount     Int      @default(40)
+  squareFootage Float    @default(2000)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  menuItems        MenuItem[]
+  inventoryItems   InventoryItem[]
+  staffMembers     StaffMember[]
+  tables           Table[]
+  orders           Order[]
+  expenses         Expense[]
+  photos           Photo[]
+  businessInsights BusinessInsight[]
+  activityLogs     ActivityLog[]
+  shifts           Shift[]
+  users            User[]
+  socialAccounts   SocialAccount[]
+  socialPosts      SocialPost[]
+  websiteConnection WebsiteConnection?
+  marketingCampaigns MarketingCampaign[]
+  guestReviews     GuestReview[]
+  vendorInvoices   VendorInvoice[]
+  inventoryWaste   InventoryWaste[]
+  externalFactors  ExternalFactor[]
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float
+  category    String
+  recipeCost  Float    @default(0)
+  available   Boolean  @default(true)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+}
+
+model InventoryItem {
+  id            String   @id @default(cuid())
+  locationId    String
+  location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name          String
+  quantity      Float
+  unit          String
+  minQuantity   Float    @default(0)
+  costPerUnit   Float    @default(0)
+  supplier      String?
+  lastRestocked DateTime?
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  wasteLogs     InventoryWaste[]
+}
+
+model StaffMember {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  role       String
+  email      String?
+  phone      String?
+  hourlyRate Float    @default(0)
+  active     Boolean  @default(true)
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  shifts     Shift[]
+}
+
+model Shift {
+  id            String      @id @default(cuid())
+  locationId    String
+  location      Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staffMemberId String
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  date          DateTime
+  startTime     String
+  endTime       String
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([locationId, date])
+  @@index([staffMemberId, date])
+}
+
+model Table {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  number     Int
+  capacity   Int      @default(4)
+  status     String   @default("available")
+  createdAt  DateTime @default(now())
+  orders     Order[]
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  locationId        String
+  location          Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  tableId           String?
+  table             Table?      @relation(fields: [tableId], references: [id])
+  status            OrderStatus @default(PENDING)
+  totalAmount       Float       @default(0)
+  guestCount        Int         @default(1)
+  channel           String      @default("dine-in")
+  discountAmount    Float       @default(0)
+  compAmount        Float       @default(0)
+  voidAmount        Float       @default(0)
+  ticketTimeMinutes Int?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  items             OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int      @default(1)
+  price      Float
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  category    String
+  date        DateTime @default(now())
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+}
+
+model Photo {
+  id          String        @id @default(cuid())
+  locationId  String
+  location    Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  filename    String
+  url         String
+  category    PhotoCategory @default(OTHER)
+  title       String?
+  description String?
+  tags        String?
+  aiAnalysis  String?
+  entityType  String?
+  entityId    String?
+  createdAt   DateTime      @default(now())
+}
+
+model BusinessInsight {
+  id           String          @id @default(cuid())
+  locationId   String
+  location     Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  category     InsightCategory @default(GENERAL)
+  severity     InsightSeverity @default(MEDIUM)
+  actionable   String?
+  resolved     Boolean         @default(false)
+  dataSnapshot String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  action     String
+  entity     String
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+}
+
+model SocialAccount {
+  id           String         @id @default(cuid())
+  locationId   String
+  location     Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  platform     SocialPlatform
+  accountName  String
+  accountId    String?
+  profileUrl   String?
+  followers    Int            @default(0)
+  connected    Boolean        @default(true)
+  lastSyncedAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  postTargets  SocialPostTarget[]
+
+  @@unique([locationId, platform])
+}
+
+model WebsiteConnection {
+  id            String   @id @default(cuid())
+  locationId    String   @unique
+  location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  url           String
+  connected     Boolean  @default(true)
+  visitors30d   Int      @default(0)
+  pageViews30d  Int      @default(0)
+  sessions30d   Int      @default(0)
+  bounceRate    Float    @default(0)
+  avgSessionSec Int      @default(0)
+  topPages      String?
+  referrers     String?
+  lastSyncedAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SocialPost {
+  id           String           @id @default(cuid())
+  locationId   String
+  location     Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  content      String
+  mediaUrl     String?
+  status       SocialPostStatus @default(DRAFT)
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  targets      SocialPostTarget[]
+}
+
+model SocialPostTarget {
+  id             String        @id @default(cuid())
+  postId         String
+  post           SocialPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  status         PublishStatus @default(PENDING)
+  externalPostId String?
+  externalUrl    String?
+  errorMessage   String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([postId, accountId])
+}
+
+model MarketingCampaign {
+  id                 String   @id @default(cuid())
+  locationId         String
+  location           Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name               String
+  channel            String
+  spend              Float    @default(0)
+  impressions        Int      @default(0)
+  clicks             Int      @default(0)
+  conversions        Int      @default(0)
+  revenueAttributed  Float    @default(0)
+  startDate          DateTime
+  endDate            DateTime?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+}
+
+model GuestReview {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  source      String
+  rating      Float
+  comment     String?
+  category    String?
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model VendorInvoice {
+  id            String   @id @default(cuid())
+  locationId    String
+  location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vendor        String
+  amount        Float
+  category      String
+  invoiceDate   DateTime @default(now())
+  priceChangePct Float   @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model InventoryWaste {
+  id              String         @id @default(cuid())
+  locationId      String
+  location        Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  itemName        String
+  quantity        Float
+  unit            String
+  cost            Float
+  reason          String
+  date            DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+}
+
+model ExternalFactor {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  date        DateTime
+  factorType  String
+  description String
+  impactPct   Float    @default(0)
+  createdAt   DateTime @default(now())
+}

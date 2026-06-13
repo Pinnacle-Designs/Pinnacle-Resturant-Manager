@@ -1,0 +1,109 @@
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
+import { analyzePhoto } from "@/lib/ai";
+import { getLocationIdFromRequest } from "@/lib/location";
+import { getSessionUserFromRequest } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import { forbiddenResponse, unauthorizedResponse } from "@/lib/api-auth";
+import type { PhotoCategory } from "@prisma/client";
+
+export async function GET(request: NextRequest) {
+  const user = await getSessionUserFromRequest(request);
+  if (!user) return unauthorizedResponse();
+
+  const locationId = await getLocationIdFromRequest(request);
+  const category = request.nextUrl.searchParams.get("category");
+
+  if (category === "RECEIPT" && !hasPermission(user.role, "view_receipts")) {
+    return forbiddenResponse();
+  }
+
+  const photos = await prisma.photo.findMany({
+    where: {
+      locationId,
+      ...(category ? { category: category as PhotoCategory } : {}),
+      ...(!hasPermission(user.role, "view_receipts")
+        ? { category: { not: "RECEIPT" as PhotoCategory } }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json(photos);
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getSessionUserFromRequest(request);
+    if (!user) return unauthorizedResponse();
+
+    const locationId = await getLocationIdFromRequest(request);
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const category = (formData.get("category") as string) || "OTHER";
+
+    if (category === "RECEIPT" && !hasPermission(user.role, "view_receipts")) {
+      return forbiddenResponse();
+    }
+    const title = formData.get("title") as string | null;
+    const description = formData.get("description") as string | null;
+    const analyzeWithAI = formData.get("analyzeWithAI") === "true";
+
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const ext = file.name.split(".").pop() || "jpg";
+    const filename = `${uuidv4()}.${ext}`;
+
+    const uploadsDir = join(process.cwd(), "public", "uploads");
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(join(uploadsDir, filename), buffer);
+
+    const url = `/uploads/${filename}`;
+    let aiAnalysis: string | null = null;
+    let photoTitle = title;
+    let tags: string[] = [];
+
+    if (analyzeWithAI) {
+      const base64 = buffer.toString("base64");
+      const analysis = await analyzePhoto(base64, category);
+      aiAnalysis = analysis.description;
+      tags = analysis.tags;
+      if (!photoTitle) photoTitle = analysis.suggestedTitle;
+    }
+
+    const photo = await prisma.photo.create({
+      data: {
+        locationId,
+        filename,
+        url,
+        category: category as PhotoCategory,
+        title: photoTitle,
+        description,
+        tags: JSON.stringify(tags),
+        aiAnalysis,
+      },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        locationId,
+        action: "PHOTO_UPLOAD",
+        entity: "photo",
+        entityId: photo.id,
+        details: `Uploaded ${category} photo: ${photoTitle || filename}`,
+      },
+    });
+
+    return NextResponse.json(photo);
+  } catch (error) {
+    console.error("Photo upload error:", error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+}
