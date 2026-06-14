@@ -30,7 +30,7 @@ export function MarketingFooter() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/docs/pricing.html" className="hover:text-orange-600">
+                  <Link href="/docs/#pricing" className="hover:text-orange-600">
                     Pricing
                   </Link>
                 </li>
