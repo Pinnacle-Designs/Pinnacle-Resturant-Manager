@@ -116,11 +116,20 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
     [applyScanResult]
   );
 
-  const { videoRef, active, supported, error: cameraError, start, stop } = useBarcodeScanner(
-    (code) => {
-      void resolveBarcode(code, true);
-    }
-  );
+  const {
+    videoRef,
+    active,
+    supported,
+    nativeSupported,
+    error: cameraError,
+    permissionDenied,
+    permissionState,
+    start,
+    stop,
+    retry,
+  } = useBarcodeScanner((code) => {
+    void resolveBarcode(code, true);
+  });
 
   const handleScaleWeight = useCallback(
     (value: number, scaleUnit: string) => {
@@ -225,10 +234,33 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
             muted
           />
           <canvas ref={canvasRef} className="hidden" />
-          {!active && (
+          {!active && !cameraError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/80 text-slate-300">
               <Camera className="h-8 w-8" />
               <p className="text-sm">Starting camera…</p>
+            </div>
+          )}
+          {!active && cameraError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/90 px-6 text-center text-slate-200">
+              <Camera className="h-8 w-8 text-slate-400" />
+              <p className="text-sm">{cameraError}</p>
+              {permissionDenied && (
+                <div className="space-y-2">
+                  <Button type="button" size="sm" onClick={() => void retry()}>
+                    Allow camera access
+                  </Button>
+                  <p className="text-xs text-slate-400">
+                    {permissionState === "denied"
+                      ? "If the prompt does not appear, open your browser site settings and allow Camera for this page."
+                      : "Your browser will ask for camera permission."}
+                  </p>
+                </div>
+              )}
+              {!permissionDenied && (
+                <Button type="button" size="sm" variant="secondary" onClick={() => void retry()}>
+                  Try again
+                </Button>
+              )}
             </div>
           )}
           {active && (
@@ -238,13 +270,20 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
           )}
         </div>
 
-        {!supported && (
-          <p className="text-xs text-amber-700">
-            BarcodeDetector not available in this browser — enter the code manually or try Chrome on
-            Android/desktop.
+        {!nativeSupported && supported && (
+          <p className="text-xs text-slate-600">
+            Using compatibility scanning in this browser. Hold the barcode steady in the frame.
           </p>
         )}
-        {cameraError && <p className="text-sm text-red-600">{cameraError}</p>}
+        {!supported && (
+          <p className="text-xs text-amber-700">
+            Automatic scanning is not available in this browser — type the barcode below or try Chrome
+            on Android/desktop.
+          </p>
+        )}
+        {cameraError && active === false && permissionDenied === false && (
+          <p className="text-sm text-red-600">{cameraError}</p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <FormField label="Barcode" className="min-w-[12rem] flex-1">
