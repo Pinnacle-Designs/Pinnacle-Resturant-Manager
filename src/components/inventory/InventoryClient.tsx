@@ -7,19 +7,7 @@ import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { InventoryScanModal } from "@/components/inventory/InventoryScanModal";
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  minQuantity: number;
-  costPerUnit: number;
-  portionSize: number | null;
-  yieldPct: number;
-  supplier: string | null;
-  barcode?: string | null;
-}
+import type { InventoryItem } from "@/components/inventory/types";
 
 export function InventoryClient({ initialItems }: { initialItems: InventoryItem[] }) {
   const [items, setItems] = useState(initialItems);

@@ -15,15 +15,7 @@ import { Input, FormField, Modal } from "@/components/ui/form";
 import { apiPost } from "@/lib/api";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useScaleSerial } from "@/hooks/useScaleSerial";
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  barcode?: string | null;
-  supplier?: string | null;
-}
+import type { InventoryItem } from "@/components/inventory/types";
 
 interface ScanSuggestion {
   name: string;
