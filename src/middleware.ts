@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/seed"];
+const PUBLIC_PATHS = ["/", "/demo", "/embed", "/login", "/api/auth/login", "/api/auth/seed"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

@@ -6,7 +6,7 @@ import { AnalyticsClient } from "@/components/analytics/AnalyticsClient";
 export default async function AnalyticsPage() {
   const user = await getSessionUser();
   if (!user || !hasPermission(user.role, "view_analytics")) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return <AnalyticsClient />;

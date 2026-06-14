@@ -27,7 +27,7 @@ export const ORDER_STATUS_COLORS = {
 } as const;
 
 export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "layout-dashboard" },
+  { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
   { href: "/photos", label: "Photos", icon: "camera" },
   { href: "/menu", label: "Menu", icon: "utensils" },
   { href: "/inventory", label: "Inventory", icon: "package" },

@@ -47,7 +47,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 flex-col border-r bg-slate-900 md:flex">
       <div className="flex h-16 items-center border-b border-slate-700 px-4">
-        <Logo href="/" priority />
+        <Logo href="/dashboard" priority />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {

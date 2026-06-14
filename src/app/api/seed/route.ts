@@ -35,7 +35,7 @@ function seedHtml(result: Awaited<ReturnType<typeof seedLocationData>>) {
   <h1 class="${result.alreadySeeded ? "warn" : "ok"}">${status}</h1>
   <p>${result.message}</p>
   <p>Demo login users were refreshed (password: <code>demo1234</code>).</p>
-  <p><a href="/">Go to dashboard</a> · <a href="/login">Login</a></p>
+  <p><a href="/dashboard">Go to dashboard</a> · <a href="/login">Login</a> · <a href="/">Website</a></p>
 </body>
 </html>`;
 }

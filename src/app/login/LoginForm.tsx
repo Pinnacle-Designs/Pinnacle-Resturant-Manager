@@ -74,7 +74,7 @@ export default function LoginForm() {
       throw new Error(data.workspaceError);
     }
 
-    const from = searchParams.get("from") || "/";
+    const from = searchParams.get("from") || "/dashboard";
     window.location.assign(from);
   };
 

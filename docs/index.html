@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Pinnacle Restaurant Manager — try the full app live in your browser. Expand to explore orders, inventory, analytics, and the AI Command Center." />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Pinnacle Restaurant Manager — AI-Powered Restaurant Operations</title>
+  <link rel="icon" href="assets/logo.png" type="image/png" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="config.js"></script>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <strong>Full app demo in the hero</strong> — click around, then hit Expand for a larger window.
+    <a href="#" data-app-link="/embed" style="margin-left:0.5rem;color:#c2410c">Open in new tab →</a>
+  </div>
+
+  <!-- Navigation -->
+  <header class="nav">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="#top"><img src="assets/logo.png" alt="Pinnacle Restaurant Manager" class="nav-logo" /></a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="#top">Live Demo</a>
+          <a href="#features">Features</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#command-center">AI</a>
+        </nav>
+        <div class="nav-actions">
+          <a href="#" class="btn btn-ghost" data-app-link="/login">Sign in</a>
+          <a href="#top" class="btn btn-primary">Try live demo</a>
+        </div>
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu">☰</button>
+      </div>
+      <nav class="nav-mobile" id="nav-mobile" aria-label="Mobile">
+        <a href="#top">Live Demo</a>
+        <a href="#features">Features</a>
+        <a href="#analytics">Analytics</a>
+        <a href="#command-center">AI</a>
+        <a href="#" data-app-link="/login">Sign in</a>
+        <a href="#top" class="btn btn-primary" style="text-align:center">Try live demo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="container">
+        <div class="hero-grid">
+          <div>
+            <div class="badge">✦ AI-powered restaurant operations</div>
+            <h1>Run your restaurant.<span class="accent">Know your numbers.</span></h1>
+            <p class="hero-lead">
+              Pinnacle is an all-in-one manager — orders, inventory, staff, finances,
+              12-tab analytics, and an AI command center that answers questions like
+              <em>"What's hurting my profit this week?"</em> using live data from every
+              part of your business.
+            </p>
+            <div class="hero-cta">
+              <a href="#top" class="btn btn-primary btn-lg">⚡ Try live demo</a>
+              <a href="#" class="btn btn-outline-light btn-lg" data-app-link="/embed">Open in new tab →</a>
+            </div>
+            <p class="hero-note">Full app in the window → owner@pinnacle.com / demo1234</p>
+          </div>
+
+          <div class="hero-app-embed" id="hero-app-embed-wrap">
+            <div class="hero-app-chrome">
+              <div class="hero-app-chrome-left">
+                <span class="mock-dot red"></span>
+                <span class="mock-dot amber"></span>
+                <span class="mock-dot green"></span>
+                <span class="hero-app-chrome-title">Live demo — click around</span>
+              </div>
+              <button type="button" class="hero-embed-expand-btn" id="hero-embed-expand" aria-label="Expand demo to full window">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                Expand
+              </button>
+            </div>
+            <div class="hero-app-frame-wrap">
+              <div class="hero-embed-loader" id="hero-embed-loader">
+                <div class="hero-embed-spinner"></div>
+                <p>Starting demo…</p>
+              </div>
+              <div id="hero-app-embed"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div><div class="stat-value">12</div><div class="stat-label">Analytics modules</div></div>
+          <div><div class="stat-value">350+</div><div class="stat-label">AI question library</div></div>
+          <div><div class="stat-value">5</div><div class="stat-label">Staff roles supported</div></div>
+          <div><div class="stat-value">&lt; 2 min</div><div class="stat-label">Setup time</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow">Everything in one app</p>
+          <h2>Built for how restaurants actually run</h2>
+          <p>From the lunch rush to month-end P&amp;L — manage daily operations and understand the business without juggling spreadsheets and disconnected tools.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Operations Dashboard</h3>
+            <p>Revenue, expenses, low-stock alerts, recent activity, and AI insights on one screen.</p>
+          </article>
+          <article class="feature-card highlight">
+            <div class="feature-icon">🧠</div>
+            <h3>AI Command Center</h3>
+            <p>Ask plain-English questions. Cross-checks sales, labor, inventory, vendors, waste, reviews, and staff together.</p>
+          </article>
+          <article class="feature-card highlight">
+            <div class="feature-icon">📈</div>
+            <h3>12-Tab Analytics Suite</h3>
+            <p>Sales, food cost, labor, menu engineering, marketing, guests, ops, purchasing, forecasting, profit, external factors, executive.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📋</div>
+            <h3>Orders &amp; POS Flow</h3>
+            <p>Create orders, track status, link to tables, capture channel and guest data.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🍽️</div>
+            <h3>Menu Management</h3>
+            <p>Categories, pricing, availability, and recipe costs for menu engineering.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📦</div>
+            <h3>Inventory &amp; Food Cost</h3>
+            <p>Stock levels, waste logs, vendor pricing, and food cost variance.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h3>Staff &amp; Scheduling</h3>
+            <p>Team members, roles, shifts, and labor performance analytics.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🪑</div>
+            <h3>Table Floor Plan</h3>
+            <p>Visual table map — available, occupied, and reserved states.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">💰</div>
+            <h3>Finances &amp; Receipt OCR</h3>
+            <p>AI receipt scanning extracts vendor, amount, and category automatically.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h3>Photo Intelligence</h3>
+            <p>AI categorizes menu, inventory, receipt, and facility photos.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📣</div>
+            <h3>Social &amp; Marketing</h3>
+            <p>Schedule posts and measure campaign ROI against real sales.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🏢</div>
+            <h3>Multi-Location</h3>
+            <p>Switch locations — every metric scoped per restaurant.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Command Center info -->
+    <section class="section section-dark" id="command-center">
+      <div class="container">
+        <div class="two-col">
+          <div>
+            <p class="eyebrow">◎ AI Command Center</p>
+            <h2 style="margin-top:1rem;font-size:2rem;font-weight:800">Not a chatbot. A restaurant brain.</h2>
+            <p style="margin-top:1rem;color:var(--slate-300)">
+              The live demo in the hero is the real app — dashboard, orders, inventory, analytics, and Command Center.
+              Responses pull from your real orders, schedules, invoices, and reviews when you run your own data.
+            </p>
+            <ul class="check-list">
+              <li>Live red/yellow/green signal board</li>
+              <li>Cross-domain findings with dollar impacts</li>
+              <li>350+ manager prompts + 10 dashboard commands</li>
+              <li>Works without OpenAI — GPT optional for deeper synthesis</li>
+            </ul>
+            <a href="#top" class="btn btn-primary btn-lg" style="margin-top:2rem">Try the live demo ↑</a>
+          </div>
+          <div class="panel-dark">
+            <img
+              src="assets/command-center-live.png"
+              alt="Command Center live demo showing profit analysis with labor, waste, and vendor findings"
+              style="width:100%;border-radius:0.75rem;border:1px solid rgba(255,255,255,0.1)"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analytics -->
+    <section class="section" id="analytics">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow">Deep analytics</p>
+          <h2>12 intelligence modules. One source of truth.</h2>
+          <p>Every tab answers real manager questions with highlights, KPI cards, and AI-powered Run Analysis.</p>
+        </div>
+        <div class="pill-row">
+          <span class="pill hot">Executive Summary</span>
+          <span class="pill hot">Sales</span>
+          <span class="pill hot">Food &amp; Inventory</span>
+          <span class="pill">Labor</span>
+          <span class="pill">Menu Engineering</span>
+          <span class="pill">Marketing</span>
+          <span class="pill">Guest Experience</span>
+          <span class="pill">Operations</span>
+          <span class="pill">Purchasing</span>
+          <span class="pill">Forecasting</span>
+          <span class="pill">Profitability</span>
+          <span class="pill">External Factors</span>
+        </div>
+        <div class="highlight-grid">
+          <div class="highlight-card">
+            <div class="icon">📊</div>
+            <h3>Menu Engineering</h3>
+            <p>Stars, plowhorses, puzzles, and dogs — promote, reprice, and remove recommendations.</p>
+          </div>
+          <div class="highlight-card">
+            <div class="icon">💵</div>
+            <h3>Profitability</h3>
+            <p>Profit by item, employee, shift, hour, channel, and campaign.</p>
+          </div>
+          <div class="highlight-card">
+            <div class="icon">🌦️</div>
+            <h3>External Factors</h3>
+            <p>Weather, events, holidays — auto-learned impact on sales.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section section-alt" id="how-it-works">
+      <div class="container">
+        <div class="section-header"><h2>How it works</h2></div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <h3>Use the live demo</h3>
+            <p>Explore the full app in the hero window — click Expand for a larger view.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <h3>Open the full app</h3>
+            <p>Launch the complete demo with menu, staff, orders, and 12 analytics tabs.</p>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <h3>Run your restaurant</h3>
+            <p>Every action feeds analytics. Ask cross-domain questions anytime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+      <div class="container">
+        <h2>Try the full app now</h2>
+        <p>Use the embedded demo in the hero, expand it, or open the app in a new tab with sample data loaded.</p>
+        <div class="cta-actions">
+          <a href="#top" class="btn btn-primary btn-xl">⚡ Live demo</a>
+          <a href="#" class="btn btn-outline-dark btn-xl" data-app-link="/embed">Open in new tab</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <img src="assets/logo.png" alt="Pinnacle" class="footer-logo" />
+          <p class="footer-tagline">AI-powered restaurant management — operations, analytics, and a command center that answers the questions owners actually ask.</p>
+        </div>
+        <div class="footer-cols">
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#top">Live demo</a></li>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#analytics">Analytics</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Full app demo</h4>
+            <ul>
+              <li><a href="#" data-app-link="/login">Sign in</a></li>
+              <li>owner@pinnacle.com</li>
+              <li>Password: demo1234</li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Stack</h4>
+            <ul>
+              <li>Next.js 15</li>
+              <li>Prisma + SQLite</li>
+              <li>OpenAI (optional)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p class="footer-copy">© <span id="year"></span> Pinnacle Restaurant Manager.</p>
+    </div>
+  </footer>
+
+  <!-- Expanded app modal -->
+  <div class="app-embed-modal" id="app-embed-modal" role="dialog" aria-modal="true" aria-label="Expanded app demo">
+    <div class="app-embed-modal-panel">
+      <div class="app-embed-modal-header">
+        <div class="hero-app-chrome-left">
+          <span class="mock-dot red"></span>
+          <span class="mock-dot amber"></span>
+          <span class="mock-dot green"></span>
+          <span class="hero-app-chrome-title">Pinnacle Restaurant Manager — Live Demo</span>
+        </div>
+        <button type="button" class="app-embed-close-btn" id="app-embed-close" aria-label="Close expanded demo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Close
+        </button>
+      </div>
+      <div class="app-embed-modal-body" id="app-embed-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="app-embed.js"></script>
+</body>
+</html>

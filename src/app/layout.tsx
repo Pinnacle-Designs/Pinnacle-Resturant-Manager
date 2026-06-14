@@ -6,8 +6,9 @@ import { AppShell } from "@/components/layout/AppShell";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Pinnacle Restaurant Manager",
-  description: "AI-powered restaurant management — photos, inventory, staff, orders, and business insights",
+  title: "Pinnacle Restaurant Manager — AI-Powered Restaurant Operations",
+  description:
+    "All-in-one restaurant management with live demo — orders, inventory, staff, finances, 12-tab analytics, and an AI command center that answers profit, labor, and ops questions from live data.",
   manifest: "/manifest.json",
   icons: {
     icon: "/logo.png",

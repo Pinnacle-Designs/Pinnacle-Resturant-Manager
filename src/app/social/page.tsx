@@ -9,7 +9,7 @@ import { SocialClient } from "@/components/social/SocialClient";
 export default async function SocialPage() {
   const user = await getSessionUser();
   if (!user || !hasPermission(user.role, "manage_social")) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   const locationId = await getLocationId();
