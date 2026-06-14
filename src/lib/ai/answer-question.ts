@@ -1,12 +1,23 @@
 import OpenAI from "openai";
-import { prisma } from "../prisma";
 import { getLocationId } from "../location";
-import { computeAnalytics, buildAnalyticsSnapshotForAI } from "../analytics/compute";
+import { buildAnalyticsSnapshotForAI } from "../analytics/compute";
 import {
   DASHBOARD_AI_COMMANDS,
   matchPromptCategory,
   type DashboardCommandId,
 } from "./manager-prompts";
+import {
+  buildCommandCenterSnapshot,
+  buildLiveSignals,
+  detectCommandIntent,
+  runCommandCenterAnalysis,
+  type CommandCenterFinding,
+  type CommandCenterMetric,
+  type CommandCenterResponse,
+  type CommandCenterSignal,
+  type CommandIntent,
+  DOMAIN_LABELS,
+} from "./command-center";
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -21,53 +32,75 @@ export interface ManagerAnswer {
   sources: string[];
   relatedActions: string[];
   usedAI: boolean;
+  /** Command center structured response */
+  mode?: "command_center" | "chat";
+  headline?: string;
+  summary?: string;
+  intent?: string;
+  signals?: CommandCenterSignal[];
+  findings?: CommandCenterFinding[];
+  metrics?: CommandCenterMetric[];
+  domainsScanned?: string[];
+}
+
+export type { CommandCenterSignal, CommandCenterFinding, CommandCenterMetric };
+
+function asCommandCenterAnswer(response: CommandCenterResponse): ManagerAnswer {
+  return response;
+}
+
+function enrichWithCommandCenter(
+  base: ManagerAnswer,
+  snapshot: Awaited<ReturnType<typeof buildCommandCenterSnapshot>>,
+  intent?: CommandIntent
+): ManagerAnswer {
+  return {
+    ...base,
+    mode: "command_center",
+    headline: base.headline ?? base.answer.split("\n")[0]?.replace(/^#+\s*/, ""),
+    summary:
+      base.summary ??
+      `${fmtMoney(snapshot.sales.netSales)} sales · ${fmtPct(snapshot.profitability.marginPct)} margin`,
+    intent: intent ?? "general",
+    signals: base.signals ?? buildLiveSignals(snapshot),
+    findings: base.findings,
+    metrics:
+      base.metrics ??
+      buildLiveSignals(snapshot).map((s) => ({
+        label: s.label,
+        value: s.value,
+        subtext: s.detail,
+      })),
+    domainsScanned:
+      base.domainsScanned ??
+      ["sales", "labor", "inventory", "scheduling", "vendors", "waste", "reviews", "employees"],
+    sources: base.sources.length ? base.sources : [...Object.values(DOMAIN_LABELS)],
+  };
 }
 
 async function buildManagerContext(locationId: string) {
-  const [inventory, menuItems, staff, recentOrders, expenses, analyticsPayload] =
-    await Promise.all([
-      prisma.inventoryItem.findMany({ where: { locationId } }),
-      prisma.menuItem.findMany({ where: { locationId } }),
-      prisma.staffMember.findMany({ where: { locationId, active: true } }),
-      prisma.order.findMany({
-        where: {
-          locationId,
-          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        },
-        include: { items: true },
-      }),
-      prisma.expense.findMany({
-        where: {
-          locationId,
-          date: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-        },
-      }),
-      computeAnalytics(locationId),
-    ]);
+  const snapshot = await buildCommandCenterSnapshot(locationId);
+  return ctxFromSnapshot(snapshot);
+}
 
-  const lowStockItems = inventory.filter((item) => item.quantity <= item.minQuantity);
-  const totalRevenue = recentOrders
-    .filter((o) => o.status === "PAID")
-    .reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const unavailableItems = menuItems.filter((m) => !m.available);
-
+function ctxFromSnapshot(snapshot: Awaited<ReturnType<typeof buildCommandCenterSnapshot>>) {
   return {
-    inventoryCount: inventory.length,
-    lowStockItems: lowStockItems.map((i) => ({
-      name: i.name,
-      quantity: i.quantity,
-      min: i.minQuantity,
+    inventoryCount: snapshot.inventory.lowStockCount,
+    lowStockItems: snapshot.inventory.lowStockItems.map((name) => ({
+      name,
+      quantity: 0,
+      min: 0,
     })),
-    menuItemCount: menuItems.length,
-    unavailableMenuItems: unavailableItems.map((m) => m.name),
-    activeStaff: staff.length,
-    weeklyOrders: recentOrders.length,
-    weeklyRevenue: totalRevenue,
-    monthlyExpenses: totalExpenses,
-    profitMargin: totalRevenue - totalExpenses,
-    analytics: buildAnalyticsSnapshotForAI(analyticsPayload),
-    rawAnalytics: analyticsPayload,
+    menuItemCount: snapshot.inventory.unavailableMenu.length,
+    unavailableMenuItems: snapshot.inventory.unavailableMenu,
+    activeStaff: snapshot.employees.activeCount,
+    weeklyOrders: snapshot.sales.orderCount,
+    weeklyRevenue: snapshot.sales.netSales,
+    monthlyExpenses: snapshot.vendors.totalSpend,
+    profitMargin: snapshot.profitability.netProfit,
+    analytics: snapshot.analytics,
+    rawAnalytics: snapshot.rawAnalytics,
+    commandCenter: snapshot,
   };
 }
 
@@ -609,25 +642,27 @@ function answerFromKeyQuestions(
 async function answerWithGPT(
   question: string,
   category: { id: string; label: string; sections: string[] },
-  ctx: Awaited<ReturnType<typeof buildManagerContext>>
+  snapshot: Awaited<ReturnType<typeof buildCommandCenterSnapshot>>
 ): Promise<ManagerAnswer> {
   const focused: Record<string, unknown> = {
     question,
     category: category.label,
-    business: {
-      weeklyRevenue: ctx.weeklyRevenue,
-      weeklyOrders: ctx.weeklyOrders,
-      activeStaff: ctx.activeStaff,
-      lowStockItems: ctx.lowStockItems,
-      unavailableMenuItems: ctx.unavailableMenuItems,
+    commandCenter: {
+      sales: snapshot.sales,
+      labor: snapshot.labor,
+      foodCost: snapshot.foodCost,
+      inventory: snapshot.inventory,
+      scheduling: snapshot.scheduling,
+      vendors: snapshot.vendors,
+      waste: snapshot.waste,
+      reviews: snapshot.reviews,
+      employees: snapshot.employees,
+      operations: snapshot.operations,
+      profitability: snapshot.profitability,
+      alerts: snapshot.alerts,
     },
+    analytics: snapshot.analytics,
   };
-
-  const a = ctx.analytics;
-  for (const s of category.sections) {
-    if (s in a) focused[s] = (a as Record<string, unknown>)[s];
-  }
-  if (!category.sections.includes("executive")) focused.executive = a.executive;
 
   try {
     const response = await openai!.chat.completions.create({
@@ -635,41 +670,57 @@ async function answerWithGPT(
       messages: [
         {
           role: "system",
-          content: `You are an expert restaurant manager AI assistant inside Pinnacle Restaurant Manager. Answer the manager's question using ONLY the JSON data provided. Be specific with numbers, names, and actionable steps. Use markdown formatting. If data is missing for part of the question, say what is available and what they should track. For creative tasks (training checklists, review responses, social posts), generate helpful content grounded in their menu and metrics when possible. Keep answers concise but complete (under 400 words unless creating a checklist).`,
+          content: `You are the AI brain of a restaurant command center. The owner asks plain-English questions and you answer by synthesizing ALL connected data: sales, labor, inventory, scheduling, vendor invoices, waste logs, guest reviews, employee performance, operations (voids/discounts), menu engineering, and profitability — together, not in silos.
+
+Rules:
+- Lead with a one-sentence headline answering the question directly
+- Cite specific numbers, names, and dollar amounts from the data
+- Connect causes across domains (e.g. labor + waste + reviews affecting profit)
+- End with 2-4 prioritized actions
+- Use markdown. If data is missing, say what you have and what to track
+- For creative tasks (checklists, review responses), ground in their real menu/metrics`,
         },
         { role: "user", content: JSON.stringify(focused) },
       ],
-      max_tokens: 900,
+      max_tokens: 1000,
     });
 
     const answer = response.choices[0]?.message?.content?.trim();
     if (answer) {
-      return {
-        question,
-        answer,
-        categoryId: category.id,
-        categoryLabel: category.label,
-        confidence: "high",
-        sources: category.sections,
-        relatedActions: [],
-        usedAI: true,
-      };
+      const headline = answer.split("\n").find((l) => l.trim())?.replace(/^#+\s*/, "") ?? "";
+      return enrichWithCommandCenter(
+        {
+          question,
+          answer,
+          headline,
+          categoryId: category.id,
+          categoryLabel: category.label,
+          confidence: "high",
+          sources: Object.keys(DOMAIN_LABELS),
+          relatedActions: [],
+          usedAI: true,
+        },
+        snapshot
+      );
     }
   } catch (err) {
     console.error("Manager AI answer error:", err);
   }
 
-  return {
-    question,
-    answer:
-      "I couldn't generate an AI answer right now. Try a dashboard command (Daily Briefing, Find Problems) or check that your analytics data is loaded.",
-    categoryId: category.id,
-    categoryLabel: category.label,
-    confidence: "low",
-    sources: [],
-    relatedActions: ["Load sample data", "Run Analysis on Analytics"],
-    usedAI: false,
-  };
+  return enrichWithCommandCenter(
+    {
+      question,
+      answer:
+        "I couldn't reach the AI engine. Your live command center data is loaded — try a quick command like \"What's hurting my profit this week?\"",
+      categoryId: category.id,
+      categoryLabel: category.label,
+      confidence: "low",
+      sources: [],
+      relatedActions: ["Load sample data on Analytics", "Set OPENAI_API_KEY for deeper answers"],
+      usedAI: false,
+    },
+    snapshot
+  );
 }
 
 export async function answerManagerQuestion(
@@ -682,7 +733,7 @@ export async function answerManagerQuestion(
       question: trimmed,
       answer: "Please enter a question.",
       categoryId: "ai_commands",
-      categoryLabel: "AI Assistant Commands",
+      categoryLabel: "Command Center",
       confidence: "low",
       sources: [],
       relatedActions: [],
@@ -691,46 +742,47 @@ export async function answerManagerQuestion(
   }
 
   const locId = locationId || (await getLocationId());
-  const ctx = await buildManagerContext(locId);
+  const snapshot = await buildCommandCenterSnapshot(locId);
+  const ctx = ctxFromSnapshot(snapshot);
   const category = matchPromptCategory(trimmed) ?? {
     id: "ai_commands",
-    label: "AI Assistant Commands",
+    label: "Command Center",
     sections: ["executive", "sales", "profitability"],
     prompts: [],
   };
 
+  let intent = detectCommandIntent(trimmed);
   const dashId = resolveDashboardCommand(trimmed);
+  if (dashId === "improve_profit") intent = "profit_improve";
+  if (dashId === "find_problems") intent = "problems";
+  if (dashId === "daily_briefing" || dashId === "owner_report") intent = "briefing";
+
+  if (intent !== "general") {
+    return asCommandCenterAnswer(runCommandCenterAnalysis(snapshot, trimmed, intent));
+  }
+
   if (dashId) {
     const dashAnswer = answerDashboardCommand(dashId, ctx);
-    if (dashAnswer) return dashAnswer;
+    if (dashAnswer) {
+      return enrichWithCommandCenter(
+        { ...dashAnswer, headline: dashAnswer.answer.split("\n")[0]?.replace(/^#+\s*/, "") },
+        snapshot
+      );
+    }
   }
 
   const ruleAnswer = answerFromKeyQuestions(trimmed, category, ctx);
+  const isCreative = /checklist|quiz|write|create|email|apology|post|calendar|report|guide/i.test(trimmed);
+
+  if (openai && (isCreative || !ruleAnswer)) {
+    return answerWithGPT(trimmed, category, snapshot);
+  }
+
   if (ruleAnswer && ruleAnswer.confidence !== "low") {
-    if (openai && /checklist|quiz|write|create|email|apology|post|calendar|report|guide/i.test(trimmed)) {
-      return answerWithGPT(trimmed, category, ctx);
-    }
-    return ruleAnswer;
+    return enrichWithCommandCenter(ruleAnswer, snapshot);
   }
 
-  if (openai) {
-    return answerWithGPT(trimmed, category, ctx);
-  }
+  if (ruleAnswer) return enrichWithCommandCenter(ruleAnswer, snapshot);
 
-  if (ruleAnswer) return ruleAnswer;
-
-  const fallbackKq = pickKeyQuestions(ctx.analytics, category.sections);
-  return {
-    question: trimmed,
-    answer:
-      fallbackKq.length > 0
-        ? `**${category.label}** (rule-based — set OPENAI_API_KEY for full answers):\n\n${fallbackKq.map((k) => `- ${k}`).join("\n")}`
-        : `No matching data for "${trimmed}". Load sample data on Analytics or set OPENAI_API_KEY for creative answers.`,
-    categoryId: category.id,
-    categoryLabel: category.label,
-    confidence: fallbackKq.length ? "medium" : "low",
-    sources: category.sections,
-    relatedActions: fallbackKq.slice(0, 3),
-    usedAI: false,
-  };
+  return asCommandCenterAnswer(runCommandCenterAnalysis(snapshot, trimmed, "profit_hurt"));
 }

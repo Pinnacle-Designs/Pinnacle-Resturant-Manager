@@ -34,8 +34,8 @@ export default function InsightsPage() {
   return (
     <div>
       <PageHeader
-        title="AI Insights"
-        description="Ask 350+ manager questions, run automated analysis, and get actionable answers from live data"
+        title="Command Center"
+        description="Your restaurant's AI brain — cross-checks every system and answers in plain English"
       />
 
       <div className="mb-8">
@@ -49,23 +49,25 @@ export default function InsightsPage() {
       )}
 
       <div className="mt-8 card">
-        <h2 className="font-semibold text-slate-900">How AI Analysis Works</h2>
+        <h2 className="font-semibold text-slate-900">How the Command Center Works</h2>
         <ul className="mt-4 space-y-2 text-sm text-slate-600">
           <li>
-            • Scans inventory levels, menu availability, staff count, orders, and
-            expenses
+            • Pulls live data from sales, labor, inventory, scheduling, vendor invoices, waste
+            logs, guest reviews, and employee performance — in one pass
           </li>
           <li>
-            • Identifies pain points like low stock, negative margins, and staffing
-            gaps
+            • Answers plain-English questions like &quot;What&apos;s hurting my profit this
+            week?&quot; with cross-domain findings and dollar impacts
           </li>
           <li>
-            • With an OpenAI API key, uses GPT for deeper contextual analysis
+            • Shows a live red/yellow/green signal board for sales, profit, labor, food cost,
+            guests, and operations
           </li>
           <li>
-            • Without a key, uses rule-based detection for common restaurant issues
+            • With OpenAI, synthesizes creative outputs (checklists, review responses) grounded
+            in your real numbers
           </li>
-          <li>• Photo uploads are analyzed to categorize and describe images</li>
+          <li>• Automated insights below flag issues between command center sessions</li>
         </ul>
         <p className="mt-4 text-xs text-slate-400">
           Set OPENAI_API_KEY in .env for full AI capabilities.
