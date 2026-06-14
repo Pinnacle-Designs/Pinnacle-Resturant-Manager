@@ -28,6 +28,15 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentMethod {
+  CASH
+  CARD
+  DEBIT
+  MOBILE
+  GIFT_CARD
+  OTHER
+}
+
 enum InsightSeverity {
   LOW
   MEDIUM
@@ -222,9 +231,24 @@ model Order {
   voidAmount        Float       @default(0)
   ticketTimeMinutes Int?
   notes             String?
+  paidAt            DateTime?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   items             OrderItem[]
+  payments          OrderPayment[]
+}
+
+model OrderPayment {
+  id        String        @id @default(cuid())
+  orderId   String
+  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method    PaymentMethod
+  amount    Float
+  tipAmount Float         @default(0)
+  reference String?
+  createdAt DateTime      @default(now())
+
+  @@index([orderId])
 }
 
 model OrderItem {

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     include: {
       table: true,
       items: { include: { menuItem: true } },
+      payments: { orderBy: { createdAt: "asc" } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
           }
         : undefined,
     },
-    include: { items: { include: { menuItem: true } }, table: true },
+    include: { items: { include: { menuItem: true } }, table: true, payments: { orderBy: { createdAt: "asc" } } },
   });
 
   await prisma.activityLog.create({

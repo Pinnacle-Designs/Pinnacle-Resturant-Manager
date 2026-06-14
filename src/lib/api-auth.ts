@@ -26,6 +26,18 @@ export async function requirePermission(request: NextRequest, permission: Permis
   return { user: user!, error: null };
 }
 
+export async function requireAnyPermission(
+  request: NextRequest,
+  permissions: Permission[]
+) {
+  const { user, error } = await requireAuth(request);
+  if (error) return { user: null, error };
+  if (!permissions.some((permission) => hasPermission(user!.role, permission))) {
+    return { user: null, error: forbiddenResponse() };
+  }
+  return { user: user!, error: null };
+}
+
 export function stripSalaries<T extends { hourlyRate?: number }>(
   role: AppRole,
   items: T[]

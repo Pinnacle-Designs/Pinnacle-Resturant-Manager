@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, ClipboardList, ListPlus } from "lucide-react";
+import { Plus, Trash2, ClipboardList, ListPlus, CreditCard } from "lucide-react";
+import type { PaymentMethod } from "@prisma/client";
 import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, Select, Textarea, FormField, Modal } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/constants";
+import {
+  getOrderBalanceDue,
+  getPaymentsTotal,
+  getTipsTotal,
+  PAYMENT_METHOD_LABELS,
+} from "@/lib/orders";
+import { PaymentModal, type PayableOrder } from "@/components/orders/PaymentModal";
 
 interface MenuItem {
   id: string;
@@ -28,13 +36,18 @@ interface OrderItem {
   menuItem: { name: string };
 }
 
-interface Order {
+interface OrderPayment {
   id: string;
-  status: string;
-  totalAmount: number;
+  method: PaymentMethod;
+  amount: number;
+  tipAmount: number;
+  reference: string | null;
+  createdAt?: string | Date;
+}
+
+interface Order extends PayableOrder {
   notes: string | null;
-  table: Table | null;
-  items: OrderItem[];
+  payments: OrderPayment[];
 }
 
 const STATUSES = ["PENDING", "PREPARING", "READY", "SERVED", "PAID", "CANCELLED"];
@@ -54,10 +67,12 @@ export function OrdersClient({
   const canManage = can("manage_orders");
   const canPlace = can("place_orders");
   const canAddToCheck = can("add_to_check");
+  const canTakePayment = canManage || canPlace;
 
   const [orders, setOrders] = useState(initialOrders);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [form, setForm] = useState({
     tableId: "",
@@ -72,6 +87,7 @@ export function OrdersClient({
   const [error, setError] = useState<string | null>(null);
 
   const availableMenu = menuItems.filter((m) => m.available);
+  const activeOrder = orders.find((o) => o.id === activeOrderId) ?? null;
 
   const handleCreate = async () => {
     if (!form.menuItemId) {
@@ -147,6 +163,17 @@ export function OrdersClient({
     setAddModalOpen(true);
   };
 
+  const openPaymentModal = (orderId: string) => {
+    setActiveOrderId(orderId);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaid = (order: PayableOrder) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? { ...o, ...order, payments: order.payments ?? [] } : o))
+    );
+  };
+
   return (
     <>
       {canPlace && (
@@ -171,63 +198,102 @@ export function OrdersClient({
         />
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
-            <div key={order.id} className="card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">Order #{order.id.slice(-6)}</h3>
-                    <Badge className={ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS]}>
-                      {order.status}
-                    </Badge>
+          {orders.map((order) => {
+            const balanceDue = getOrderBalanceDue(order, order.payments ?? []);
+            const paidTotal = getPaymentsTotal(order.payments ?? []);
+            const tipTotal = getTipsTotal(order.payments ?? []);
+            const isOpen = order.status !== "PAID" && order.status !== "CANCELLED";
+
+            return (
+              <div key={order.id} className="card">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-slate-900">Order #{order.id.slice(-6)}</h3>
+                      <Badge className={ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS]}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                    {order.table && (
+                      <p className="mt-1 text-sm text-slate-500">Table {order.table.number}</p>
+                    )}
                   </div>
-                  {order.table && (
-                    <p className="mt-1 text-sm text-slate-500">Table {order.table.number}</p>
-                  )}
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{formatCurrency(order.totalAmount)}</p>
+                    {isOpen && paidTotal > 0 && (
+                      <p className="text-xs text-slate-500">
+                        {formatCurrency(balanceDue)} remaining
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-lg font-bold text-slate-900">{formatCurrency(order.totalAmount)}</p>
-              </div>
-              {order.items.length > 0 && (
-                <ul className="mt-4 space-y-1 text-sm text-slate-600">
-                  {order.items.map((item) => (
-                    <li key={item.id}>
-                      {item.quantity}x {item.menuItem.name} — {formatCurrency(item.price)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                {canAddToCheck &&
-                  order.status !== "PAID" &&
-                  order.status !== "CANCELLED" && (
+                {order.items.length > 0 && (
+                  <ul className="mt-4 space-y-1 text-sm text-slate-600">
+                    {order.items.map((item) => (
+                      <li key={item.id}>
+                        {item.quantity}x {item.menuItem.name} — {formatCurrency(item.price)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(order.payments?.length ?? 0) > 0 && (
+                  <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payments</p>
+                    <ul className="mt-1 space-y-1">
+                      {order.payments.map((payment) => (
+                        <li key={payment.id} className="flex justify-between gap-3">
+                          <span>
+                            {PAYMENT_METHOD_LABELS[payment.method]}
+                            {payment.reference ? ` (${payment.reference})` : ""}
+                          </span>
+                          <span className="font-medium text-slate-800">
+                            {formatCurrency(payment.amount)}
+                            {payment.tipAmount > 0 ? ` + ${formatCurrency(payment.tipAmount)} tip` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {tipTotal > 0 && (
+                      <p className="mt-2 text-xs text-slate-500">Total tips: {formatCurrency(tipTotal)}</p>
+                    )}
+                  </div>
+                )}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {canTakePayment && isOpen && balanceDue > 0 && (
+                    <Button size="sm" onClick={() => openPaymentModal(order.id)}>
+                      <CreditCard className="h-3 w-3" />
+                      Take payment
+                    </Button>
+                  )}
+                  {canAddToCheck && isOpen && (
                     <Button variant="secondary" size="sm" onClick={() => openAddModal(order.id)}>
                       <ListPlus className="h-3 w-3" />
                       Add to check
                     </Button>
                   )}
-                {canManage && (
-                  <>
-                    <Select
-                      value={order.status}
-                      onChange={(e) => updateStatus(order.id, e.target.value)}
-                      className="w-auto"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </Select>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(order.id)}>
-                      <Trash2 className="h-3 w-3 text-red-500" />
-                    </Button>
-                  </>
-                )}
+                  {canManage && (
+                    <>
+                      <Select
+                        value={order.status}
+                        onChange={(e) => updateStatus(order.id, e.target.value)}
+                        className="w-auto"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </Select>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(order.id)}>
+                        <Trash2 className="h-3 w-3 text-red-500" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* New order modal */}
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="New Order">
         <div className="space-y-4">
           <FormField label="Menu Item">
@@ -274,7 +340,6 @@ export function OrdersClient({
         </div>
       </Modal>
 
-      {/* Add to check modal */}
       <Modal open={addModalOpen} onClose={() => setAddModalOpen(false)} title="Add to Check">
         <div className="space-y-4">
           <p className="text-sm text-slate-500">Add an item to an open order check.</p>
@@ -296,6 +361,13 @@ export function OrdersClient({
           </div>
         </div>
       </Modal>
+
+      <PaymentModal
+        open={paymentModalOpen}
+        order={activeOrder}
+        onClose={() => setPaymentModalOpen(false)}
+        onPaid={handlePaid}
+      />
     </>
   );
 }

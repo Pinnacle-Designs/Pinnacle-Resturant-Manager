@@ -27,7 +27,7 @@ export async function PATCH(
       ticketTimeMinutes: body.ticketTimeMinutes,
       notes: body.notes,
     },
-    include: { items: { include: { menuItem: true } }, table: true },
+    include: { items: { include: { menuItem: true } }, table: true, payments: { orderBy: { createdAt: "asc" } } },
   });
 
   return NextResponse.json(order);

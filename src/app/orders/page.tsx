@@ -8,7 +8,7 @@ export default async function OrdersPage() {
   const [orders, menuItems, tables] = await Promise.all([
     prisma.order.findMany({
       where: { locationId },
-      include: { table: true, items: { include: { menuItem: true } } },
+      include: { table: true, items: { include: { menuItem: true } }, payments: { orderBy: { createdAt: "asc" } } },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
