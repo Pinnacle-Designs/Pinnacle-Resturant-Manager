@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { MarketingNav } from "./MarketingNav";
 import { DEMO_TOUR_STOPS } from "@/lib/marketing-content";
-import { embedBootstrapUrl } from "@/lib/embed-config";
+import { embedLaunchUrl } from "@/lib/embed-config";
 import { cn } from "@/lib/utils";
 
 export function DemoPage() {
@@ -129,17 +129,21 @@ export function DemoPage() {
           )}
           <iframe
             key={`${activeStop.path}-${iframeKey}`}
-            src={embedBootstrapUrl(activeStop.path)}
+            src={embedLaunchUrl(activeStop.path)}
             title={`Pinnacle demo — ${activeStop.label}`}
             className="h-[calc(100vh-8rem)] w-full flex-1 bg-white lg:h-[calc(100vh-7rem)]"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
             onLoad={(e) => {
               if (readyRef.current) return;
               try {
                 const frame = e.currentTarget.contentWindow;
                 const search = frame?.location.search ?? "";
                 const path = frame?.location.pathname ?? "";
-                if (path !== "/embed" && search.includes("embed=1")) {
+                if (
+                  path !== "/embed" &&
+                  path !== "/api/embed/launch" &&
+                  path !== "/login" &&
+                  (search.includes("embed=1") || path === "/dashboard")
+                ) {
                   readyRef.current = true;
                   setIframeLoading(false);
                 }

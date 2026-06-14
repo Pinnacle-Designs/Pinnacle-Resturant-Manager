@@ -10,6 +10,13 @@ export function resolveEmbedPath(raw: string | null | undefined): string {
   return EMBEDDABLE_DEMO_PATH_SET.has(path) ? path : DEMO_TOUR_STOPS[0].path;
 }
 
+/** Server-side launch — seeds demo, sets session cookie, redirects to app route. */
+export function embedLaunchUrl(targetPath?: string): string {
+  const path = resolveEmbedPath(targetPath ?? DEMO_TOUR_STOPS[0].path);
+  return `/api/embed/launch?path=${encodeURIComponent(path)}`;
+}
+
+/** @deprecated Prefer embedLaunchUrl — kept for /embed page fallback */
 export function embedBootstrapUrl(targetPath?: string): string {
   const path = resolveEmbedPath(targetPath ?? DEMO_TOUR_STOPS[0].path);
   return `/embed?path=${encodeURIComponent(path)}`;
@@ -44,5 +51,5 @@ export function getEmbedFrameAncestors(): string {
 }
 
 export function isEmbeddableRequest(pathname: string, embedParam: string | null): boolean {
-  return pathname === "/embed" || embedParam === "1";
+  return pathname === "/embed" || pathname === "/api/embed/launch" || embedParam === "1";
 }

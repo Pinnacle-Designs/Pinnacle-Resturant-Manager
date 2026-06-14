@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
+import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -47,15 +48,22 @@ export async function POST(request: NextRequest) {
     workspace,
     workspaceError,
   });
-  response.cookies.set(sessionCookieOptions(token, forEmbed));
 
-  if (workspace) {
-    response.cookies.set(LOCATION_COOKIE_NAME, workspace.locationId, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: forEmbed ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production" || forEmbed,
-    });
+  if (forEmbed) {
+    if (workspace) {
+      applyEmbedAuthCookies(response, request, token, workspace.locationId, true);
+    } else {
+      response.cookies.set(sessionCookieOptions(token, true));
+    }
+  } else {
+    response.cookies.set(sessionCookieOptions(token, false));
+    if (workspace) {
+      response.cookies.set(LOCATION_COOKIE_NAME, workspace.locationId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
   }
 
   return response;

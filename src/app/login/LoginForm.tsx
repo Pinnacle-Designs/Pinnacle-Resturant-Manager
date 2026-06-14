@@ -75,7 +75,12 @@ export default function LoginForm() {
     }
 
     const from = searchParams.get("from") || "/dashboard";
-    window.location.assign(from);
+    const embed = searchParams.get("embed");
+    let target = from;
+    if (embed === "1" && !from.includes("embed=1")) {
+      target = from + (from.includes("?") ? "&" : "?") + "embed=1";
+    }
+    window.location.assign(target);
   };
 
   const handleLogin = async (loginEmail?: string, loginPassword?: string) => {

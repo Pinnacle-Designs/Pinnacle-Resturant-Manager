@@ -97,13 +97,13 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
   }
 }
 
-export function sessionCookieOptions(token: string, forEmbed = false) {
-  const secure = process.env.NODE_ENV === "production" || forEmbed;
+export function sessionCookieOptions(token: string, forEmbed = false, secure?: boolean) {
+  const useSecure = secure ?? (process.env.NODE_ENV === "production" || forEmbed);
   return {
     name: AUTH_COOKIE_NAME,
     value: token,
     httpOnly: true,
-    secure,
+    secure: useSecure,
     sameSite: (forEmbed ? "none" : "lax") as "none" | "lax",
     path: "/",
     maxAge: AUTH_COOKIE_MAX_AGE,

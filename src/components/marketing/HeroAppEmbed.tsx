@@ -53,7 +53,7 @@ export function HeroAppEmbed({
           const frame = e.currentTarget.contentWindow;
           const search = frame?.location.search ?? "";
           const path = frame?.location.pathname ?? "";
-          if (path !== "/embed" && search.includes("embed=1")) {
+          if (path !== "/embed" && path !== "/api/embed/launch" && search.includes("embed=1")) {
             readyRef.current = true;
             setLoading(false);
           }

@@ -24,7 +24,7 @@ import {
 import { MarketingNav } from "./MarketingNav";
 import { MarketingFooter } from "./MarketingFooter";
 import { HeroAppEmbed } from "./HeroAppEmbed";
-import { embedBootstrapUrl } from "@/lib/embed-config";
+import { embedLaunchUrl } from "@/lib/embed-config";
 import {
   ANALYTICS_TABS,
   CORE_FEATURES,
@@ -114,7 +114,7 @@ export function LandingPage() {
               </p>
             </div>
 
-            <HeroAppEmbed embedSrc={embedBootstrapUrl()} />
+            <HeroAppEmbed embedSrc={embedLaunchUrl()} />
           </div>
 
           <div className="mt-16 grid grid-cols-2 gap-6 border-t border-white/10 pt-10 sm:grid-cols-4">

@@ -3,8 +3,18 @@ import type { NextRequest } from "next/server";
 import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
 import { getEmbedFrameAncestors, isEmbeddableRequest } from "@/lib/embed-config";
+import { applyEmbedSessionParam } from "@/lib/embed-launch";
 
-const PUBLIC_PATHS = ["/", "/demo", "/embed", "/login", "/api/auth/login", "/api/auth/seed"];
+const PUBLIC_PATHS = [
+  "/",
+  "/demo",
+  "/embed",
+  "/login",
+  "/docs",
+  "/api/auth/login",
+  "/api/auth/seed",
+  "/api/embed/launch",
+];
 
 function applyFramePolicy(request: NextRequest, response: NextResponse): NextResponse {
   const { pathname } = request.nextUrl;
@@ -20,6 +30,26 @@ function applyFramePolicy(request: NextRequest, response: NextResponse): NextRes
     response.headers.set("X-Frame-Options", "DENY");
   }
 
+  return applyDevCors(request, response);
+}
+
+/** Allow docs/Live Server to probe the app in local development. */
+function applyDevCors(request: NextRequest, response: NextResponse): NextResponse {
+  if (process.env.NODE_ENV !== "development") return response;
+
+  const origin = request.headers.get("origin");
+  if (
+    origin &&
+    (origin.startsWith("http://localhost:") ||
+      origin.startsWith("http://127.0.0.1:") ||
+      origin === "null")
+  ) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+    response.headers.append("Vary", "Origin");
+  }
+
   return response;
 }
 
@@ -27,12 +57,21 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const embedParam = request.nextUrl.searchParams.get("embed");
 
+  if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
+    return applyDevCors(request, new NextResponse(null, { status: 204 }));
+  }
+
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/uploads") ||
-    pathname.match(/\.(png|svg|jpg|jpeg|ico|json|js)$/)
+    pathname.match(/\.(png|svg|jpg|jpeg|ico|json|js|css|html)$/)
   ) {
     return applyFramePolicy(request, NextResponse.next());
+  }
+
+  const embedSessionRedirect = await applyEmbedSessionParam(request);
+  if (embedSessionRedirect) {
+    return applyFramePolicy(request, embedSessionRedirect);
   }
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
@@ -53,6 +92,7 @@ export async function middleware(request: NextRequest) {
     loginUrl.searchParams.set("from", pathname);
     if (embedParam === "1") {
       loginUrl.searchParams.set("embed", "1");
+      loginUrl.searchParams.set("from", `${pathname}?embed=1`);
     }
     return applyFramePolicy(request, NextResponse.redirect(loginUrl));
   }

@@ -20,9 +20,15 @@ export function EmbedBootstrap() {
     const target = `${path}?embed=1`;
     const crossOrigin = needsCrossOriginEmbedCookies();
 
-    launchDemo("owner@pinnacle.com", "demo1234", "seeded", {
-      embed: crossOrigin,
-    })
+    // Cross-origin iframes (docs site, GitHub Pages) cannot rely on fetch + client redirect.
+    if (crossOrigin) {
+      window.location.replace(
+        `/api/embed/launch?path=${encodeURIComponent(path)}`
+      );
+      return;
+    }
+
+    launchDemo("owner@pinnacle.com", "demo1234", "seeded", { embed: false })
       .then(() => {
         // Hard navigation — avoids client-router loops re-running this bootstrap.
         window.location.replace(target);
