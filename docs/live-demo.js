@@ -4,32 +4,70 @@
  */
 (function () {
   var NAV = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "photos", label: "Photos", icon: "📷" },
-    { id: "menu", label: "Menu", icon: "🍽️" },
-    { id: "inventory", label: "Inventory", icon: "📦" },
-    { id: "staff", label: "Staff", icon: "👥" },
-    { id: "tables", label: "Tables", icon: "🪑" },
-    { id: "orders", label: "Orders", icon: "📋" },
-    { id: "finances", label: "Finances", icon: "💰" },
-    { id: "analytics", label: "Analytics", icon: "📈" },
-    { id: "social", label: "Social", icon: "📱" },
-    { id: "insights", label: "Command Center", icon: "🧠" },
+    { id: "dashboard", label: "Dashboard", icon: "layout-dashboard" },
+    { id: "photos", label: "Photos", icon: "camera" },
+    { id: "menu", label: "Menu", icon: "utensils" },
+    { id: "inventory", label: "Inventory", icon: "package" },
+    { id: "staff", label: "Staff", icon: "users" },
+    { id: "tables", label: "Tables", icon: "layout-grid" },
+    { id: "orders", label: "Orders", icon: "clipboard-list" },
+    { id: "finances", label: "Finances", icon: "dollar-sign" },
+    { id: "analytics", label: "Analytics", icon: "bar-chart-3" },
+    { id: "social", label: "Social", icon: "share-2" },
+    { id: "insights", label: "Command Center", icon: "brain" },
+  ];
+
+  var ICONS = {
+    "layout-dashboard": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>',
+    camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
+    utensils: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
+    package: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    "layout-grid": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    "clipboard-list": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>',
+    "dollar-sign": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    "bar-chart-3": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
+    "share-2": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+    brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M12 18v4"/></svg>',
+  };
+
+  var LIVE_SIGNALS = [
+    { label: "Sales (7d)", value: "$24.8k", status: "green", detail: "+8% WoW" },
+    { label: "Labor %", value: "31.2%", status: "yellow", detail: "Above goal" },
+    { label: "Low stock", value: "3 items", status: "red", detail: "Reorder today" },
+    { label: "Guest rating", value: "4.6★", status: "green", detail: "Google" },
+    { label: "Open orders", value: "8", status: "yellow", detail: "3 in kitchen" },
+    { label: "Waste (7d)", value: "$420", status: "yellow", detail: "Above avg" },
+  ];
+
+  var QUICK_COMMANDS = [
+    { key: "profit", text: "What's hurting my profit this week?" },
+    { key: "rush", text: "What needs my attention before dinner rush?" },
+    { key: "profit", text: "Scan the restaurant and tell me what needs attention." },
+    { key: "rush", text: "Give me today's sales, labor, inventory, staffing, and guest service summary." },
+  ];
+
+  var DASHBOARD_COMMANDS = [
+    { key: "rush", label: "Daily Briefing" },
+    { key: "profit", label: "Find Problems" },
+    { key: "profit", label: "Improve Profit" },
+    { key: "coach", label: "Build Schedule" },
+    { key: "order", label: "Order Inventory" },
   ];
 
   var ANALYTICS_TABS = [
     "Executive",
     "Sales",
-    "Food & Inv.",
+    "Food & Inventory",
     "Labor",
-    "Menu Eng.",
+    "Menu Engineering",
     "Marketing",
-    "Guests",
+    "Guest Experience",
     "Operations",
     "Purchasing",
     "Forecasting",
-    "Profit",
-    "External",
+    "Profitability",
+    "External Factors",
   ];
 
   var ANALYTICS_TAB_DATA = [
@@ -122,31 +160,45 @@
     scenarioKey: "profit",
     analyzing: false,
     analyticsTab: 0,
+    staffTab: "schedule",
+    socialTab: "compose",
+    location: "downtown",
   };
 
-  function screenHeader(title, desc) {
+  function navIcon(name) {
+    return '<span class="demo-nav-icon" aria-hidden="true">' + (ICONS[name] || "") + "</span>";
+  }
+
+  function screenHeader(title, desc, actionHtml) {
     return (
       '<div class="demo-page-header">' +
+      '<div class="demo-page-header-text">' +
       '<h2 class="demo-screen-title">' + title + "</h2>" +
       (desc ? '<p class="demo-screen-desc">' + desc + "</p>" : "") +
+      "</div>" +
+      (actionHtml || "") +
+      "</div>"
+    );
+  }
+
+  function statGrid(kpis) {
+    return (
+      '<div class="demo-stat-grid">' +
+      kpis.map(function (k) {
+        return (
+          '<div class="demo-stat-card"><label>' + k.l + "</label><strong" +
+          (k.warn ? ' class="warn"' : "") +
+          ">" + k.v + "</strong>" +
+          (k.s ? '<span' + (k.up ? ' class="up"' : "") + ">" + k.s + "</span>" : "") +
+          "</div>"
+        );
+      }).join("") +
       "</div>"
     );
   }
 
   function kpiRow(kpis) {
-    return (
-      '<div class="demo-kpi-row">' +
-      kpis.map(function (k) {
-        return (
-          '<div class="demo-kpi"><label>' + k.l + "</label><strong" +
-          (k.warn ? ' class="warn"' : "") +
-          ">" + k.v + "</strong><span" +
-          (k.up ? ' class="up"' : "") +
-          ">" + k.s + "</span></div>"
-        );
-      }).join("") +
-      "</div>"
-    );
+    return statGrid(kpis);
   }
 
   function el(tag, cls, html) {
@@ -162,168 +214,175 @@
 
   function renderInsights() {
     var s = SCENARIOS[state.scenarioKey];
+    var signalsHtml = LIVE_SIGNALS.map(function (sig) {
+      return (
+        '<div class="cc-signal cc-signal-' + sig.status + '">' +
+        '<div class="cc-signal-top"><span class="cc-signal-dot"></span><span>' + sig.label + "</span></div>" +
+        '<strong>' + sig.value + "</strong>" +
+        (sig.detail ? '<span class="cc-signal-detail">' + sig.detail + "</span>" : "") +
+        "</div>"
+      );
+    }).join("");
+
     var findingsHtml = s.findings
       .map(function (f) {
+        var sev = f.status === "red" ? "high" : f.status === "amber" ? "medium" : "low";
         return (
-          '<div class="cc-finding">' +
-          statusDot(f.status) +
-          '<span class="finding-tag">' +
-          f.tag +
-          "</span><span>" +
-          f.text +
-          "</span></div>"
+          '<div class="cc-finding-card cc-sev-' + sev + '">' +
+          '<span class="cc-domain-badge">' + f.tag + "</span>" +
+          "<p>" + f.text + "</p></div>"
         );
       })
       .join("");
 
+    var quickCmdHtml = QUICK_COMMANDS.map(function (cmd) {
+      var short = cmd.text.length > 42 ? cmd.text.slice(0, 42) + "…" : cmd.text;
+      return (
+        '<button type="button" class="cc-quick-chip" data-scenario="' + cmd.key + '" title="' +
+        cmd.text.replace(/"/g, "&quot;") + '">' + short + "</button>"
+      );
+    }).join("");
+
+    var dashCmdHtml = DASHBOARD_COMMANDS.map(function (cmd) {
+      return (
+        '<button type="button" class="cc-dash-cmd" data-scenario="' + cmd.key + '">' + cmd.label + "</button>"
+      );
+    }).join("");
+
     var scanHtml = state.analyzing
-      ? '<span class="cc-scan-pulse"></span> Cross-checking sales, labor, inventory…'
-      : '<span class="cc-scan-done">✓</span> Analysis complete — "' + s.confidence + '" confidence';
+      ? '<div class="cc-scan-panel"><div class="cc-scan-title">Cross-checking restaurant data…</div><div class="cc-scan-domains">' +
+        ["Sales", "Labor", "Inventory", "Scheduling", "Vendor invoices", "Waste logs", "Guest reviews", "Employee performance"]
+          .map(function (d, i) {
+            return '<div class="cc-scan-domain' + (i <= 3 ? " done" : "") + '">' + (i <= 3 ? "✓" : "…") + " " + d + "</div>";
+          }).join("") +
+        "</div></div>"
+      : "";
+
+    var responseHtml = state.analyzing
+      ? scanHtml
+      : '<div class="cc-response">' +
+        '<p class="cc-response-label">Command center response</p>' +
+        '<h3 class="cc-response-headline">' + s.headline + "</h3>" +
+        '<div class="cc-response-metrics">' +
+        '<div><label>Sales</label><strong>' + s.metrics.sales + "</strong></div>" +
+        '<div><label>Profit</label><strong>' + s.metrics.profit + "</strong></div>" +
+        '<div><label>Labor</label><strong class="' + s.laborClass + '">' + s.metrics.labor + "</strong></div>" +
+        "</div>" +
+        '<div class="cc-findings-grid">' + findingsHtml + "</div>" +
+        '<p class="cc-scanned">Analyzed: ' + s.scanned.join(" · ") + ' · <span class="cc-confidence">' + s.confidence + " confidence</span></p>" +
+        "</div>";
 
     return (
-      '<div class="demo-screen demo-screen-insights' +
-      (state.analyzing ? " is-loading" : "") +
-      '" data-screen="insights">' +
-      '<div class="cc-metrics">' +
-      '<div class="cc-metric"><label>Sales</label><strong class="green">' +
-      s.metrics.sales +
-      "</strong></div>" +
-      '<div class="cc-metric"><label>Profit</label><strong class="green">' +
-      s.metrics.profit +
-      "</strong></div>" +
-      '<div class="cc-metric"><label>Labor</label><strong class="' +
-      s.laborClass +
-      '">' +
-      s.metrics.labor +
-      "</strong></div></div>" +
-      '<div class="cc-question-box"><div class="cc-label">You asked:</div>' +
-      '<div class="cc-question-text">' +
-      s.question +
-      "</div></div>" +
-      '<div class="cc-headline-block"><div class="cc-headline">' +
-      s.headline +
-      "</div></div>" +
-      '<div class="cc-findings">' +
-      findingsHtml +
+      '<div class="demo-screen" data-screen="insights">' +
+      screenHeader("Command Center", "Ask plain-English questions — cross-checks every part of your business") +
+      '<div class="cc-card">' +
+      '<div class="cc-card-header">' +
+      '<div class="cc-card-header-top">' +
+      '<div><p class="cc-eyebrow">Restaurant Command Center</p><h3 class="cc-location-title">Downtown Bistro</h3>' +
+      '<p class="cc-card-desc">Ask plain-English questions. The system cross-checks sales, labor, inventory, scheduling, vendor invoices, waste, reviews, and employee data — together.</p></div>' +
+      '<div class="cc-live-badge"><span class="cc-live-dot"></span> Live <span class="cc-live-count">2 critical</span></div>' +
       "</div>" +
-      '<div class="cc-scan' +
-      (state.analyzing ? " active" : "") +
-      '">' +
-      scanHtml +
-      "</div>" +
-      '<div class="cc-scanned">Analyzed: ' +
-      s.scanned.join(" · ") +
-      "</div>" +
-      '<div class="cc-controls">' +
-      '<div class="cc-input-row">' +
-      '<input type="text" class="cc-input demo-cc-input" placeholder="Ask anything about your restaurant…" value="' +
+      '<div class="cc-signals">' + signalsHtml + "</div>" +
+      '<div class="cc-input-wrap">' +
+      '<input type="text" class="cc-input demo-cc-input" placeholder="What\'s hurting my profit this week?" value="' +
       s.question.replace(/"/g, "&quot;") +
       '" aria-label="Ask the Command Center" />' +
-      '<button type="button" class="cc-analyze-btn demo-analyze-btn"' +
-      (state.analyzing ? " disabled" : "") +
-      ">Analyze</button></div>" +
-      '<div class="cc-chips demo-cc-chips">' +
-      SCENARIO_KEYS.map(function (key) {
-        var sc = SCENARIOS[key];
-        var labels = {
-          profit: "Profit leaks",
-          rush: "Before dinner rush",
-          order: "Order for tomorrow",
-          coach: "Coach employees",
-          weekend: "Weekend forecast",
-        };
-        return (
-          '<button type="button" class="cc-chip' +
-          (state.scenarioKey === key ? " active" : "") +
-          '" data-scenario="' +
-          key +
-          '">' +
-          labels[key] +
-          "</button>"
-        );
-      }).join("") +
-      "</div></div></div>"
+      '<button type="button" class="cc-analyze-btn demo-analyze-btn"' + (state.analyzing ? " disabled" : "") + ">Analyze</button>" +
+      "</div>" +
+      '<div class="cc-quick-chips">' + quickCmdHtml + "</div>" +
+      "</div>" +
+      '<div class="cc-quick-actions"><p>Quick commands</p><div class="cc-dash-cmds">' + dashCmdHtml + "</div></div>" +
+      '<div class="cc-card-body">' + responseHtml + "</div>" +
+      "</div></div>"
     );
   }
 
   function renderDashboard() {
     return (
       '<div class="demo-screen" data-screen="dashboard">' +
-      screenHeader("Dashboard", "Downtown Bistro — daily operations overview") +
-      kpiRow([
-        { l: "Weekly revenue", v: "$24,820", s: "86 orders", up: true },
-        { l: "Monthly expenses", v: "$18,450", s: "Last 30 days" },
-        { l: "Active staff", v: "14", s: "42 menu items" },
-        { l: "Photos uploaded", v: "128", s: "3 low stock alerts", warn: true },
+      screenHeader(
+        "Dashboard",
+        "Downtown Bistro — overview of your restaurant operations",
+        '<button type="button" class="demo-header-btn" data-screen="photos">Capture Photo</button>'
+      ) +
+      statGrid([
+        { l: "Weekly Revenue", v: "$24,820", s: "86 orders this week", up: true },
+        { l: "Monthly Expenses", v: "$18,450", s: "Last 30 days" },
+        { l: "Active Staff", v: "14", s: "42 menu items" },
+        { l: "Photos Uploaded", v: "128", s: "3 low stock alerts", warn: true },
       ]) +
-      '<div class="demo-alert">⚠ Low stock: Salmon (8 lb), Romaine (2 cases), Brioche buns (1 case) — ' +
-      '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="order">Ask AI to draft order →</button></div>' +
-      '<div class="demo-panel"><div class="demo-panel-head">AI insights</div>' +
-      '<div class="demo-insight-item"><span class="demo-insight-sev high">High</span><strong>Labor cost above target</strong><p>31.2% labor vs 28% goal — review Friday dinner schedule.</p>' +
-      '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="profit">Open Command Center →</button></div>' +
-      '<div class="demo-insight-item"><span class="demo-insight-sev medium">Medium</span><strong>Waste trending up</strong><p>$420 waste this week — prep variance on salmon and greens.</p></div>' +
-      "</div>" +
-      '<div class="demo-panel"><div class="demo-panel-head">Recent activity</div>' +
-      '<div class="demo-list-item"><span>Order #2184 created</span><span></span><span>2m ago</span></div>' +
-      '<div class="demo-list-item"><span>Inventory count updated</span><span></span><span>1h ago</span></div>' +
-      '<div class="demo-list-item"><span>Schedule published</span><span></span><span>3h ago</span></div>' +
-      "</div></div>"
+      '<div class="demo-alert">⚠ <strong>Low Stock Alerts</strong> — Salmon: 8 lb (min 40), Romaine: 2 cases (min 5), Brioche buns: 1 case (min 3). ' +
+      '<button type="button" class="demo-link-btn" data-goto="inventory">View inventory →</button></div>' +
+      '<div class="demo-card"><h3 class="demo-card-title">AI Business Insights</h3>' +
+      '<div class="demo-insight-item"><span class="demo-insight-sev high">High</span><strong>Labor cost above target</strong><p>31.2% labor vs 28% goal — review Friday dinner schedule.</p></div>' +
+      '<div class="demo-insight-item"><span class="demo-insight-sev medium">Medium</span><strong>Waste trending up</strong><p>$420 waste this week — prep variance on salmon and greens.</p></div></div>' +
+      '<div class="demo-two-col">' +
+      '<div class="demo-card"><h3 class="demo-card-title">Quick Actions</h3>' +
+      '<div class="demo-quick-actions-grid">' +
+      '<button type="button" class="demo-quick-action" data-screen="orders"><span>📋</span> Orders</button>' +
+      '<button type="button" class="demo-quick-action" data-screen="inventory"><span>📦</span> Inventory</button>' +
+      '<button type="button" class="demo-quick-action" data-screen="staff"><span>👥</span> Staff</button>' +
+      '<button type="button" class="demo-quick-action" data-screen="finances"><span>💰</span> Finances</button>' +
+      "</div></div>" +
+      '<div class="demo-card"><h3 class="demo-card-title">Recent Activity</h3>' +
+      '<div class="demo-list-item"><span>ORDER_CREATED</span><span class="badge-new">Order</span><span>2m ago</span></div>' +
+      '<div class="demo-list-item"><span>INVENTORY_UPDATED</span><span class="badge-open">Stock</span><span>1h ago</span></div>' +
+      '<div class="demo-list-item"><span>SCHEDULE_PUBLISHED</span><span class="badge-done">Staff</span><span>3h ago</span></div>' +
+      "</div></div></div>"
     );
   }
 
   function renderPhotos() {
-    var cats = [
-      { name: "Menu Items", count: 24, color: "orange" },
-      { name: "Inventory", count: 18, color: "blue" },
-      { name: "Receipts", count: 12, color: "green" },
-      { name: "Staff", count: 8, color: "purple" },
-      { name: "Food Prep", count: 15, color: "red" },
-      { name: "Marketing", count: 9, color: "pink" },
-      { name: "Facility", count: 6, color: "slate" },
-      { name: "Maintenance", count: 4, color: "amber" },
-    ];
+    var cats = ["All", "Menu Items", "Inventory", "Receipts", "Staff", "Food Prep", "Marketing"];
     return (
       '<div class="demo-screen" data-screen="photos">' +
-      screenHeader("Photo Library", "Capture and organize photos by category") +
-      '<div class="demo-upload-zone">📷 Drop photos or tap to upload — AI auto-tags by category</div>' +
-      '<div class="demo-photo-grid">' +
-      cats.map(function (c) {
-        return (
-          '<div class="demo-photo-cat demo-photo-cat-' + c.color + '">' +
-          "<strong>" + c.name + "</strong><span>" + c.count + " photos</span></div>"
-        );
+      screenHeader("Photo Library", "Capture and organize photos by category — menu, inventory, receipts, and more") +
+      '<div class="demo-upload-zone">Drop photos here or click to upload — AI auto-tags by category</div>' +
+      '<div class="demo-photo-pills">' +
+      cats.map(function (c, i) {
+        return '<button type="button" class="demo-photo-pill' + (i === 0 ? " active" : "") + '">' + c + "</button>";
       }).join("") +
       "</div>" +
-      '<div class="demo-panel"><div class="demo-panel-head">Recent uploads</div>' +
-      '<div class="demo-photo-row"><span class="demo-photo-thumb">🥩</span><div><strong>Ribeye plating</strong><br><span>Menu · AI: Premium cut, medium-rare</span></div></div>' +
-      '<div class="demo-photo-row"><span class="demo-photo-thumb">🧾</span><div><strong>Sysco receipt</strong><br><span>Receipt · AI: $1,842 produce order</span></div></div>' +
+      '<div class="demo-photo-grid">' +
+      ["Ribeye plating", "Walk-in cooler", "Sysco receipt", "Line setup", "Brunch promo", "Bar garnish"]
+        .map(function (name) {
+          return '<div class="demo-photo-tile"><div class="demo-photo-tile-img"></div><span>' + name + "</span></div>";
+        }).join("") +
       "</div></div>"
     );
   }
 
   function renderMenu() {
-    var items = [
-      { cat: "Mains", name: "Wood-Fired Ribeye", price: "$42", avail: true, cost: "$11.20" },
-      { cat: "Mains", name: "Pan-Seared Salmon", price: "$34", avail: true, cost: "$9.80" },
-      { cat: "Appetizers", name: "Burrata & Heirloom", price: "$16", avail: true, cost: "$4.10" },
-      { cat: "Appetizers", name: "Crispy Calamari", price: "$14", avail: false, cost: "$3.60" },
-      { cat: "Desserts", name: "Chocolate Lava Cake", price: "$12", avail: true, cost: "$2.40" },
-      { cat: "Beverages", name: "House Old Fashioned", price: "$14", avail: true, cost: "$2.80" },
+    var sections = [
+      { cat: "Mains", items: [
+        { name: "Wood-Fired Ribeye", price: "$42", avail: true },
+        { name: "Pan-Seared Salmon", price: "$34", avail: true },
+      ]},
+      { cat: "Appetizers", items: [
+        { name: "Burrata & Heirloom", price: "$16", avail: true },
+        { name: "Crispy Calamari", price: "$14", avail: false },
+      ]},
     ];
     return (
       '<div class="demo-screen" data-screen="menu">' +
-      screenHeader("Menu Management", "Categories, pricing, availability, and recipe costs") +
-      '<div class="demo-toolbar"><span class="demo-toolbar-pill active">All</span><span class="demo-toolbar-pill">Mains</span><span class="demo-toolbar-pill">Appetizers</span><span class="demo-toolbar-pill">Desserts</span><span class="demo-toolbar-pill">Beverages</span></div>' +
-      '<div class="demo-menu-list">' +
-      items.map(function (item) {
+      screenHeader("Menu", "Categories, pricing, availability, and recipe costs") +
+      sections.map(function (sec) {
         return (
-          '<div class="demo-menu-row">' +
-          '<div><span class="demo-menu-cat">' + item.cat + "</span><strong>" + item.name + "</strong></div>" +
-          '<div class="demo-menu-meta"><span>Cost ' + item.cost + "</span><strong>" + item.price + "</strong>" +
-          '<span class="' + (item.avail ? "badge-done" : "badge-open") + '">' + (item.avail ? "Available" : "86'd") + "</span></div></div>"
+          '<div class="demo-menu-section"><h3 class="demo-menu-section-title">' + sec.cat + "</h3>" +
+          '<div class="demo-menu-cards">' +
+          sec.items.map(function (item) {
+            return (
+              '<div class="demo-menu-card">' +
+              '<div class="demo-menu-card-img"></div>' +
+              "<strong>" + item.name + "</strong>" +
+              '<div class="demo-menu-card-meta"><span>' + item.price + "</span>" +
+              '<span class="' + (item.avail ? "badge-done" : "badge-open") + '">' + (item.avail ? "Available" : "86'd") + "</span></div></div>"
+            );
+          }).join("") +
+          "</div></div>"
         );
       }).join("") +
-      "</div></div>"
+      "</div>"
     );
   }
 
@@ -339,8 +398,8 @@
 
     return (
       '<div class="demo-screen" data-screen="analytics">' +
-      screenHeader("Analytics", "12-tab intelligence suite — click any tab") +
-      '<div class="demo-analytics-tabs" role="tablist">' + tabsHtml + "</div>" +
+      screenHeader("Analytics", "Restaurant intelligence — last 30 days") +
+      '<div class="demo-analytics-tabs-wrap" role="tablist">' + tabsHtml + "</div>" +
       '<div class="demo-analytics-content">' +
       '<h3 class="demo-analytics-tab-title">' + tab.title + "</h3>" +
       kpiRow(tab.kpis.map(function (k) {
@@ -361,24 +420,24 @@
   function renderOrders() {
     return (
       '<div class="demo-screen" data-screen="orders">' +
-      screenHeader("Orders", "Create orders, track status, and link to tables") +
+      screenHeader("Orders", "Track active and completed orders") +
       '<div class="demo-toolbar"><button type="button" class="demo-action-btn">+ New order</button><span class="demo-toolbar-pill active">All</span><span class="demo-toolbar-pill">Open</span><span class="demo-toolbar-pill">Paid</span></div>' +
       '<div class="demo-orders">' +
       [
-        { id: "#2184", table: "Table 12", status: "Preparing", total: "$86.40", items: "2× Ribeye, 1× Caesar" },
-        { id: "#2183", table: "Bar 3", status: "Served", total: "$42.00", items: "Burger, Fries, 2× Beer" },
-        { id: "#2182", table: "Takeout", status: "New", total: "$31.50", items: "Pad Thai, Spring rolls" },
-        { id: "#2181", table: "Table 8", status: "Paid", total: "$124.80", items: "Chef's tasting menu ×2" },
+        { id: "#2184", table: "Table 12", status: "PREPARING", total: "$86.40", items: "2× Ribeye, 1× Caesar" },
+        { id: "#2183", table: "Bar 3", status: "SERVED", total: "$42.00", items: "Burger, Fries, 2× Beer" },
+        { id: "#2182", table: "Takeout", status: "PENDING", total: "$31.50", items: "Pad Thai, Spring rolls" },
+        { id: "#2181", table: "Table 8", status: "PAID", total: "$124.80", items: "Chef's tasting menu ×2" },
       ]
         .map(function (o) {
           var cls =
-            o.status === "New"
-              ? "badge-new"
-              : o.status === "Preparing"
-                ? "badge-open"
-                : o.status === "Served"
-                  ? "badge-open"
-                  : "badge-done";
+            o.status === "PENDING"
+              ? "badge-pending"
+              : o.status === "PREPARING"
+                ? "badge-preparing"
+                : o.status === "SERVED"
+                  ? "badge-served"
+                  : "badge-paid";
           return (
             '<div class="demo-order-card">' +
             '<div class="demo-order-top"><strong>' +
@@ -406,31 +465,24 @@
   function renderInventory() {
     return (
       '<div class="demo-screen" data-screen="inventory">' +
-      screenHeader("Inventory", "Stock levels, par levels, waste, and vendor pricing") +
-      '<div class="demo-inv-list">' +
+      screenHeader("Inventory", "Track stock levels, suppliers, and reorder points") +
+      '<table class="demo-table-data"><thead><tr><th>Item</th><th>On hand</th><th>Par</th><th>Status</th></tr></thead><tbody>' +
       [
-        { name: "Atlantic Salmon", qty: "8 lb", par: "40 lb", status: "red" },
-        { name: "Romaine Hearts", qty: "2 cases", par: "5 cases", status: "amber" },
-        { name: "Brioche Buns", qty: "1 case", par: "3 cases", status: "amber" },
-        { name: "Olive Oil (EVOO)", qty: "4 gal", par: "2 gal", status: "green" },
-        { name: "Ribeye Strip", qty: "22 lb", par: "25 lb", status: "green" },
-        { name: "Heavy Cream", qty: "3 qt", par: "4 qt", status: "amber" },
+        { name: "Atlantic Salmon", qty: "8 lb", par: "40 lb", status: "Low Stock" },
+        { name: "Romaine Hearts", qty: "2 cases", par: "5 cases", status: "Low Stock" },
+        { name: "Brioche Buns", qty: "1 case", par: "3 cases", status: "Low Stock" },
+        { name: "Olive Oil (EVOO)", qty: "4 gal", par: "2 gal", status: "OK" },
+        { name: "Ribeye Strip", qty: "22 lb", par: "25 lb", status: "OK" },
       ]
         .map(function (item) {
           return (
-            '<div class="demo-inv-row">' +
-            statusDot(item.status) +
-            "<div><strong>" +
-            item.name +
-            "</strong><br><span>" +
-            item.qty +
-            " on hand · par " +
-            item.par +
-            "</span></div></div>"
+            "<tr><td><strong>" + item.name + "</strong></td><td>" + item.qty +
+            "</td><td>" + item.par + '</td><td><span class="' +
+            (item.status === "Low Stock" ? "badge-low-stock" : "badge-ok") + '">' + item.status + "</span></td></tr>"
           );
         })
         .join("") +
-      "</div>" +
+      "</tbody></table>" +
       '<button type="button" class="demo-action-btn demo-link-btn" data-goto="insights" data-scenario="order">Ask AI for suggested order →</button>' +
       "</div>"
     );
@@ -446,22 +498,24 @@
     ];
     return (
       '<div class="demo-screen" data-screen="staff">' +
-      screenHeader("Staff & Scheduling", "Team roster, roles, shifts, and performance") +
-      kpiRow([
-        { l: "Active staff", v: "14", s: "5 roles" },
-        { l: "Scheduled (wk)", v: "312 hrs", s: "vs 298 plan" },
-        { l: "Open shifts", v: "2", s: "Fri dinner", warn: true },
-        { l: "Overtime risk", v: "2 staff", s: "This week" },
-      ]) +
-      '<div class="demo-staff-list">' +
-      team.map(function (m) {
-        return (
-          '<div class="demo-staff-row"><div class="demo-staff-avatar">' + m.name.charAt(0) +
-          '</div><div><strong>' + m.name + '</strong><br><span>' + m.role + " · " + m.shift +
-          '</span></div><span class="demo-staff-perf">' + m.perf + "</span></div>"
-        );
-      }).join("") +
+      screenHeader("Staff", "Team members, roles, shifts, and labor performance") +
+      '<div class="demo-subtabs">' +
+      '<button type="button" class="demo-subtab' + (state.staffTab === "schedule" ? " active" : "") + '" data-staff-tab="schedule">Schedule</button>' +
+      '<button type="button" class="demo-subtab' + (state.staffTab === "team" ? " active" : "") + '" data-staff-tab="team">Team</button>' +
       "</div>" +
+      (state.staffTab === "schedule"
+        ? '<div class="demo-schedule"><div class="demo-schedule-row"><span>Fri Dinner</span><strong>4 servers</strong><span class="badge-low-stock">Understaffed</span></div>' +
+          '<div class="demo-schedule-row"><span>Sat Brunch</span><strong>6 staff</strong><span class="badge-ok">On plan</span></div>' +
+          '<div class="demo-schedule-row"><span>Sun Dinner</span><strong>5 servers</strong><span class="badge-ok">On plan</span></div></div>'
+        : '<div class="demo-staff-list">' +
+          team.map(function (m) {
+            return (
+              '<div class="demo-staff-row"><div class="demo-staff-avatar">' + m.name.charAt(0) +
+              '</div><div><strong>' + m.name + '</strong><br><span>' + m.role + " · " + m.shift +
+              '</span></div><span class="demo-staff-perf">' + m.perf + "</span></div>"
+            );
+          }).join("") +
+          "</div>") +
       '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="coach">Who needs coaching? Ask AI →</button>' +
       "</div>"
     );
@@ -484,7 +538,7 @@
     ];
     return (
       '<div class="demo-screen" data-screen="tables">' +
-      screenHeader("Table Floor Plan", "Visual map — available, occupied, and reserved") +
+      screenHeader("Tables", "Visual table map — available, occupied, and reserved states") +
       '<div class="demo-table-legend">' +
       '<span><i class="demo-table-dot available"></i> Available (5)</span>' +
       '<span><i class="demo-table-dot occupied"></i> Occupied (5)</span>' +
@@ -504,12 +558,11 @@
   function renderFinances() {
     return (
       '<div class="demo-screen" data-screen="finances">' +
-      screenHeader("Finances", "Expenses, receipts, and P&L tracking") +
-      kpiRow([
-        { l: "Expenses (30d)", v: "$18,450", s: "Tracked" },
-        { l: "Food purchases", v: "$8,220", s: "44% of spend" },
-        { l: "Labor (payroll)", v: "$7,640", s: "41%" },
-        { l: "Receipts scanned", v: "24", s: "AI extracted" },
+      screenHeader("Finances", "Revenue, expenses, and profit overview") +
+      statGrid([
+        { l: "Weekly Revenue", v: "$24,820", s: "86 orders", up: true },
+        { l: "Monthly Expenses", v: "$18,450", s: "Last 30 days" },
+        { l: "Net (est.)", v: "$6,370", s: "Weekly margin", up: true },
       ]) +
       '<div class="demo-upload-zone demo-upload-sm">🧾 Scan receipt — AI extracts vendor, amount, and category</div>' +
       '<div class="demo-panel"><div class="demo-panel-head">Recent expenses</div>' +
@@ -522,24 +575,40 @@
   }
 
   function renderSocial() {
+    var tabs = [
+      { id: "compose", label: "Compose" },
+      { id: "accounts", label: "Accounts" },
+      { id: "traffic", label: "Website Traffic" },
+      { id: "posts", label: "Posts" },
+    ];
+    var tabHtml = tabs.map(function (t) {
+      return '<button type="button" class="demo-subtab' + (state.socialTab === t.id ? " active" : "") + '" data-social-tab="' + t.id + '">' + t.label + "</button>";
+    }).join("");
+
+    var content =
+      state.socialTab === "accounts"
+        ? '<div class="demo-social-accounts">' +
+          '<div class="demo-social-acct connected"><strong>Instagram</strong><span>2,840 followers · Connected</span></div>' +
+          '<div class="demo-social-acct connected"><strong>Facebook</strong><span>1,120 followers · Connected</span></div>' +
+          '<div class="demo-social-acct connected"><strong>Google Business</strong><span>4.6★ · 142 reviews</span></div></div>'
+        : state.socialTab === "traffic"
+          ? statGrid([
+              { l: "Visitors (30d)", v: "4,280", s: "+12%" },
+              { l: "Page views", v: "12,400", s: "3.2 pages/session" },
+              { l: "Bounce rate", v: "38%", s: "Improving" },
+            ])
+          : state.socialTab === "posts"
+            ? '<div class="demo-card"><div class="demo-list-item"><span>Saturday brunch promo</span><span class="badge-preparing">Scheduled</span><span>Fri 9am</span></div>' +
+              '<div class="demo-list-item"><span>New menu item spotlight</span><span class="badge-served">Published</span><span>Mon</span></div></div>'
+            : '<div class="demo-compose"><label>Draft post</label>' +
+              '<div class="demo-compose-box">Saturday brunch is back — reserve your patio table. #DowntownBistro</div>' +
+              '<div class="demo-compose-actions"><button type="button" class="demo-action-btn">Schedule</button></div></div>';
+
     return (
       '<div class="demo-screen" data-screen="social">' +
-      screenHeader("Social & Web", "Publish posts, manage accounts, and track website traffic") +
-      '<div class="demo-social-accounts">' +
-      '<div class="demo-social-acct connected"><strong>Instagram</strong><span>2,840 followers · Connected</span></div>' +
-      '<div class="demo-social-acct connected"><strong>Facebook</strong><span>1,120 followers · Connected</span></div>' +
-      '<div class="demo-social-acct connected"><strong>Google Business</strong><span>4.6★ · 142 reviews</span></div>' +
-      "</div>" +
-      kpiRow([
-        { l: "Scheduled posts", v: "3", s: "This week" },
-        { l: "Website visitors", v: "4,280", s: "30 days" },
-        { l: "Bounce rate", v: "38%", s: "Improving" },
-        { l: "Top referrer", v: "Google", s: "62%" },
-      ]) +
-      '<div class="demo-compose"><label>Draft post</label>' +
-      '<div class="demo-compose-box">Saturday brunch is back — reserve your patio table. 🥂 #DowntownBistro</div>' +
-      '<div class="demo-compose-actions"><button type="button" class="demo-action-btn">Schedule</button><button type="button" class="demo-toolbar-pill">Publish now</button></div>' +
-      "</div></div>"
+      screenHeader("Social Media", "Publish posts, manage accounts, and track website traffic") +
+      '<div class="demo-subtabs">' + tabHtml + "</div>" + content +
+      "</div>"
     );
   }
 
@@ -552,9 +621,8 @@
         item.id +
         '" title="' +
         item.label +
-        '"><span class="demo-nav-icon">' +
-        item.icon +
-        '</span><span class="demo-nav-label">' +
+        '">' + navIcon(item.icon) +
+        '<span class="demo-nav-label">' +
         item.label +
         "</span></button>"
       );
@@ -573,6 +641,15 @@
       renderSocial() +
       renderInsights();
 
+    var mobileNavHtml = NAV.slice(0, 5).map(function (item) {
+      return (
+        '<button type="button" class="demo-mobile-nav-item' +
+        (state.screen === item.id ? " active" : "") +
+        '" data-screen="' + item.id + '">' + navIcon(item.icon) +
+        '<span>' + item.label + "</span></button>"
+      );
+    }).join("");
+
     return (
       '<div class="pinnacle-demo" id="pinnacle-live-demo">' +
       '<aside class="demo-sidebar">' +
@@ -585,11 +662,19 @@
       '<div class="demo-sidebar-footer">' +
       '<div class="demo-user-name">Jordan Mitchell</div>' +
       '<span class="demo-user-badge">Owner</span>' +
-      '<div class="demo-location">📍 Downtown Bistro</div>' +
+      '<button type="button" class="demo-sign-out">Sign out</button>' +
+      '<label class="demo-location-label">Location</label>' +
+      '<select class="demo-location-select" aria-label="Switch location">' +
+      '<option value="downtown" selected>Downtown Bistro</option>' +
+      '<option value="midtown">Midtown Location</option>' +
+      "</select>" +
       "</div></aside>" +
       '<div class="demo-main">' +
+      '<div class="demo-main-inner">' +
       screens +
-      "</div></div>"
+      "</div></div>" +
+      '<nav class="demo-mobile-nav" aria-label="Mobile navigation">' + mobileNavHtml + "</nav>" +
+      "</div>"
     );
   }
 
@@ -643,8 +728,28 @@
     container.querySelectorAll(".demo-link-btn").forEach(function (btn) {
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
+        var goto = btn.getAttribute("data-goto");
         var scenario = btn.getAttribute("data-scenario");
+        if (goto && !scenario) {
+          showScreen(goto);
+          return;
+        }
         runAnalysis(scenario || state.scenarioKey);
+      });
+    });
+
+    container.querySelectorAll("[data-screen]").forEach(function (btn) {
+      if (btn.classList.contains("demo-nav-item") || btn.classList.contains("demo-mobile-nav-item")) return;
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        showScreen(btn.getAttribute("data-screen"));
+      });
+    });
+
+    container.querySelectorAll(".cc-quick-chip, .cc-dash-cmd").forEach(function (chip) {
+      chip.addEventListener("click", function (e) {
+        e.stopPropagation();
+        runAnalysis(chip.getAttribute("data-scenario"));
       });
     });
 
@@ -670,6 +775,29 @@
       chip.addEventListener("click", function (e) {
         e.stopPropagation();
         runAnalysis(chip.getAttribute("data-scenario"));
+      });
+    });
+
+    container.querySelectorAll(".demo-subtab[data-staff-tab]").forEach(function (tab) {
+      tab.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.staffTab = tab.getAttribute("data-staff-tab");
+        refreshDemo();
+      });
+    });
+
+    container.querySelectorAll(".demo-subtab[data-social-tab]").forEach(function (tab) {
+      tab.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.socialTab = tab.getAttribute("data-social-tab");
+        refreshDemo();
+      });
+    });
+
+    container.querySelectorAll(".demo-mobile-nav-item").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        showScreen(btn.getAttribute("data-screen"));
       });
     });
 
