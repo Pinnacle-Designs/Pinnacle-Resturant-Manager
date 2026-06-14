@@ -17,6 +17,7 @@ export interface PlanDefinition {
 
 const STARTER_ROUTES = [
   "/dashboard",
+  "/account",
   "/photos",
   "/menu",
   "/inventory",

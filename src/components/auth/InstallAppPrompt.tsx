@@ -94,6 +94,12 @@ export function InstallAppPrompt({ plan, onContinue, embedded }: InstallAppPromp
           {isInstalled ? "Open your workspace" : "Go to dashboard"}
         </Button>
       </div>
+      <p className="mt-4 text-center text-xs text-slate-500">
+        Want hands-off billing?{" "}
+        <a href="/account?tab=billing" className="font-medium text-orange-600 hover:text-orange-500">
+          Set up autopay in Account settings
+        </a>
+      </p>
     </div>
   );
 }

@@ -111,6 +111,7 @@ model User {
   email        String   @unique
   passwordHash String
   name         String
+  avatarUrl    String?
   role         AppRole
   locationId   String?
   location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
@@ -127,6 +128,13 @@ model Location {
   seatCount     Int      @default(40)
   squareFootage Float    @default(2000)
   plan          SubscriptionPlan @default(STARTER)
+  autopayEnabled Boolean  @default(false)
+  billingEmail   String?
+  paymentBrand   String?
+  paymentLast4   String?
+  paymentExpMonth Int?
+  paymentExpYear  Int?
+  nextBillingDate DateTime?
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

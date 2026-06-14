@@ -13,21 +13,22 @@ function createPrismaClient() {
   });
 }
 
-function hasCurrentSchema(client: PrismaClient): boolean {
-  return (
-    "websiteConnection" in client &&
-    "vendorPriceHistory" in client &&
-    "inventoryWaste" in client &&
-    "orderPayment" in client &&
-    "orderCheck" in client &&
-    "SubscriptionPlan" in Prisma
+function hasCurrentSchema(): boolean {
+  if (!("SubscriptionPlan" in Prisma)) return false;
+
+  const userModel = Prisma.dmmf.datamodel.models.find((m) => m.name === "User");
+  const locationModel = Prisma.dmmf.datamodel.models.find((m) => m.name === "Location");
+
+  return Boolean(
+    userModel?.fields.some((f) => f.name === "avatarUrl") &&
+      locationModel?.fields.some((f) => f.name === "autopayEnabled")
   );
 }
 
 function getPrismaClient() {
   const cached = globalForPrisma.prisma;
-  // Hot reload can keep an older Prisma client missing newly added models.
-  if (cached && hasCurrentSchema(cached)) {
+  // Hot reload can keep an older Prisma client missing newly added fields.
+  if (cached && hasCurrentSchema()) {
     return cached;
   }
   const client = createPrismaClient();

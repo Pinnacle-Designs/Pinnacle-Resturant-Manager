@@ -11,6 +11,7 @@ export interface SessionUser {
   role: AppRole;
   locationId: string | null;
   plan?: PlanId;
+  avatarUrl?: string | null;
 }
 
 function getSecret(): string {
@@ -94,6 +95,7 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
       role: data.role,
       locationId: data.locationId,
       plan: data.plan,
+      avatarUrl: data.avatarUrl,
     };
   } catch {
     return null;

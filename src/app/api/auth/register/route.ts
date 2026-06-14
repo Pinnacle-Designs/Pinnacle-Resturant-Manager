@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       name: restaurantName,
       address: "Add your address",
       plan,
+      billingEmail: email,
     },
   });
 

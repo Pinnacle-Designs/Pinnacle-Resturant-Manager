@@ -12,6 +12,7 @@ export interface AuthUser {
   role: AppRole;
   locationId: string | null;
   plan?: PlanId;
+  avatarUrl?: string | null;
 }
 
 interface AuthContextValue {

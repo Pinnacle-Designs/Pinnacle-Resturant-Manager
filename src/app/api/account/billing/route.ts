@@ -1,0 +1,119 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getLocationIdFromRequest } from "@/lib/location";
+import { requireAuth } from "@/lib/api-auth";
+import {
+  defaultNextBillingDate,
+  isValidExpiry,
+  parseCardNumber,
+} from "@/lib/billing";
+
+export async function PATCH(request: NextRequest) {
+  const { user, error } = await requireAuth(request);
+  if (error) return error;
+
+  if (user!.role !== "OWNER") {
+    return NextResponse.json(
+      { error: "Only the location owner can manage billing" },
+      { status: 403 }
+    );
+  }
+
+  const locationId = await getLocationIdFromRequest(request);
+  const body = await request.json();
+
+  const autopayEnabled = body.autopayEnabled === true;
+  const billingEmail = body.billingEmail
+    ? String(body.billingEmail).trim().toLowerCase()
+    : undefined;
+  const cardNumber = body.cardNumber ? String(body.cardNumber) : "";
+  const expMonth = body.expMonth != null ? Number(body.expMonth) : null;
+  const expYear = body.expYear != null ? Number(body.expYear) : null;
+  const removePaymentMethod = body.removePaymentMethod === true;
+
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: {
+      paymentLast4: true,
+      paymentBrand: true,
+      paymentExpMonth: true,
+      paymentExpYear: true,
+      billingEmail: true,
+      nextBillingDate: true,
+    },
+  });
+
+  if (!location) {
+    return NextResponse.json({ error: "Location not found" }, { status: 404 });
+  }
+
+  if (billingEmail !== undefined && billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
+    return NextResponse.json({ error: "Enter a valid billing email" }, { status: 400 });
+  }
+
+  let paymentBrand = location.paymentBrand;
+  let paymentLast4 = location.paymentLast4;
+  let paymentExpMonth = location.paymentExpMonth;
+  let paymentExpYear = location.paymentExpYear;
+
+  if (removePaymentMethod) {
+    paymentBrand = null;
+    paymentLast4 = null;
+    paymentExpMonth = null;
+    paymentExpYear = null;
+  } else if (cardNumber) {
+    const parsed = parseCardNumber(cardNumber);
+    if (!parsed) {
+      return NextResponse.json({ error: "Enter a valid card number" }, { status: 400 });
+    }
+    if (expMonth == null || expYear == null || !isValidExpiry(expMonth, expYear)) {
+      return NextResponse.json({ error: "Enter a valid expiration date" }, { status: 400 });
+    }
+    paymentBrand = parsed.brand;
+    paymentLast4 = parsed.last4;
+    paymentExpMonth = expMonth;
+    paymentExpYear = expYear < 100 ? 2000 + expYear : expYear;
+  }
+
+  if (autopayEnabled && !paymentLast4) {
+    return NextResponse.json(
+      { error: "Add a payment method before enabling autopay" },
+      { status: 400 }
+    );
+  }
+
+  const nextBillingDate =
+    autopayEnabled && !location.nextBillingDate
+      ? defaultNextBillingDate()
+      : location.nextBillingDate;
+
+  const updated = await prisma.location.update({
+    where: { id: locationId },
+    data: {
+      autopayEnabled,
+      billingEmail: billingEmail ?? location.billingEmail ?? user!.email,
+      paymentBrand,
+      paymentLast4,
+      paymentExpMonth,
+      paymentExpYear,
+      nextBillingDate: autopayEnabled ? nextBillingDate : null,
+    },
+    select: {
+      autopayEnabled: true,
+      billingEmail: true,
+      paymentBrand: true,
+      paymentLast4: true,
+      paymentExpMonth: true,
+      paymentExpYear: true,
+      nextBillingDate: true,
+    },
+  });
+
+  return NextResponse.json({
+    billing: {
+      ...updated,
+      nextBillingDate: updated.nextBillingDate?.toISOString() ?? null,
+      hasPaymentMethod: Boolean(updated.paymentLast4),
+    },
+  });
+}
