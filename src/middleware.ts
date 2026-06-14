@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
-import { getEmbedFrameAncestors, isEmbeddableRequest, isEmbeddableEmbedParam } from "@/lib/embed-config";
+import { getEmbedFrameAncestors, getMarketingFrameAncestors, isEmbeddableRequest, isEmbeddableEmbedParam } from "@/lib/embed-config";
 import { applyEmbedSessionParam } from "@/lib/embed-session-middleware";
 
 const PUBLIC_PATHS = [
@@ -30,7 +30,25 @@ function applyFramePolicy(request: NextRequest, response: NextResponse): NextRes
     response.headers.set("X-Frame-Options", "DENY");
   }
 
-  return applyDevCors(request, response);
+  return applyMarketingCors(request, applyDevCors(request, response));
+}
+
+/** Allow GitHub Pages / marketing sites to probe embed launch in production. */
+function applyMarketingCors(request: NextRequest, response: NextResponse): NextResponse {
+  const origin = request.headers.get("origin");
+  if (!origin) return response;
+
+  const allowed =
+    origin.endsWith(".github.io") ||
+    getMarketingFrameAncestors().includes(origin);
+
+  if (!allowed) return response;
+
+  response.headers.set("Access-Control-Allow-Origin", origin);
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  response.headers.append("Vary", "Origin");
+  return response;
 }
 
 /** Allow docs/Live Server to probe the app in local development. */

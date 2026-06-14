@@ -22,14 +22,12 @@
     );
   }
 
-  /** Docs and app on the same deployment (e.g. Vercel /docs). */
+  /** Docs on the same host as the app (e.g. Vercel /docs only). */
   function isDocsOnAppOrigin() {
     if (location.pathname.indexOf("/docs") !== 0) return false;
     var cfg = window.PINNACLE_CONFIG || {};
     var configured = (cfg.appUrl || "").replace(/\/$/, "");
-    if (configured && location.origin === configured) return true;
-    if (!isLocalHost() && location.protocol.startsWith("http")) return true;
-    return false;
+    return !!(configured && location.origin === configured);
   }
 
   function localDevHost() {
@@ -42,7 +40,10 @@
 
   function probeEmbedUrl(base) {
     var url =
-      base.replace(/\/$/, "") + "/api/embed/launch?path=" + encodeURIComponent(DEFAULT_PATH);
+      base.replace(/\/$/, "") +
+      "/api/embed/launch?path=" +
+      encodeURIComponent(DEFAULT_PATH) +
+      "&chrome=mobile";
     var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     var timer = controller
       ? setTimeout(function () {

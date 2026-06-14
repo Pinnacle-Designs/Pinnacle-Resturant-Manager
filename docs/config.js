@@ -6,8 +6,8 @@
  * - Local Live Server: auto-probes ports 3000–3005 on localhost / 127.0.0.1
  * - Production / GitHub Pages: set appUrl to your deployed app (below)
  *
- * On Vercel, set EMBED_FRAME_ANCESTORS to your docs origin if docs are hosted
- * separately (e.g. GitHub Pages). Not needed when docs are served from the app itself.
+ * On Vercel (optional): set GITHUB_PAGES_ORIGIN or EMBED_FRAME_ANCESTORS if your
+ * Pages URL uses a different GitHub user/org than the default in embed-config.
  */
 window.PINNACLE_CONFIG = {
   appUrl: "https://pinnacle-resturant-manager.vercel.app",

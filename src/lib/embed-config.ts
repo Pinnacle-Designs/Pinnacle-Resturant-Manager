@@ -59,13 +59,28 @@ export function getEmbedFrameAncestors(request?: { nextUrl: URL }): string {
   }
 
   const parts = ["'self'"];
+  for (const origin of getMarketingFrameAncestors()) {
+    if (!parts.includes(origin)) parts.push(origin);
+  }
+  return parts.join(" ");
+}
+
+/** Origins allowed to iframe the app (GitHub Pages marketing site, etc.). */
+export function getMarketingFrameAncestors(): string[] {
+  const origins: string[] = [];
   const extra = process.env.EMBED_FRAME_ANCESTORS?.trim();
   if (extra) {
     for (const origin of extra.split(/[\s,]+/)) {
-      if (origin) parts.push(origin);
+      if (origin) origins.push(origin);
     }
   }
-  return parts.join(" ");
+  const githubPages = process.env.GITHUB_PAGES_ORIGIN?.trim();
+  if (githubPages) origins.push(githubPages);
+
+  // Default: this repo's GitHub Pages (david-foy89.github.io/…)
+  origins.push("https://david-foy89.github.io");
+
+  return origins;
 }
 
 export function isEmbeddableRequest(pathname: string, embedParam: string | null): boolean {

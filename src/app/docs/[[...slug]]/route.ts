@@ -34,9 +34,20 @@ export async function GET(
   }
 
   try {
-    const content = await readFile(filePath);
+    const raw = await readFile(filePath);
     const ext = path.extname(filePath).toLowerCase();
-    return new NextResponse(content, {
+    let body: BodyInit = new Uint8Array(raw);
+
+    if (ext === ".html" && (!slug?.length || (slug.length === 1 && slug[0] === "index.html"))) {
+      const html = raw.toString("utf-8");
+      if (!html.includes("<base ")) {
+        body = html.replace("<head>", '<head>\n  <base href="/docs/" />');
+      } else {
+        body = html;
+      }
+    }
+
+    return new NextResponse(body, {
       headers: {
         "Content-Type": MIME[ext] || "application/octet-stream",
         "Cache-Control": "public, max-age=0, must-revalidate",

@@ -8,6 +8,23 @@
   <title>Pinnacle Restaurant Manager — AI-Powered Restaurant Operations</title>
   <link rel="icon" href="./assets/logo.png" type="image/png" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    /* Resolve asset/script base for Vercel (/docs) and GitHub Pages (/RepoName/) */
+    (function () {
+      var path = location.pathname;
+      if (path.indexOf("/docs") === 0) {
+        window.PINNACLE_DOCS_BASE = "/docs/";
+        return;
+      }
+      if (location.hostname.endsWith(".github.io")) {
+        var segs = path.split("/").filter(Boolean);
+        if (segs.length && /\.[a-z0-9]+$/i.test(segs[segs.length - 1])) segs.pop();
+        window.PINNACLE_DOCS_BASE = segs.length ? "/" + segs.join("/") + "/" : "/";
+        return;
+      }
+      window.PINNACLE_DOCS_BASE = "./";
+    })();
+  </script>
 </head>
 <body>
 
@@ -332,7 +349,15 @@
     </div>
   </div>
 
-  <script src="/docs/config.js"></script>
-  <script src="/docs/live-demo.js"></script>
+  <script>
+    (function () {
+      var base = window.PINNACLE_DOCS_BASE || "./";
+      ["config.js", "live-demo.js"].forEach(function (file) {
+        var s = document.createElement("script");
+        s.src = base.replace(/\/?$/, "/") + file;
+        document.body.appendChild(s);
+      });
+    })();
+  </script>
 </body>
 </html>
