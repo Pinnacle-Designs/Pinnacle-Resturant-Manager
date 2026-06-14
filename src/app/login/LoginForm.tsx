@@ -7,6 +7,7 @@ import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
 import { SignupPlanModal } from "@/components/auth/SignupPlanModal";
+import { PlanDemoLogins } from "@/components/auth/PlanDemoLogins";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -16,11 +17,11 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
 
-  const completeLogin = async () => {
+  const completeLogin = async (loginEmail = email, loginPassword = password) => {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Login failed");
@@ -99,6 +100,21 @@ export default function LoginForm() {
         </div>
 
         <SignupPlanModal open={signupOpen} onClose={() => setSignupOpen(false)} />
+
+        <PlanDemoLogins
+          loading={loading}
+          onLogin={async (loginEmail, loginPassword) => {
+            setLoading(true);
+            setError(null);
+            try {
+              await completeLogin(loginEmail, loginPassword);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Login failed");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Just exploring?{" "}

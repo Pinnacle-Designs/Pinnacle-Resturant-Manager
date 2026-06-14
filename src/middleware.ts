@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/seed",
+  "/api/auth/plan-demos",
   "/api/embed/launch",
 ];
 

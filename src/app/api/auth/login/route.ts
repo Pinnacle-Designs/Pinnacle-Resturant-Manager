@@ -9,7 +9,7 @@ import { enrichUserWithPlan } from "@/lib/location-plan";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
-import { isDemoAccountEmail } from "@/lib/demo-users";
+import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled } from "@/lib/demo-users";
 import { resolveUserWorkspace } from "@/lib/user-workspace";
 
 export async function GET(request: NextRequest) {
@@ -34,7 +34,11 @@ export async function POST(request: NextRequest) {
   const demoMode: DemoMode = body.demoMode === "fresh" ? "fresh" : "seeded";
   const useDemoWorkspace = body.demo === true && (body.demoMode === "seeded" || body.demoMode === "fresh");
 
-  if (!useDemoWorkspace && isDemoAccountEmail(email)) {
+  if (
+    !useDemoWorkspace &&
+    isDemoAccountEmail(email) &&
+    !(isPlanDemoAccountEmail(email) && planDemoLoginEnabled())
+  ) {
     return NextResponse.json(
       {
         error:
@@ -42,6 +46,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 403 }
     );
+  }
+
+  if (!useDemoWorkspace && isPlanDemoAccountEmail(email) && !planDemoLoginEnabled()) {
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
   let workspace = null;
