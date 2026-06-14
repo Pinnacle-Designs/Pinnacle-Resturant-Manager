@@ -1,18 +1,17 @@
-import { NextResponse } from "next/server";
 import {
   PLAN_DEMO_USERS,
   planDemoLoginEnabled,
   seedPlanDemoUsers,
 } from "@/lib/demo-users";
+import { privateJsonResponse } from "@/lib/secure-response";
 
 export async function GET() {
   if (!planDemoLoginEnabled()) {
-    return NextResponse.json({ enabled: false, accounts: [] });
+    return privateJsonResponse({ enabled: false, accounts: [] });
   }
 
-  return NextResponse.json({
+  return privateJsonResponse({
     enabled: true,
-    password: PLAN_DEMO_USERS[0]?.password ?? "demo1234",
     accounts: PLAN_DEMO_USERS.map((u) => ({
       email: u.email,
       plan: u.plan,
@@ -23,12 +22,16 @@ export async function GET() {
 
 export async function POST() {
   if (!planDemoLoginEnabled()) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return privateJsonResponse({ error: "Not found" }, { status: 404 });
   }
 
   const accounts = await seedPlanDemoUsers();
-  return NextResponse.json({
+  return privateJsonResponse({
     message: "Plan demo accounts ready",
-    accounts,
+    accounts: accounts.map(({ email, plan, locationName }) => ({
+      email,
+      plan,
+      locationName,
+    })),
   });
 }

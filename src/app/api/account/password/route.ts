@@ -1,26 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth";
-import { requireAuth } from "@/lib/api-auth";
+import { requireSecureAuth } from "@/lib/api-auth";
+import { isRateLimited } from "@/lib/rate-limit";
+import { validatePassword } from "@/lib/password-policy";
+import { privateJsonResponse } from "@/lib/secure-response";
 
 export async function POST(request: NextRequest) {
-  const { user, error } = await requireAuth(request);
+  const { user, error } = await requireSecureAuth(request);
   if (error) return error;
+
+  if (isRateLimited(`password:${user!.id}`, 5, 60_000)) {
+    return privateJsonResponse(
+      { error: "Too many password attempts. Try again shortly." },
+      { status: 429 }
+    );
+  }
 
   const body = await request.json();
   const currentPassword = String(body.currentPassword || "");
   const newPassword = String(body.newPassword || "");
 
   if (!currentPassword || !newPassword) {
-    return NextResponse.json(
+    return privateJsonResponse(
       { error: "Current and new password are required" },
       { status: 400 }
     );
   }
 
-  if (newPassword.length < 8) {
-    return NextResponse.json(
-      { error: "New password must be at least 8 characters" },
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    return privateJsonResponse({ error: passwordError }, { status: 400 });
+  }
+
+  if (currentPassword === newPassword) {
+    return privateJsonResponse(
+      { error: "New password must be different from your current password" },
       { status: 400 }
     );
   }
@@ -31,7 +46,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!dbUser || !verifyPassword(currentPassword, dbUser.passwordHash)) {
-    return NextResponse.json({ error: "Current password is incorrect" }, { status: 401 });
+    return privateJsonResponse({ error: "Current password is incorrect" }, { status: 401 });
   }
 
   await prisma.user.update({
@@ -39,5 +54,5 @@ export async function POST(request: NextRequest) {
     data: { passwordHash: hashPassword(newPassword) },
   });
 
-  return NextResponse.json({ message: "Password updated" });
+  return privateJsonResponse({ message: "Password updated" });
 }

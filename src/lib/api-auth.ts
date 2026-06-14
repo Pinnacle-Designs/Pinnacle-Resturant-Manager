@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AppRole } from "@prisma/client";
 import { getSessionUserFromRequest } from "./auth";
+import { prisma } from "./prisma";
+import type { SessionUser } from "./session";
 import {
   hasPermission,
   type Permission,
@@ -19,6 +21,48 @@ export async function requireAuth(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
   if (!user) return { user: null, error: unauthorizedResponse() };
   return { user, error: null };
+}
+
+/** Re-check the account is still active in the database (revoked/deactivated sessions). */
+export async function requireActiveAccount(user: SessionUser | null) {
+  if (!user) {
+    return { user: null, error: unauthorizedResponse() };
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      locationId: true,
+      avatarUrl: true,
+      active: true,
+    },
+  });
+
+  if (!dbUser?.active) {
+    return { user: null, error: unauthorizedResponse() };
+  }
+
+  return {
+    user: {
+      ...user,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role,
+      locationId: dbUser.locationId,
+      avatarUrl: dbUser.avatarUrl,
+    } satisfies SessionUser,
+    error: null,
+  };
+}
+
+export async function requireSecureAuth(request: NextRequest) {
+  const { user, error } = await requireAuth(request);
+  if (error) return { user: null, error };
+  return requireActiveAccount(user);
 }
 
 async function userHasPermission(

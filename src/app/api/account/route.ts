@@ -1,15 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getLocationIdFromRequest } from "@/lib/location";
-import { requireAuth } from "@/lib/api-auth";
+import { requireSecureAuth } from "@/lib/api-auth";
+import { userManagesBilling } from "@/lib/billing-auth";
 import { PLAN_BY_ID, type PlanId } from "@/lib/plans";
 import { planMonthlyAmount } from "@/lib/billing";
+import { privateJsonResponse } from "@/lib/secure-response";
+import {
+  getProviderConnections,
+  safeConnectionView,
+  kindToSubscriptionId,
+  kindToPosId,
+} from "@/lib/payments/providers";
 
 export async function GET(request: NextRequest) {
-  const { user, error } = await requireAuth(request);
+  const { user, error } = await requireSecureAuth(request);
   if (error) return error;
 
-  const locationId = await getLocationIdFromRequest(request);
+  const locationId = user!.locationId;
+  if (!locationId) {
+    return privateJsonResponse({ error: "No location assigned to this account" }, { status: 404 });
+  }
+
   const location = await prisma.location.findUnique({
     where: { id: locationId },
     select: {
@@ -26,13 +37,19 @@ export async function GET(request: NextRequest) {
   });
 
   if (!location) {
-    return NextResponse.json({ error: "Location not found" }, { status: 404 });
+    return privateJsonResponse({ error: "Location not found" }, { status: 404 });
   }
 
   const plan = location.plan as PlanId;
-  const canManageBilling = user!.role === "OWNER";
+  const canManageBilling = userManagesBilling(user!);
+  const connections = await getProviderConnections(locationId);
+  const subscriptionConn = connections.find((c) => c.purpose === "SUBSCRIPTION") ?? null;
+  const posConn = connections.find((c) => c.purpose === "POS") ?? null;
+  const subscriptionProvider = kindToSubscriptionId(subscriptionConn?.provider);
+  const posProvider = kindToPosId(posConn?.provider);
+  const stripeBilling = subscriptionConn?.provider === "STRIPE";
 
-  return NextResponse.json({
+  return privateJsonResponse({
     profile: {
       id: user!.id,
       email: user!.email,
@@ -49,14 +66,26 @@ export async function GET(request: NextRequest) {
       planName: PLAN_BY_ID[plan].name,
       monthlyAmount: planMonthlyAmount(plan),
       autopayEnabled: location.autopayEnabled,
-      billingEmail: location.billingEmail,
+      billingEmail: canManageBilling ? location.billingEmail : null,
       paymentBrand: canManageBilling ? location.paymentBrand : null,
       paymentLast4: canManageBilling ? location.paymentLast4 : null,
       paymentExpMonth: canManageBilling ? location.paymentExpMonth : null,
       paymentExpYear: canManageBilling ? location.paymentExpYear : null,
-      nextBillingDate: location.nextBillingDate?.toISOString() ?? null,
-      hasPaymentMethod: Boolean(location.paymentLast4),
+      nextBillingDate: canManageBilling
+        ? location.nextBillingDate?.toISOString() ?? null
+        : null,
+      hasPaymentMethod: canManageBilling
+        ? stripeBilling
+          ? Boolean(subscriptionConn?.metadata)
+          : Boolean(location.paymentLast4)
+        : false,
       canManage: canManageBilling,
+      subscriptionProvider,
+      posProvider,
+      integrations: {
+        subscription: safeConnectionView(subscriptionConn),
+        pos: safeConnectionView(posConn),
+      },
     },
   });
 }

@@ -5,6 +5,7 @@ import { isManagement } from "@/lib/permissions";
 import { seedDemoUsers } from "@/lib/demo-users";
 import { seedLocationData } from "@/lib/seed-data";
 import { getLocationId } from "@/lib/location";
+import { isAuthSeedRouteEnabled } from "@/lib/dev-routes";
 
 async function runSeed(request?: NextRequest) {
   await seedDemoUsers();
@@ -34,13 +35,17 @@ function seedHtml(result: Awaited<ReturnType<typeof seedLocationData>>) {
 <body>
   <h1 class="${result.alreadySeeded ? "warn" : "ok"}">${status}</h1>
   <p>${result.message}</p>
-  <p>Demo login users were refreshed (password: <code>demo1234</code>).</p>
+  <p>Demo login users were refreshed.</p>
   <p><a href="/dashboard">Go to dashboard</a> · <a href="/login">Login</a> · <a href="/">Website</a></p>
 </body>
 </html>`;
 }
 
 export async function GET(request: NextRequest) {
+  if (!isAuthSeedRouteEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const user = await getSessionUserFromRequest(request);
   if (!user) {
     return NextResponse.json(
@@ -77,6 +82,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isAuthSeedRouteEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const user = await getSessionUserFromRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

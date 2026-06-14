@@ -1,12 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import { requireSecureAuth } from "@/lib/api-auth";
+import { isProductionRuntime } from "@/lib/dev-routes";
+import { privateJsonResponse } from "@/lib/secure-response";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(LOCATION_COOKIE_NAME, body.locationId, {
+  const { user, error } = await requireSecureAuth(request);
+  if (error) return error;
+
+  const body = await request.json().catch(() => ({}));
+  const locationId = String(body.locationId || "").trim();
+
+  if (!locationId) {
+    return privateJsonResponse({ error: "Location is required" }, { status: 400 });
+  }
+
+  if (isProductionRuntime()) {
+    if (locationId !== user!.locationId) {
+      return privateJsonResponse({ error: "Forbidden" }, { status: 403 });
+    }
+  } else {
+    const exists = await prisma.location.findUnique({
+      where: { id: locationId },
+      select: { id: true },
+    });
+    if (!exists) {
+      return privateJsonResponse({ error: "Location not found" }, { status: 404 });
+    }
+  }
+
+  const response = privateJsonResponse({ success: true });
+  response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   });
   return response;

@@ -18,6 +18,7 @@ import { PageHeader, Button, Badge } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PermissionsTab } from "@/components/account/PermissionsTab";
+import { BillingIntegrations } from "@/components/account/BillingIntegrations";
 import { PLAN_BY_ID } from "@/lib/plans";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/permissions";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -55,6 +56,8 @@ interface AccountData {
     nextBillingDate: string | null;
     hasPaymentMethod: boolean;
     canManage: boolean;
+    subscriptionProvider: "manual" | "stripe";
+    posProvider: "none" | "stripe" | "square";
   };
 }
 
@@ -123,6 +126,19 @@ export function AccountClient() {
   useEffect(() => {
     void loadAccount();
   }, [loadAccount]);
+
+  useEffect(() => {
+    const stripe = searchParams.get("stripe");
+    const pos = searchParams.get("pos");
+    if (stripe === "success" || pos?.includes("connected")) {
+      setBillingMessage(
+        stripe === "success"
+          ? "Stripe subscription connected"
+          : "Payment integration connected"
+      );
+      void loadAccount();
+    }
+  }, [searchParams, loadAccount]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -209,7 +225,7 @@ export function AccountClient() {
         billingEmail,
       };
       if (cardNumber.trim()) {
-        payload.cardNumber = cardNumber;
+        payload.cardNumber = cardNumber.replace(/\D/g, "");
         payload.expMonth = Number(expMonth);
         payload.expYear = Number(expYear);
       }
@@ -238,6 +254,9 @@ export function AccountClient() {
 
   const removePaymentMethod = async () => {
     if (!data?.billing.canManage) return;
+    if (!window.confirm("Remove your saved payment method? Autopay will be turned off.")) {
+      return;
+    }
     setBillingSaving(true);
     setBillingMessage(null);
     try {
@@ -496,7 +515,17 @@ export function AccountClient() {
                 </Link>
               </div>
 
-              {data.billing.canManage ? (
+              <BillingIntegrations
+                plan={data.billing.plan}
+                planName={data.billing.planName}
+                monthlyAmount={data.billing.monthlyAmount}
+                canManage={data.billing.canManage}
+                subscriptionProvider={data.billing.subscriptionProvider}
+                posProvider={data.billing.posProvider}
+                onRefresh={loadAccount}
+              />
+
+              {data.billing.canManage && data.billing.subscriptionProvider === "manual" ? (
                 <form className="mt-6 max-w-lg space-y-4" onSubmit={saveBilling}>
                   <FormField label="Billing email">
                     <Input
@@ -538,33 +567,40 @@ export function AccountClient() {
                     <Input
                       inputMode="numeric"
                       autoComplete="cc-number"
+                      spellCheck={false}
                       placeholder="4242 4242 4242 4242"
                       value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 19);
+                        setCardNumber(digits.replace(/(\d{4})(?=\d)/g, "$1 "));
+                      }}
                     />
                   </FormField>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Exp month">
                       <Input
                         inputMode="numeric"
+                        autoComplete="cc-exp-month"
                         placeholder="MM"
                         maxLength={2}
                         value={expMonth}
-                        onChange={(e) => setExpMonth(e.target.value)}
+                        onChange={(e) => setExpMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
                       />
                     </FormField>
                     <FormField label="Exp year">
                       <Input
                         inputMode="numeric"
+                        autoComplete="cc-exp-year"
                         placeholder="YYYY"
                         maxLength={4}
                         value={expYear}
-                        onChange={(e) => setExpYear(e.target.value)}
+                        onChange={(e) => setExpYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
                       />
                     </FormField>
                   </div>
                   <p className="text-xs text-slate-400">
-                    We only store the last four digits and card brand — never the full card number.
+                    Card numbers are validated and discarded immediately. We only store the last
+                    four digits and card brand — never the full number or security code.
                   </p>
 
                   <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 px-4 py-3">
@@ -591,7 +627,8 @@ export function AccountClient() {
                         "text-sm",
                         billingMessage.includes("enabled") ||
                           billingMessage.includes("saved") ||
-                          billingMessage.includes("removed")
+                          billingMessage.includes("removed") ||
+                          billingMessage.includes("connected")
                           ? "text-green-700"
                           : "text-red-600"
                       )}
@@ -605,7 +642,9 @@ export function AccountClient() {
                     {billingSaving ? "Saving…" : "Save billing settings"}
                   </Button>
                 </form>
-              ) : (
+              ) : null}
+
+              {!data.billing.canManage && (
                 <div className="mt-6 text-sm text-slate-600">
                   <p>
                     Plan: <strong>{data.billing.planName}</strong> (

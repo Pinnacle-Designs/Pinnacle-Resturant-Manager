@@ -32,11 +32,46 @@ export function detectCardBrand(cardNumber: string): string {
   return "Card";
 }
 
+export function passesLuhnCheck(digits: string): boolean {
+  if (!/^\d{13,19}$/.test(digits)) return false;
+
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let digit = Number(digits[i]);
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+  return sum % 10 === 0;
+}
+
 export function parseCardNumber(cardNumber: string): { last4: string; brand: string } | null {
   const digits = cardNumber.replace(/\D/g, "");
   if (digits.length < 13 || digits.length > 19) return null;
+  if (!passesLuhnCheck(digits)) return null;
   return {
     last4: maskCardLast4(digits),
     brand: detectCardBrand(digits),
   };
+}
+
+/** Fields that must never be sent or stored — reject at the API boundary. */
+export const FORBIDDEN_PAYMENT_FIELDS = [
+  "cvv",
+  "cvc",
+  "securityCode",
+  "cardCvv",
+  "cardCvc",
+  "pin",
+] as const;
+
+export function containsForbiddenPaymentFields(body: Record<string, unknown>): boolean {
+  return FORBIDDEN_PAYMENT_FIELDS.some((field) => {
+    const value = body[field];
+    return value != null && String(value).trim() !== "";
+  });
 }

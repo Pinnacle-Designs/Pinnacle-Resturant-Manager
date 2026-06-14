@@ -1,26 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getLocationIdFromRequest } from "@/lib/location";
-import { requireAuth } from "@/lib/api-auth";
+import { requireSecureAuth } from "@/lib/api-auth";
+import { getVerifiedOwnerLocationId } from "@/lib/billing-auth";
 import {
+  containsForbiddenPaymentFields,
   defaultNextBillingDate,
   isValidExpiry,
   parseCardNumber,
 } from "@/lib/billing";
+import { isRateLimited } from "@/lib/rate-limit";
+import { privateJsonResponse } from "@/lib/secure-response";
+import { getProviderConnection } from "@/lib/payments/providers";
 
 export async function PATCH(request: NextRequest) {
-  const { user, error } = await requireAuth(request);
+  const { user, error } = await requireSecureAuth(request);
   if (error) return error;
 
-  if (user!.role !== "OWNER") {
-    return NextResponse.json(
-      { error: "Only the location owner can manage billing" },
-      { status: 403 }
+  if (
+    isRateLimited(`billing:${user!.id}`, 8, 60_000)
+  ) {
+    return privateJsonResponse(
+      { error: "Too many billing attempts. Try again shortly." },
+      { status: 429 }
     );
   }
 
-  const locationId = await getLocationIdFromRequest(request);
-  const body = await request.json();
+  const { locationId, error: ownerError } = await getVerifiedOwnerLocationId(user);
+  if (ownerError) return ownerError;
+
+  const stripeConnection = await getProviderConnection(locationId!, "SUBSCRIPTION");
+  const usesStripe = stripeConnection?.provider === "STRIPE";
+
+  const body = (await request.json()) as Record<string, unknown>;
+
+  if (containsForbiddenPaymentFields(body)) {
+    return privateJsonResponse({ error: "Invalid payment request" }, { status: 400 });
+  }
 
   const autopayEnabled = body.autopayEnabled === true;
   const billingEmail = body.billingEmail
@@ -31,8 +46,18 @@ export async function PATCH(request: NextRequest) {
   const expYear = body.expYear != null ? Number(body.expYear) : null;
   const removePaymentMethod = body.removePaymentMethod === true;
 
+  if (usesStripe && (cardNumber || removePaymentMethod || body.autopayEnabled !== undefined)) {
+    return privateJsonResponse(
+      {
+        error:
+          "Subscription billing is managed through Stripe. Use Manage billing to update your payment method.",
+      },
+      { status: 400 }
+    );
+  }
+
   const location = await prisma.location.findUnique({
-    where: { id: locationId },
+    where: { id: locationId! },
     select: {
       paymentLast4: true,
       paymentBrand: true,
@@ -44,11 +69,15 @@ export async function PATCH(request: NextRequest) {
   });
 
   if (!location) {
-    return NextResponse.json({ error: "Location not found" }, { status: 404 });
+    return privateJsonResponse({ error: "Location not found" }, { status: 404 });
   }
 
-  if (billingEmail !== undefined && billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
-    return NextResponse.json({ error: "Enter a valid billing email" }, { status: 400 });
+  if (
+    billingEmail !== undefined &&
+    billingEmail &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)
+  ) {
+    return privateJsonResponse({ error: "Enter a valid billing email" }, { status: 400 });
   }
 
   let paymentBrand = location.paymentBrand;
@@ -64,10 +93,10 @@ export async function PATCH(request: NextRequest) {
   } else if (cardNumber) {
     const parsed = parseCardNumber(cardNumber);
     if (!parsed) {
-      return NextResponse.json({ error: "Enter a valid card number" }, { status: 400 });
+      return privateJsonResponse({ error: "Enter a valid card number" }, { status: 400 });
     }
     if (expMonth == null || expYear == null || !isValidExpiry(expMonth, expYear)) {
-      return NextResponse.json({ error: "Enter a valid expiration date" }, { status: 400 });
+      return privateJsonResponse({ error: "Enter a valid expiration date" }, { status: 400 });
     }
     paymentBrand = parsed.brand;
     paymentLast4 = parsed.last4;
@@ -76,7 +105,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (autopayEnabled && !paymentLast4) {
-    return NextResponse.json(
+    return privateJsonResponse(
       { error: "Add a payment method before enabling autopay" },
       { status: 400 }
     );
@@ -88,7 +117,7 @@ export async function PATCH(request: NextRequest) {
       : location.nextBillingDate;
 
   const updated = await prisma.location.update({
-    where: { id: locationId },
+    where: { id: locationId! },
     data: {
       autopayEnabled,
       billingEmail: billingEmail ?? location.billingEmail ?? user!.email,
@@ -109,7 +138,7 @@ export async function PATCH(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({
+  return privateJsonResponse({
     billing: {
       ...updated,
       nextBillingDate: updated.nextBillingDate?.toISOString() ?? null,

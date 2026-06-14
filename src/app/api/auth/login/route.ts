@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   loginUser,
   createSessionToken,
@@ -11,23 +11,49 @@ import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled } from "@/lib/demo-users";
 import { resolveUserWorkspace } from "@/lib/user-workspace";
+import { getClientIp } from "@/lib/client-ip";
+import { isRateLimited } from "@/lib/rate-limit";
+import { privateJsonResponse } from "@/lib/secure-response";
+
+const LOGIN_FAILURE_DELAY_MS = 250;
+
+async function rejectLogin() {
+  await new Promise((resolve) => setTimeout(resolve, LOGIN_FAILURE_DELAY_MS));
+  return privateJsonResponse({ error: "Invalid email or password" }, { status: 401 });
+}
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ user: null });
+    return privateJsonResponse({ user: null });
   }
   const enriched = await enrichUserWithPlan(user);
-  return NextResponse.json({ user: enriched });
+  return privateJsonResponse({ user: enriched });
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (isRateLimited(`login:ip:${ip}`, 20, 60_000)) {
+    return privateJsonResponse(
+      { error: "Too many login attempts. Try again shortly." },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json();
-  const email = String(body.email || "").trim();
+  const email = String(body.email || "").trim().toLowerCase();
+
+  if (email && isRateLimited(`login:email:${email}`, 10, 60_000)) {
+    return privateJsonResponse(
+      { error: "Too many login attempts. Try again shortly." },
+      { status: 429 }
+    );
+  }
+
   const user = await loginUser(email, body.password);
 
   if (!user) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return rejectLogin();
   }
 
   const forEmbed = body.embed === true;
@@ -39,7 +65,7 @@ export async function POST(request: NextRequest) {
     isDemoAccountEmail(email) &&
     !(isPlanDemoAccountEmail(email) && planDemoLoginEnabled())
   ) {
-    return NextResponse.json(
+    return privateJsonResponse(
       {
         error:
           "Demo accounts are for the live demo only. Create your own account or use the embedded demo on the marketing site.",
@@ -49,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!useDemoWorkspace && isPlanDemoAccountEmail(email) && !planDemoLoginEnabled()) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return rejectLogin();
   }
 
   let workspace = null;
@@ -78,7 +104,7 @@ export async function POST(request: NextRequest) {
   });
   const token = await createSessionToken(sessionUser);
 
-  const response = NextResponse.json({
+  const response = privateJsonResponse({
     user: sessionUser,
     workspace,
     workspaceError,
@@ -96,6 +122,8 @@ export async function POST(request: NextRequest) {
       response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
         path: "/",
         maxAge: 60 * 60 * 24 * 365,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
       });
     }

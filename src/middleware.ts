@@ -18,6 +18,9 @@ const PUBLIC_PATHS = [
   "/api/auth/seed",
   "/api/auth/plan-demos",
   "/api/embed/launch",
+  "/api/webhooks/stripe",
+  "/api/account/billing/square/callback",
+  "/api/account/billing/stripe/connect/callback",
 ];
 
 function applyFramePolicy(request: NextRequest, response: NextResponse): NextResponse {
@@ -35,7 +38,23 @@ function applyFramePolicy(request: NextRequest, response: NextResponse): NextRes
     response.headers.set("X-Frame-Options", "DENY");
   }
 
-  return applyMarketingCors(request, applyDevCors(request, response));
+  return applySecurityHeaders(applyMarketingCors(request, applyDevCors(request, response)));
+}
+
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(self), microphone=(), geolocation=(), payment=()"
+  );
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    );
+  }
+  return response;
 }
 
 /** Allow GitHub Pages / marketing sites to probe embed launch in production. */
