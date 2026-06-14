@@ -14,7 +14,9 @@ function hasCurrentSchema(client: PrismaClient): boolean {
   return (
     "websiteConnection" in client &&
     "vendorPriceHistory" in client &&
-    "inventoryWaste" in client
+    "inventoryWaste" in client &&
+    "orderPayment" in client &&
+    "orderCheck" in client
   );
 }
 

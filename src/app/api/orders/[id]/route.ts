@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { OrderStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/api-auth";
+import { ORDER_INCLUDE } from "@/lib/orders";
 
 export async function PATCH(
   request: NextRequest,
@@ -27,7 +28,7 @@ export async function PATCH(
       ticketTimeMinutes: body.ticketTimeMinutes,
       notes: body.notes,
     },
-    include: { items: { include: { menuItem: true } }, table: true, payments: { orderBy: { createdAt: "asc" } } },
+    include: ORDER_INCLUDE,
   });
 
   return NextResponse.json(order);

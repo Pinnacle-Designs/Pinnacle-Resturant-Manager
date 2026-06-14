@@ -37,6 +37,16 @@ enum PaymentMethod {
   OTHER
 }
 
+enum CheckStatus {
+  OPEN
+  PRINTED
+  PARTIALLY_PAID
+  PAID
+  CLOSED
+  NEEDS_TIP
+  REFUND_VOID_NEEDED
+}
+
 enum InsightSeverity {
   LOW
   MEDIUM
@@ -231,17 +241,38 @@ model Order {
   voidAmount        Float       @default(0)
   ticketTimeMinutes Int?
   notes             String?
+  partyName         String?
+  checkStatus       CheckStatus @default(OPEN)
+  printedAt         DateTime?
+  discountReason    String?
   paidAt            DateTime?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   items             OrderItem[]
   payments          OrderPayment[]
+  checks            OrderCheck[]
+}
+
+model OrderCheck {
+  id         String         @id @default(cuid())
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  label      String
+  seatNumber Int?
+  isClosed   Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  items      OrderItem[]
+  payments   OrderPayment[]
+
+  @@index([orderId])
 }
 
 model OrderPayment {
   id        String        @id @default(cuid())
   orderId   String
   order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  checkId   String?
+  check     OrderCheck?   @relation(fields: [checkId], references: [id], onDelete: SetNull)
   method    PaymentMethod
   amount    Float
   tipAmount Float         @default(0)
@@ -249,16 +280,20 @@ model OrderPayment {
   createdAt DateTime      @default(now())
 
   @@index([orderId])
+  @@index([checkId])
 }
 
 model OrderItem {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   orderId    String
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItemId String
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
-  quantity   Int      @default(1)
+  menuItem   MenuItem    @relation(fields: [menuItemId], references: [id])
+  quantity   Int         @default(1)
   price      Float
+  seatNumber Int?
+  checkId    String?
+  check      OrderCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
 }
 
 model Expense {

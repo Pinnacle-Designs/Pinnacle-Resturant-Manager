@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
+import { ORDER_INCLUDE } from "@/lib/orders";
 import { PageHeader } from "@/components/ui";
 import { OrdersClient } from "@/components/orders/OrdersClient";
 
@@ -8,7 +9,7 @@ export default async function OrdersPage() {
   const [orders, menuItems, tables] = await Promise.all([
     prisma.order.findMany({
       where: { locationId },
-      include: { table: true, items: { include: { menuItem: true } }, payments: { orderBy: { createdAt: "asc" } } },
+      include: ORDER_INCLUDE,
       orderBy: { createdAt: "desc" },
       take: 50,
     }),

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getLocationIdFromRequest } from "@/lib/location";
 import { getSessionUserFromRequest } from "@/lib/auth";
 import { requirePermission, unauthorizedResponse } from "@/lib/api-auth";
+import { ORDER_INCLUDE } from "@/lib/orders";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -11,11 +12,7 @@ export async function GET(request: NextRequest) {
   const locationId = await getLocationIdFromRequest(request);
   const orders = await prisma.order.findMany({
     where: { locationId },
-    include: {
-      table: true,
-      items: { include: { menuItem: true } },
-      payments: { orderBy: { createdAt: "asc" } },
-    },
+    include: ORDER_INCLUDE,
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(orders);
@@ -49,7 +46,7 @@ export async function POST(request: NextRequest) {
           }
         : undefined,
     },
-    include: { items: { include: { menuItem: true } }, table: true, payments: { orderBy: { createdAt: "asc" } } },
+    include: ORDER_INCLUDE,
   });
 
   await prisma.activityLog.create({

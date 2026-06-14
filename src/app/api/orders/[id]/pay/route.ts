@@ -3,16 +3,12 @@ import type { PaymentMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/api-auth";
 import {
+  deriveCheckStatus,
   getOrderBalanceDue,
   getPaymentsTotal,
+  ORDER_INCLUDE,
   roundMoney,
 } from "@/lib/orders";
-
-const ORDER_INCLUDE = {
-  table: true,
-  items: { include: { menuItem: true } },
-  payments: { orderBy: { createdAt: "asc" as const } },
-};
 
 const VALID_METHODS = new Set<PaymentMethod>([
   "CASH",
@@ -45,6 +41,7 @@ export async function POST(
   const tipAmount = roundMoney(Number(body.tipAmount) || 0);
   const cashTendered =
     body.cashTendered != null ? roundMoney(Number(body.cashTendered)) : null;
+  const checkId = typeof body.checkId === "string" ? body.checkId : null;
   const reference =
     typeof body.reference === "string" && body.reference.trim()
       ? body.reference.trim().slice(0, 64)
@@ -53,20 +50,17 @@ export async function POST(
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: "Payment amount must be greater than zero" }, { status: 400 });
   }
-  if (!Number.isFinite(tipAmount) || tipAmount < 0) {
-    return NextResponse.json({ error: "Invalid tip amount" }, { status: 400 });
-  }
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { payments: true, table: true },
+    include: { payments: true, table: true, checks: true },
   });
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
-  if (order.status === "PAID") {
-    return NextResponse.json({ error: "Order is already paid" }, { status: 400 });
+  if (order.checkStatus === "CLOSED") {
+    return NextResponse.json({ error: "Check is closed" }, { status: 400 });
   }
   if (order.status === "CANCELLED") {
     return NextResponse.json({ error: "Cannot pay a cancelled order" }, { status: 400 });
@@ -87,41 +81,36 @@ export async function POST(
     );
   }
 
-  const totalAfterPayment = getPaymentsTotal(order.payments) + amount;
-  const fullyPaid = totalAfterPayment >= getOrderBalanceDue(order, []) - 0.001;
-
   const updated = await prisma.$transaction(async (tx) => {
-    await tx.orderPayment.create({
-      data: {
-        orderId: id,
-        method,
-        amount,
-        tipAmount,
-        reference,
-      },
+    const created = await tx.orderPayment.create({
+      data: { orderId: id, checkId, method, amount, tipAmount, reference },
     });
 
-    const nextStatus = fullyPaid
-      ? "PAID"
-      : order.status === "PENDING" || order.status === "PREPARING"
-        ? "SERVED"
-        : order.status;
+    const fresh = await tx.order.findUnique({
+      where: { id },
+      include: { payments: true },
+    });
+    if (!fresh) throw new Error("Order missing");
+
+    const newBalance = getOrderBalanceDue(fresh, fresh.payments);
+    const nextCheckStatus = deriveCheckStatus({
+      checkStatus: fresh.checkStatus,
+      balanceDue: newBalance,
+      payments: fresh.payments,
+      printedAt: fresh.printedAt,
+    });
 
     const result = await tx.order.update({
       where: { id },
       data: {
-        status: nextStatus,
-        paidAt: fullyPaid ? new Date() : null,
+        checkStatus: nextCheckStatus,
+        status:
+          nextCheckStatus === "PAID" || nextCheckStatus === "NEEDS_TIP"
+            ? "SERVED"
+            : fresh.status,
       },
       include: ORDER_INCLUDE,
     });
-
-    if (fullyPaid && order.tableId) {
-      await tx.table.update({
-        where: { id: order.tableId },
-        data: { status: "available" },
-      });
-    }
 
     await tx.activityLog.create({
       data: {
@@ -135,19 +124,29 @@ export async function POST(
       },
     });
 
-    return result;
+    return { result, paymentId: created.id };
   });
 
-  const newBalance = getOrderBalanceDue(updated, updated.payments);
+  const newBalance = getOrderBalanceDue(updated.result, updated.result.payments);
   const changeDue =
     method === "CASH" && cashTendered != null
       ? roundMoney(Math.max(0, cashTendered - amount - tipAmount))
       : null;
 
+  const cardNeedsTip =
+    ["CARD", "DEBIT", "MOBILE"].includes(method) && tipAmount <= 0;
+
   return NextResponse.json({
-    order: updated,
+    order: updated.result,
+    paymentId: updated.paymentId,
     changeDue,
     balanceDue: newBalance,
-    fullyPaid: updated.status === "PAID",
+    fullyPaid: newBalance <= 0,
+    needsTip: cardNeedsTip,
+    nextAction: cardNeedsTip
+      ? "Add tip"
+      : newBalance > 0
+        ? `Collect ${newBalance.toFixed(2)} more`
+        : "Close check",
   });
 }

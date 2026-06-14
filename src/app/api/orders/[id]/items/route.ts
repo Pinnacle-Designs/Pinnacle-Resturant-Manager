@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/api-auth";
+import { hasPaymentsAttached, ORDER_INCLUDE } from "@/lib/orders";
 
 export async function POST(
   request: NextRequest,
@@ -14,13 +15,19 @@ export async function POST(
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true },
+    include: { items: true, payments: true },
   });
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
-  if (order.status === "PAID" || order.status === "CANCELLED") {
+  if (order.checkStatus === "CLOSED" || order.status === "CANCELLED") {
     return NextResponse.json({ error: "Cannot modify a closed order" }, { status: 400 });
+  }
+  if (hasPaymentsAttached(order.payments)) {
+    return NextResponse.json(
+      { error: "Void payments before adding items to this check" },
+      { status: 400 }
+    );
   }
 
   await prisma.orderItem.create({
@@ -29,6 +36,7 @@ export async function POST(
       menuItemId: body.menuItemId,
       quantity: body.quantity || 1,
       price: body.price,
+      seatNumber: body.seatNumber ?? null,
     },
   });
 
@@ -36,7 +44,7 @@ export async function POST(
   const updated = await prisma.order.update({
     where: { id: orderId },
     data: { totalAmount: order.totalAmount + lineTotal },
-    include: { items: { include: { menuItem: true } }, table: true, payments: { orderBy: { createdAt: "asc" } } },
+    include: ORDER_INCLUDE,
   });
 
   return NextResponse.json(updated);

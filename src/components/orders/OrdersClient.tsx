@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, ClipboardList, ListPlus, CreditCard } from "lucide-react";
-import type { PaymentMethod } from "@prisma/client";
+import { Plus, Trash2, ClipboardList, ListPlus, Wallet } from "lucide-react";
+import type { CheckStatus, PaymentMethod } from "@prisma/client";
 import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, Select, Textarea, FormField, Modal } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -10,12 +10,15 @@ import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/constants";
 import {
+  CHECK_STATUS_COLORS,
+  CHECK_STATUS_LABELS,
   getOrderBalanceDue,
   getPaymentsTotal,
   getTipsTotal,
+  hasPaymentsAttached,
   PAYMENT_METHOD_LABELS,
 } from "@/lib/orders";
-import { PaymentModal, type PayableOrder } from "@/components/orders/PaymentModal";
+import { PayCheckScreen, type PayableOrder } from "@/components/orders/PayCheckScreen";
 
 interface MenuItem {
   id: string;
@@ -33,6 +36,7 @@ interface OrderItem {
   id: string;
   quantity: number;
   price: number;
+  seatNumber?: number | null;
   menuItem: { name: string };
 }
 
@@ -47,6 +51,7 @@ interface OrderPayment {
 
 interface Order extends PayableOrder {
   notes: string | null;
+  checkStatus?: CheckStatus;
   payments: OrderPayment[];
 }
 
@@ -82,7 +87,7 @@ export function OrdersClient({
     channel: "dine-in",
     notes: "",
   });
-  const [addForm, setAddForm] = useState({ menuItemId: "", quantity: "1" });
+  const [addForm, setAddForm] = useState({ menuItemId: "", quantity: "1", seatNumber: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,14 +135,16 @@ export function OrdersClient({
     setError(null);
     try {
       const quantity = parseInt(addForm.quantity) || 1;
+      const seatNumber = addForm.seatNumber ? parseInt(addForm.seatNumber, 10) : undefined;
       const updated = await apiPost<Order>(`/api/orders/${activeOrderId}/items`, {
         menuItemId: addForm.menuItemId,
         quantity,
         price: menuItem.price,
+        seatNumber,
       });
       setOrders((prev) => prev.map((o) => (o.id === activeOrderId ? updated : o)));
       setAddModalOpen(false);
-      setAddForm({ menuItemId: "", quantity: "1" });
+      setAddForm({ menuItemId: "", quantity: "1", seatNumber: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add item");
     } finally {
@@ -158,7 +165,7 @@ export function OrdersClient({
 
   const openAddModal = (orderId: string) => {
     setActiveOrderId(orderId);
-    setAddForm({ menuItemId: "", quantity: "1" });
+    setAddForm({ menuItemId: "", quantity: "1", seatNumber: "" });
     setError(null);
     setAddModalOpen(true);
   };
@@ -170,7 +177,11 @@ export function OrdersClient({
 
   const handlePaid = (order: PayableOrder) => {
     setOrders((prev) =>
-      prev.map((o) => (o.id === order.id ? { ...o, ...order, payments: order.payments ?? [] } : o))
+      prev.map((o) =>
+        o.id === order.id
+          ? { ...o, ...order, payments: order.payments ?? [], checks: order.checks ?? [] }
+          : o
+      )
     );
   };
 
@@ -202,16 +213,24 @@ export function OrdersClient({
             const balanceDue = getOrderBalanceDue(order, order.payments ?? []);
             const paidTotal = getPaymentsTotal(order.payments ?? []);
             const tipTotal = getTipsTotal(order.payments ?? []);
-            const isOpen = order.status !== "PAID" && order.status !== "CANCELLED";
+            const isOpen =
+              order.checkStatus !== "CLOSED" &&
+              order.status !== "PAID" &&
+              order.status !== "CANCELLED";
+            const checkStatus = (order.checkStatus ?? "OPEN") as CheckStatus;
+            const canModifyCheck = isOpen && !hasPaymentsAttached(order.payments);
 
             return (
               <div key={order.id} className="card">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold text-slate-900">Order #{order.id.slice(-6)}</h3>
                       <Badge className={ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS]}>
                         {order.status}
+                      </Badge>
+                      <Badge className={CHECK_STATUS_COLORS[checkStatus]}>
+                        {CHECK_STATUS_LABELS[checkStatus]}
                       </Badge>
                     </div>
                     {order.table && (
@@ -231,7 +250,8 @@ export function OrdersClient({
                   <ul className="mt-4 space-y-1 text-sm text-slate-600">
                     {order.items.map((item) => (
                       <li key={item.id}>
-                        {item.quantity}x {item.menuItem.name} — {formatCurrency(item.price)}
+                        {item.quantity}x {item.menuItem.name}
+                        {item.seatNumber ? ` (Seat ${item.seatNumber})` : ""} — {formatCurrency(item.price)}
                       </li>
                     ))}
                   </ul>
@@ -259,13 +279,13 @@ export function OrdersClient({
                   </div>
                 )}
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {canTakePayment && isOpen && balanceDue > 0 && (
+                  {canTakePayment && order.status !== "CANCELLED" && (
                     <Button size="sm" onClick={() => openPaymentModal(order.id)}>
-                      <CreditCard className="h-3 w-3" />
-                      Take payment
+                      <Wallet className="h-3 w-3" />
+                      {order.checkStatus === "CLOSED" ? "View Check" : "Pay Check"}
                     </Button>
                   )}
-                  {canAddToCheck && isOpen && (
+                  {canAddToCheck && canModifyCheck && (
                     <Button variant="secondary" size="sm" onClick={() => openAddModal(order.id)}>
                       <ListPlus className="h-3 w-3" />
                       Add to check
@@ -354,6 +374,15 @@ export function OrdersClient({
           <FormField label="Quantity">
             <Input type="number" min="1" value={addForm.quantity} onChange={(e) => setAddForm({ ...addForm, quantity: e.target.value })} />
           </FormField>
+          <FormField label="Seat (optional)">
+            <Input
+              type="number"
+              min="1"
+              value={addForm.seatNumber}
+              onChange={(e) => setAddForm({ ...addForm, seatNumber: e.target.value })}
+              placeholder="For split-by-seat"
+            />
+          </FormField>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAddModalOpen(false)}>Cancel</Button>
@@ -362,11 +391,11 @@ export function OrdersClient({
         </div>
       </Modal>
 
-      <PaymentModal
+      <PayCheckScreen
         open={paymentModalOpen}
         order={activeOrder}
         onClose={() => setPaymentModalOpen(false)}
-        onPaid={handlePaid}
+        onUpdate={handlePaid}
       />
     </>
   );
