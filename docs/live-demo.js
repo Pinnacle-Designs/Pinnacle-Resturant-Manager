@@ -216,7 +216,7 @@
       [65, 82, 45, 90, 72, 88, 95].map(function (h, i) {
         return '<div class="demo-bar" style="height:' + h + '%" title="Day ' + (i + 1) + '"></div>';
       }).join("") +
-      "</div><p class="demo-chart-label">7-day revenue trend</p></div>" +
+      '</div><p class="demo-chart-label">7-day revenue trend</p></div>' +
       '<div class="demo-kpi-row">' +
       '<div class="demo-kpi"><label>Food cost %</label><strong>28.4%</strong><span class="up">On target</span></div>' +
       '<div class="demo-kpi"><label>Labor %</label><strong class="warn">31.2%</strong><span>Above goal</span></div>' +
@@ -437,7 +437,8 @@
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
     if (modal) {
       modal.addEventListener("click", function (e) {
-        if (e.target === modal) closeModal();
+        if (e.target.closest(".app-embed-modal-panel")) return;
+        closeModal();
       });
     }
     document.addEventListener("keydown", function (e) {
