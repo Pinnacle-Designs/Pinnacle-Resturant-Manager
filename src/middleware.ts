@@ -23,7 +23,7 @@ function applyFramePolicy(request: NextRequest, response: NextResponse): NextRes
   if (isEmbeddableRequest(pathname, embedParam)) {
     response.headers.set(
       "Content-Security-Policy",
-      `frame-ancestors ${getEmbedFrameAncestors()}`
+      `frame-ancestors ${getEmbedFrameAncestors(request)}`
     );
   } else {
     response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");

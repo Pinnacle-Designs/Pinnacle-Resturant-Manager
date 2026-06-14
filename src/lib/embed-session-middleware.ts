@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { parseSessionToken, sessionCookieOptions } from "@/lib/session";
-import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import { LOCATION_COOKIE_NAME } from "@/lib/location-constants";
 
 /** Edge-safe — must not import Prisma, Node fs, or other server-only modules. */
 

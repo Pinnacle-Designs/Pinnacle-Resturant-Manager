@@ -34,9 +34,13 @@ export function needsCrossOriginEmbedCookies(): boolean {
 }
 
 /** CSP `frame-ancestors` value for embeddable responses (`'self'` + optional env origins). */
-export function getEmbedFrameAncestors(): string {
-  // Local marketing previews (docs/index.html, Live Server, etc.) use a different origin.
+export function getEmbedFrameAncestors(request?: { nextUrl: URL }): string {
   if (process.env.NODE_ENV === "development") {
+    return "*";
+  }
+
+  const host = request?.nextUrl.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
     return "*";
   }
 

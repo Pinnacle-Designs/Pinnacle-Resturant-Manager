@@ -40,28 +40,37 @@
     return "http://" + localDevHost() + ":3000";
   }
 
-  function probeBaseUrl(base) {
-    var url = base.replace(/\/$/, "") + "/api/auth/login";
+  function probeEmbedUrl(base) {
+    var url =
+      base.replace(/\/$/, "") + "/api/embed/launch?path=" + encodeURIComponent(DEFAULT_PATH);
     var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     var timer = controller
       ? setTimeout(function () {
           controller.abort();
-        }, PROBE_TIMEOUT_MS)
+        }, PROBE_TIMEOUT_MS * 3)
       : null;
 
     return fetch(url, {
       method: "GET",
       credentials: "omit",
+      redirect: "manual",
       signal: controller ? controller.signal : undefined,
     })
       .then(function (res) {
         if (timer) clearTimeout(timer);
-        return res.ok ? base.replace(/\/$/, "") : "";
+        if (res.status === 307 || res.status === 302 || res.status === 303) {
+          return base.replace(/\/$/, "");
+        }
+        return "";
       })
       .catch(function () {
         if (timer) clearTimeout(timer);
         return "";
       });
+  }
+
+  function probeBaseUrl(base) {
+    return probeEmbedUrl(base);
   }
 
   function probeLocalAppUrl() {
@@ -71,24 +80,42 @@
     }
     if (host !== "localhost" && host !== "127.0.0.1") return Promise.resolve("");
 
-    return Promise.all(
-      PROBE_PORTS.map(function (port) {
-        return probeBaseUrl("http://" + host + ":" + port);
-      })
-    ).then(function (results) {
-      for (var i = 0; i < results.length; i++) {
-        if (results[i]) return results[i];
-      }
-      return "";
-    });
+    var ports = PROBE_PORTS.slice();
+    var currentPort = location.port;
+    if (currentPort && ports.indexOf(currentPort) !== -1) {
+      ports.splice(ports.indexOf(currentPort), 1);
+      ports.unshift(currentPort);
+    }
+
+    return ports
+      .reduce(function (chain, port) {
+        return chain.then(function (found) {
+          if (found) return found;
+          return probeEmbedUrl("http://" + host + ":" + port);
+        });
+      }, Promise.resolve(""))
+      .then(function (found) {
+        return found || "";
+      });
   }
 
   function resolveAppUrl() {
     var cfg = window.PINNACLE_CONFIG || {};
     var configured = (cfg.appUrl || "").replace(/\/$/, "");
 
-    if (isDocsOnNextApp() || isDocsOnAppOrigin()) {
-      return Promise.resolve(location.origin);
+    if (isDocsOnNextApp()) {
+      return probeEmbedUrl(location.origin).then(function (ok) {
+        if (ok) return location.origin;
+        return probeLocalAppUrl().then(function (found) {
+          return found || location.origin;
+        });
+      });
+    }
+
+    if (isDocsOnAppOrigin()) {
+      return probeEmbedUrl(location.origin).then(function (ok) {
+        return ok ? location.origin : configured || location.origin;
+      });
     }
 
     if (isLocalHost()) {
@@ -100,6 +127,25 @@
     if (configured) return Promise.resolve(configured);
 
     return Promise.resolve("");
+  }
+
+  function isProductionSite() {
+    return !isLocalHost() && location.protocol.startsWith("http");
+  }
+
+  function devTimeoutMessage(activeUrl) {
+    return (
+      "Timed out connecting to <code>" +
+      activeUrl +
+      "</code>. Run <code>npm run dev</code>, note the port in the terminal, then open <code>http://localhost:PORT/docs</code>."
+    );
+  }
+
+  function productionErrorMessage() {
+    return (
+      "The live demo could not start on the deployed server. " +
+      "Redeploy the latest code to Vercel — the site is currently returning a server error."
+    );
   }
 
   function embedLaunchUrl(base, path) {
@@ -187,7 +233,7 @@
       }
       rotateTimer = setTimeout(function () {
         tryNextCandidate(iframe, loading);
-      }, 5000);
+      }, 3000);
     }
 
     function render() {
@@ -219,7 +265,11 @@
           if (framePath === "/api/embed/launch" && loadCount >= 2) {
             markFailed(
               loading,
-              "The app server returned an error starting the demo. If this is production, redeploy after the latest database fix."
+              isProductionSite()
+                ? productionErrorMessage()
+                : "The app server returned an error starting the demo on <code>" +
+                    activeUrl +
+                    "</code>. Try another port or redeploy."
             );
             return;
           }
@@ -231,10 +281,13 @@
               framePath === "/login")
           ) {
             markReady(loading);
+            return;
           }
         } catch (err) {
-          if (loadCount >= 2) {
-            markReady(loading);
+          if (loadCount >= 1) {
+            setTimeout(function () {
+              if (!ready && !failed) markReady(loading);
+            }, 1500);
           }
         }
       });
@@ -245,17 +298,17 @@
       if (candidates.length > 1) {
         rotateTimer = setTimeout(function () {
           if (!ready) tryNextCandidate(iframe, loading);
-        }, 5000);
+        }, 3000);
       }
 
       errorTimer = setTimeout(function () {
         if (!ready && !failed) {
           markFailed(
             loading,
-            "Timed out connecting to the live app. Run <code>npm run dev</code> and open <code>http://localhost:3000/docs</code> (or the port shown in the terminal)."
+            isProductionSite() ? productionErrorMessage() : devTimeoutMessage(activeUrl)
           );
         }
-      }, 20000);
+      }, 35000);
 
       setTimeout(function () {
         markReady(loading);
@@ -324,10 +377,16 @@
     function connectApp() {
       showFindingApp();
       return resolveAppUrl().then(function (url) {
-        if (!url && isLocalHost()) {
-          url = defaultLocalAppUrl();
-        }
         appUrl = url;
+        if (!appUrl) {
+          heroSlot.innerHTML = "";
+          heroSlot.appendChild(
+            createFallback(
+              "No dev server found. Run <code>npm run dev</code> in the project root, then open <code>http://localhost:PORT/docs/</code>."
+            )
+          );
+          return "";
+        }
         mountHero();
         wireOptionalAppLinks(appUrl);
         return url;

@@ -1,11 +1,12 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
+import { LOCATION_COOKIE_NAME } from "./location-constants";
 
-const LOCATION_COOKIE = "pinnacle_location_id";
+export { LOCATION_COOKIE_NAME };
 
 export async function getLocationId(): Promise<string> {
   const cookieStore = await cookies();
-  const cookieId = cookieStore.get(LOCATION_COOKIE)?.value;
+  const cookieId = cookieStore.get(LOCATION_COOKIE_NAME)?.value;
 
   if (cookieId) {
     const exists = await prisma.location.findUnique({ where: { id: cookieId } });
@@ -33,5 +34,3 @@ export async function getLocationIdFromRequest(request: Request): Promise<string
   }
   return getLocationId();
 }
-
-export const LOCATION_COOKIE_NAME = LOCATION_COOKIE;

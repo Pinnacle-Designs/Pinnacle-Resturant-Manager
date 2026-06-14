@@ -1,4 +1,4 @@
-import type { AppRole } from "@prisma/client";
+import type { AppRole } from "./app-role";
 
 export type Permission =
   | "view_finances"
