@@ -12,7 +12,10 @@ export default async function InventoryPage() {
 
   return (
     <div>
-      <PageHeader title="Inventory" description="Track stock levels, suppliers, and reorder points" />
+      <PageHeader
+        title="Inventory"
+        description="Scan barcodes to receive stock, connect a scale for weights, and track par levels"
+      />
       <InventoryClient initialItems={items} />
     </div>
   );

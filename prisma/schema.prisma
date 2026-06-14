@@ -167,6 +167,7 @@ model InventoryItem {
   locationId    String
   location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   name          String
+  barcode       String?
   quantity      Float
   unit          String
   minQuantity   Float    @default(0)
@@ -180,6 +181,8 @@ model InventoryItem {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   wasteLogs     InventoryWaste[]
+
+  @@unique([locationId, barcode])
 }
 
 model StaffMember {

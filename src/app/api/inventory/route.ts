@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       yieldPct: body.yieldPct ?? 100,
       supplier: body.supplier,
       imageUrl: body.imageUrl,
+      barcode: body.barcode ? String(body.barcode).replace(/\D/g, "") || null : null,
     },
   });
 

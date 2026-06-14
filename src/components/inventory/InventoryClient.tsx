@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2, Package } from "lucide-react";
+import { Pencil, Plus, Trash2, Package, ScanLine } from "lucide-react";
 import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { InventoryScanModal } from "@/components/inventory/InventoryScanModal";
 
 interface InventoryItem {
   id: string;
@@ -17,11 +18,13 @@ interface InventoryItem {
   portionSize: number | null;
   yieldPct: number;
   supplier: string | null;
+  barcode?: string | null;
 }
 
 export function InventoryClient({ initialItems }: { initialItems: InventoryItem[] }) {
   const [items, setItems] = useState(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -32,13 +35,24 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
     portionSize: "",
     yieldPct: "100",
     supplier: "",
+    barcode: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", quantity: "", unit: "lbs", minQuantity: "", costPerUnit: "", portionSize: "", yieldPct: "100", supplier: "" });
+    setForm({
+      name: "",
+      quantity: "",
+      unit: "lbs",
+      minQuantity: "",
+      costPerUnit: "",
+      portionSize: "",
+      yieldPct: "100",
+      supplier: "",
+      barcode: "",
+    });
     setError(null);
     setModalOpen(true);
   };
@@ -54,6 +68,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
       portionSize: item.portionSize != null ? String(item.portionSize) : "",
       yieldPct: String(item.yieldPct ?? 100),
       supplier: item.supplier || "",
+      barcode: item.barcode || "",
     });
     setError(null);
     setModalOpen(true);
@@ -75,6 +90,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
         portionSize: form.portionSize ? parseFloat(form.portionSize) : null,
         yieldPct: parseFloat(form.yieldPct) || 100,
         supplier: form.supplier || null,
+        barcode: form.barcode.replace(/\D/g, "") || null,
       };
       if (editing) {
         const updated = await apiPatch<InventoryItem>(`/api/inventory/${editing.id}`, payload);
@@ -97,9 +113,20 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  const handleReceived = (item: InventoryItem, created: boolean) => {
+    setItems((prev) => {
+      if (created) return [...prev, item].sort((a, b) => a.name.localeCompare(b.name));
+      return prev.map((i) => (i.id === item.id ? item : i));
+    });
+  };
+
   return (
     <>
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onClick={() => setScanOpen(true)}>
+          <ScanLine className="h-4 w-4" />
+          Scan &amp; receive
+        </Button>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Add Item
@@ -110,8 +137,18 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
         <EmptyState
           icon={<Package className="h-12 w-12" />}
           title="No inventory items"
-          description="Track stock levels and get low-stock alerts."
-          action={<Button onClick={openCreate}>Add Item</Button>}
+          description="Scan a barcode to receive stock, or add items manually."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => setScanOpen(true)}>
+                <ScanLine className="h-4 w-4" />
+                Scan &amp; receive
+              </Button>
+              <Button variant="secondary" onClick={openCreate}>
+                Add manually
+              </Button>
+            </div>
+          }
         />
       ) : (
         <div className="overflow-hidden rounded-xl border bg-white">
@@ -119,6 +156,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
             <thead className="border-b bg-slate-50">
               <tr>
                 <th className="px-6 py-3 text-left font-medium text-slate-500">Item</th>
+                <th className="px-6 py-3 text-left font-medium text-slate-500">Barcode</th>
                 <th className="px-6 py-3 text-left font-medium text-slate-500">Quantity</th>
                 <th className="px-6 py-3 text-left font-medium text-slate-500">Min</th>
                 <th className="px-6 py-3 text-left font-medium text-slate-500">Cost/Unit</th>
@@ -134,8 +172,15 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
                 return (
                   <tr key={item.id} className={isLow ? "bg-amber-50" : ""}>
                     <td className="px-6 py-4 font-medium text-slate-900">{item.name}</td>
-                    <td className="px-6 py-4 text-slate-600">{item.quantity} {item.unit}</td>
-                    <td className="px-6 py-4 text-slate-600">{item.minQuantity} {item.unit}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-500">
+                      {item.barcode || "—"}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {item.quantity} {item.unit}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {item.minQuantity} {item.unit}
+                    </td>
                     <td className="px-6 py-4 text-slate-600">{formatCurrency(item.costPerUnit)}</td>
                     <td className="px-6 py-4 text-slate-600">{(item.yieldPct ?? 100).toFixed(0)}%</td>
                     <td className="px-6 py-4 text-slate-600">{item.supplier || "—"}</td>
@@ -162,10 +207,23 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
         </div>
       )}
 
+      <InventoryScanModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onReceived={handleReceived}
+      />
+
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Item" : "Add Item"}>
         <div className="space-y-4">
           <FormField label="Name">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </FormField>
+          <FormField label="Barcode (optional)">
+            <Input
+              value={form.barcode}
+              onChange={(e) => setForm({ ...form, barcode: e.target.value.replace(/\D/g, "") })}
+              placeholder="UPC / EAN"
+            />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Quantity">
@@ -175,6 +233,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
               <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
                 <option value="lbs">lbs</option>
                 <option value="oz">oz</option>
+                <option value="kg">kg</option>
                 <option value="units">units</option>
                 <option value="heads">heads</option>
                 <option value="bottles">bottles</option>

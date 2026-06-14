@@ -26,6 +26,12 @@ export async function PATCH(
       yieldPct: body.yieldPct,
       supplier: body.supplier,
       imageUrl: body.imageUrl,
+      barcode:
+        body.barcode !== undefined
+          ? body.barcode
+            ? String(body.barcode).replace(/\D/g, "")
+            : null
+          : undefined,
     },
   });
 
