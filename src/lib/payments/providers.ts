@@ -1,6 +1,9 @@
 import type { PaymentProviderConnection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ProviderOption } from "./types";
+import { kindToPosId, kindToSubscriptionId } from "./types";
+
+export { kindToPosId, kindToSubscriptionId };
 
 export function appBaseUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();

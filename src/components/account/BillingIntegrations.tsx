@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { CreditCard, Link2, Unplug } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
-import type { PlanId } from "@/lib/plans";
 
 interface ProviderConnection {
   provider: string;
@@ -37,7 +36,6 @@ interface ProvidersPayload {
 }
 
 interface BillingIntegrationsProps {
-  plan: PlanId;
   planName: string;
   monthlyAmount: number;
   canManage: boolean;
@@ -47,7 +45,6 @@ interface BillingIntegrationsProps {
 }
 
 export function BillingIntegrations({
-  plan,
   planName,
   monthlyAmount,
   canManage,

@@ -516,7 +516,6 @@ export function AccountClient() {
               </div>
 
               <BillingIntegrations
-                plan={data.billing.plan}
                 planName={data.billing.planName}
                 monthlyAmount={data.billing.monthlyAmount}
                 canManage={data.billing.canManage}
