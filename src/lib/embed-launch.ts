@@ -4,17 +4,16 @@ import {
   loginUser,
   createSessionToken,
   getSessionUserFromRequest,
-  parseSessionToken,
-  sessionCookieOptions,
   AUTH_COOKIE_NAME,
 } from "@/lib/auth";
 import { seedDemoUsers } from "@/lib/demo-users";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { resolveEmbedPath } from "@/lib/embed-config";
-import { applyEmbedAuthCookies, embedCookieFlags } from "@/lib/embed-cookies";
+import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 import { setupDemoWorkspace } from "@/lib/seed-data";
+import { EMBED_SESSION_PARAM } from "@/lib/embed-session-middleware";
 
-export const EMBED_SESSION_PARAM = "_st";
+export { EMBED_SESSION_PARAM };
 
 /** True when the iframe parent is on a different origin (needs SameSite=None cookies). */
 export function isCrossOriginEmbedRequest(request: NextRequest): boolean {
@@ -96,38 +95,5 @@ export async function buildEmbedLaunchResponse(
 
   const response = NextResponse.redirect(redirectUrl);
   applyEmbedAuthCookies(response, request, token, workspace.locationId, forEmbed);
-  return response;
-}
-
-export async function applyEmbedSessionParam(
-  request: NextRequest
-): Promise<NextResponse | null> {
-  const embedParam = request.nextUrl.searchParams.get("embed");
-  const rawToken = request.nextUrl.searchParams.get(EMBED_SESSION_PARAM);
-  if (embedParam !== "1" || !rawToken) return null;
-
-  const user = await parseSessionToken(rawToken);
-  if (!user) return null;
-
-  const clean = new URL(request.url);
-  clean.searchParams.delete(EMBED_SESSION_PARAM);
-
-  const response = NextResponse.redirect(clean);
-  // _st is only added for cross-origin embeds — keep SameSite=None through the redirect chain.
-  const forEmbed = true;
-  const flags = embedCookieFlags(request, forEmbed);
-  // Edge-safe: session only. Location cookie is set by /api/embed/launch or resolved server-side.
-  response.cookies.set(sessionCookieOptions(rawToken, forEmbed, flags.secure));
-
-  const existingLocation = request.cookies.get(LOCATION_COOKIE_NAME)?.value;
-  if (existingLocation) {
-    response.cookies.set(LOCATION_COOKIE_NAME, existingLocation, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: flags.sameSite,
-      secure: flags.secure,
-    });
-  }
-
   return response;
 }

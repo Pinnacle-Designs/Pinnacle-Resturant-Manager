@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
 import { getEmbedFrameAncestors, isEmbeddableRequest } from "@/lib/embed-config";
-import { applyEmbedSessionParam } from "@/lib/embed-launch";
+import { applyEmbedSessionParam } from "@/lib/embed-session-middleware";
 
 const PUBLIC_PATHS = [
   "/",
