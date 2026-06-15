@@ -34,7 +34,7 @@
     el.className = "pitch-form-status " + (ok ? "is-success" : "is-error");
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function initPitchRequestForm() {
     var form = document.getElementById("pitch-request-form");
     var status = document.getElementById("pitch-form-status");
     if (!form || !status) return;
@@ -93,5 +93,11 @@
           }
         });
     });
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPitchRequestForm);
+  } else {
+    initPitchRequestForm();
+  }
 })();

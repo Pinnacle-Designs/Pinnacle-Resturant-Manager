@@ -111,7 +111,7 @@ export async function middleware(request: NextRequest) {
   const embedParam = request.nextUrl.searchParams.get("embed");
 
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
-    return applyDevCors(request, new NextResponse(null, { status: 204 }));
+    return applyFramePolicy(request, new NextResponse(null, { status: 204 }));
   }
 
   if (
