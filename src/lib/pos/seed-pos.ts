@@ -13,51 +13,58 @@ export async function seedPosSample(locationId: string) {
     });
   }
 
-  let ribeye = await prisma.menuItem.findFirst({
-    where: { locationId, name: "Ribeye Steak" },
+  const brisket = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Smoked Brisket Plate" },
   });
-  if (!ribeye) {
-    ribeye = await prisma.menuItem.create({
+  if (!brisket) return;
+
+  let brisketSandwich = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Brisket Sandwich" },
+  });
+  if (!brisketSandwich) {
+    brisketSandwich = await prisma.menuItem.create({
       data: {
         locationId,
-        name: "Ribeye Steak",
-        description: "12oz USDA Choice",
-        price: 38.99,
-        category: "Entrees",
-        posColor: "#b45309",
-        posGridIndex: 0,
+        name: "Brisket Sandwich",
+        description: "Chopped brisket, pickles, slaw on brioche",
+        price: 16.99,
+        category: "Sandwiches",
+        salesCategory: "FOOD",
+        posGridIndex: 4,
       },
     });
   }
 
-  let burger = await prisma.menuItem.findFirst({
-    where: { locationId, name: "Classic Burger" },
+  const bakedBeans = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Baked Beans" },
   });
-  if (!burger) {
-    burger = await prisma.menuItem.create({
-      data: {
-        locationId,
-        name: "Classic Burger",
-        description: "Angus patty, brioche bun",
-        price: 17.99,
-        category: "Burgers",
-        posGridIndex: 1,
-      },
-    });
-  }
-
-  const baconBurger = await prisma.menuItem.findFirst({
-    where: { locationId, name: "Bacon BBQ Burger" },
-  });
-  if (!baconBurger) {
+  if (!bakedBeans) {
     await prisma.menuItem.create({
       data: {
         locationId,
-        name: "Bacon BBQ Burger",
-        description: "Smoked bacon, BBQ sauce",
-        price: 19.99,
-        category: "Burgers",
-        posGridIndex: 2,
+        name: "Baked Beans",
+        description: "Sweet molasses pit beans",
+        price: 4.99,
+        category: "Sides",
+        salesCategory: "FOOD",
+        posGridIndex: 12,
+      },
+    });
+  }
+
+  const cornbread = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Cornbread" },
+  });
+  if (!cornbread) {
+    await prisma.menuItem.create({
+      data: {
+        locationId,
+        name: "Cornbread",
+        description: "Cast-iron skillet, honey butter",
+        price: 4.49,
+        category: "Sides",
+        salesCategory: "FOOD",
+        posGridIndex: 13,
       },
     });
   }
@@ -68,44 +75,46 @@ export async function seedPosSample(locationId: string) {
       data: {
         locationId,
         name: "Draft Beer",
-        description: "Rotating tap",
-        price: 7.99,
+        description: "Local craft lager on tap",
+        price: 6.99,
         category: "Beer",
-        posGridIndex: 20,
-      },
-    });
-  }
-
-  const cocktail = await prisma.menuItem.findFirst({ where: { locationId, name: "House Cocktail" } });
-  if (!cocktail) {
-    await prisma.menuItem.create({
-      data: {
-        locationId,
-        name: "House Cocktail",
-        price: 13.99,
-        category: "Cocktails",
+        salesCategory: "DRAFT_BEER",
         posGridIndex: 21,
       },
     });
   }
 
-  const cookGroup = await prisma.modifierGroup.create({
+  const cocktail = await prisma.menuItem.findFirst({ where: { locationId, name: "Bourbon Lemonade" } });
+  if (!cocktail) {
+    await prisma.menuItem.create({
+      data: {
+        locationId,
+        name: "Bourbon Lemonade",
+        description: "House bourbon, fresh lemonade, mint",
+        price: 11.99,
+        category: "Cocktails",
+        salesCategory: "LIQUOR",
+        posGridIndex: 22,
+      },
+    });
+  }
+
+  await prisma.modifierGroup.create({
     data: {
       locationId,
-      name: "How would they like it cooked?",
-      slug: "cook-temp",
-      menuItemId: ribeye.id,
+      name: "BBQ sauce",
+      slug: "bbq-sauce",
+      menuItemId: brisket.id,
       required: true,
       minSelect: 1,
       maxSelect: 1,
       sortOrder: 0,
       options: {
         create: [
-          { name: "Rare", sortOrder: 0, isDefault: false },
-          { name: "Medium Rare", sortOrder: 1, isDefault: false },
-          { name: "Medium", sortOrder: 2, isDefault: true },
-          { name: "Medium Well", sortOrder: 3 },
-          { name: "Well Done", sortOrder: 4 },
+          { name: "Sweet Texas", sortOrder: 0, isDefault: true },
+          { name: "Spicy Chipotle", sortOrder: 1 },
+          { name: "Carolina Vinegar", sortOrder: 2 },
+          { name: "Alabama White", sortOrder: 3 },
         ],
       },
     },
@@ -115,69 +124,72 @@ export async function seedPosSample(locationId: string) {
     data: {
       locationId,
       name: "Choose two sides",
-      slug: "steak-sides",
-      menuItemId: ribeye.id,
+      slug: "plate-sides",
+      menuItemId: brisket.id,
       required: true,
       minSelect: 2,
       maxSelect: 2,
       sortOrder: 1,
       options: {
         create: [
-          { name: "Mashed Potatoes", sortOrder: 0, isDefault: true },
-          { name: "Grilled Asparagus", sortOrder: 1, isDefault: true },
-          { name: "Fries", sortOrder: 2 },
-          { name: "Side Salad", sortOrder: 3 },
-          { name: "Mac & Cheese", sortOrder: 4 },
+          { name: "Mac & Cheese", sortOrder: 0, isDefault: true },
+          { name: "Coleslaw", sortOrder: 1, isDefault: true },
+          { name: "Baked Beans", sortOrder: 2 },
+          { name: "Cornbread", sortOrder: 3 },
         ],
       },
     },
   });
 
-  await prisma.modifierGroup.create({
-    data: {
-      locationId,
-      name: "Burger extras",
-      slug: "burger-extras",
-      categories: "Burgers",
-      required: false,
-      minSelect: 0,
-      maxSelect: 4,
-      sortOrder: 0,
-      options: {
-        create: [
-          { name: "No Onions", sortOrder: 0 },
-          { name: "Extra Cheese", sortOrder: 1, priceDelta: 1.5 },
-          { name: "Add Bacon", sortOrder: 2, priceDelta: 2.5 },
-          { name: "Gluten-Free Bun", sortOrder: 3, priceDelta: 2 },
-        ],
-      },
-    },
+  const porkSandwich = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Pulled Pork Sandwich" },
   });
-
-  await prisma.modifierGroup.create({
-    data: {
-      locationId,
-      name: "Protein temp (global)",
-      slug: "protein-temp",
-      categories: "Entrees",
-      required: false,
-      minSelect: 0,
-      maxSelect: 1,
-      sortOrder: 10,
-      options: {
-        create: [
-          { name: "Medium", sortOrder: 0, isDefault: true },
-          { name: "Medium Well", sortOrder: 1 },
-          { name: "Well Done", sortOrder: 2 },
-        ],
+  if (porkSandwich) {
+    await prisma.modifierGroup.create({
+      data: {
+        locationId,
+        name: "Sandwich sauce",
+        slug: "sandwich-sauce",
+        categories: "Sandwiches",
+        required: false,
+        minSelect: 0,
+        maxSelect: 1,
+        sortOrder: 2,
+        options: {
+          create: [
+            { name: "Sweet Texas", sortOrder: 0, isDefault: true },
+            { name: "Carolina Vinegar", sortOrder: 1 },
+            { name: "Alabama White", sortOrder: 2 },
+            { name: "Sauce on the side", sortOrder: 3 },
+          ],
+        },
       },
-    },
-  });
+    });
 
-  void cookGroup;
+    await prisma.modifierGroup.create({
+      data: {
+        locationId,
+        name: "Sandwich extras",
+        slug: "sandwich-extras",
+        categories: "Sandwiches",
+        required: false,
+        minSelect: 0,
+        maxSelect: 3,
+        sortOrder: 3,
+        options: {
+          create: [
+            { name: "Extra pork", sortOrder: 0, priceDelta: 3.5 },
+            { name: "Add pickles", sortOrder: 1 },
+            { name: "No slaw", sortOrder: 2 },
+            { name: "Extra slaw", sortOrder: 3, priceDelta: 1 },
+          ],
+        },
+      },
+    });
+  }
 
   const items = await prisma.menuItem.findMany({ where: { locationId, posGridIndex: null } });
-  let idx = 10;
+  let idx = 40;
   for (const item of items) {
     await prisma.menuItem.update({
       where: { id: item.id },

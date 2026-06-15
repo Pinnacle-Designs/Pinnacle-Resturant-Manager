@@ -1,25 +1,36 @@
 import { prisma } from "@/lib/prisma";
 
-/** Rich sample data for analytics dashboards */
+/** Rich sample data for analytics dashboards — Smoky Oak BBQ theme */
 export async function seedAnalyticsSampleData(locationId: string) {
   const existingOrders = await prisma.order.count({ where: { locationId } });
   if (existingOrders > 5) return;
 
   await prisma.location.update({
     where: { id: locationId },
-    data: { seatCount: 48, squareFootage: 2400 },
+    data: { seatCount: 76, squareFootage: 3200 },
   });
 
   const menuItems = await prisma.menuItem.findMany({ where: { locationId } });
   const recipeCosts: Record<string, number> = {
-    "Grilled Salmon": 9.2,
-    "Caesar Salad": 2.8,
-    "Margherita Pizza": 4.1,
-    "Chocolate Lava Cake": 2.2,
-    "House Red Wine": 3.5,
+    "Smoked Brisket Plate": 8.4,
+    "St. Louis Ribs (Half Rack)": 7.6,
+    "Pulled Pork Sandwich": 4.2,
+    "Smoked Chicken Quarter": 5.1,
+    "Brisket Sandwich": 5.8,
+    "Pitmaster Sampler": 14.2,
+    "Burnt Ends": 6.5,
+    "Mac & Cheese": 1.4,
+    "Coleslaw": 0.9,
+    "Baked Beans": 1.1,
+    "Cornbread": 0.8,
+    "Sweet Tea": 0.35,
+    "Peach Cobbler": 2.1,
+    "Draft Beer": 1.8,
+    "Bourbon Lemonade": 2.6,
+    "Jalapeño Poppers": 2.8,
   };
   for (const item of menuItems) {
-    const rc = recipeCosts[item.name] ?? item.price * 0.28;
+    const rc = recipeCosts[item.name] ?? item.price * 0.32;
     await prisma.menuItem.update({ where: { id: item.id }, data: { recipeCost: rc } });
   }
 
@@ -31,9 +42,9 @@ export async function seedAnalyticsSampleData(locationId: string) {
   const now = Date.now();
 
   for (let day = 0; day < 28; day++) {
-    const ordersPerDay = 4 + Math.floor(Math.random() * 8);
+    const ordersPerDay = 6 + Math.floor(Math.random() * 10);
     for (let o = 0; o < ordersPerDay; o++) {
-      const hour = 7 + Math.floor(Math.random() * 14);
+      const hour = 11 + Math.floor(Math.random() * 10);
       const createdAt = new Date(now - day * 86400000);
       createdAt.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
       const menuItem = menuItems[Math.floor(Math.random() * menuItems.length)]!;
@@ -47,12 +58,12 @@ export async function seedAnalyticsSampleData(locationId: string) {
           tableId: tables[Math.floor(Math.random() * tables.length)]?.id,
           status: "PAID",
           totalAmount: total,
-          guestCount: 1 + Math.floor(Math.random() * 4),
+          guestCount: 1 + Math.floor(Math.random() * 5),
           channel,
-          discountAmount: Math.random() > 0.85 ? total * 0.1 : 0,
-          compAmount: Math.random() > 0.92 ? total * 0.05 : 0,
+          discountAmount: Math.random() > 0.88 ? total * 0.1 : 0,
+          compAmount: Math.random() > 0.94 ? total * 0.05 : 0,
           voidAmount: Math.random() > 0.97 ? total * 0.02 : 0,
-          ticketTimeMinutes: 12 + Math.floor(Math.random() * 25),
+          ticketTimeMinutes: 14 + Math.floor(Math.random() * 22),
           createdAt,
           items: {
             create: {
@@ -68,14 +79,14 @@ export async function seedAnalyticsSampleData(locationId: string) {
 
   for (let day = 0; day < 14; day++) {
     const d = new Date(now - day * 86400000);
-    for (const member of staff.slice(0, 3)) {
+    for (const member of staff.slice(0, 4)) {
       await prisma.shift.create({
         data: {
           locationId,
           staffMemberId: member.id,
           date: d,
-          startTime: day % 2 === 0 ? "09:00" : "11:00",
-          endTime: day % 2 === 0 ? "17:00" : "21:00",
+          startTime: day % 2 === 0 ? "10:00" : "11:00",
+          endTime: day % 2 === 0 ? "18:00" : "22:00",
         },
       });
     }
@@ -83,73 +94,72 @@ export async function seedAnalyticsSampleData(locationId: string) {
 
   await prisma.marketingCampaign.createMany({
     data: [
-      { locationId, name: "Summer Instagram", channel: "instagram", spend: 850, impressions: 42000, clicks: 2100, conversions: 145, revenueAttributed: 4200, startDate: new Date(now - 20 * 86400000) },
-      { locationId, name: "Google Local Ads", channel: "google", spend: 600, impressions: 18000, clicks: 890, conversions: 98, revenueAttributed: 3100, startDate: new Date(now - 25 * 86400000) },
-      { locationId, name: "Email Newsletter", channel: "email", spend: 120, impressions: 5000, clicks: 420, conversions: 52, revenueAttributed: 1800, startDate: new Date(now - 10 * 86400000) },
+      { locationId, name: "Rib Night Instagram", channel: "instagram", spend: 920, impressions: 52000, clicks: 2800, conversions: 168, revenueAttributed: 5100, startDate: new Date(now - 18 * 86400000) },
+      { locationId, name: "Google — BBQ near me", channel: "google", spend: 750, impressions: 22000, clicks: 1100, conversions: 124, revenueAttributed: 3800, startDate: new Date(now - 25 * 86400000) },
+      { locationId, name: "Catering email blast", channel: "email", spend: 80, impressions: 4200, clicks: 380, conversions: 42, revenueAttributed: 6200, startDate: new Date(now - 12 * 86400000) },
     ],
   });
 
   await prisma.guestReview.createMany({
     data: [
-      { locationId, source: "Google", rating: 4.5, comment: "Great salmon and fast service!", category: "service" },
-      { locationId, source: "Google", rating: 3, comment: "Food was good but wait was long", category: "wait_time", resolved: false, createdAt: new Date(now - 2 * 86400000 + 19 * 3600000) },
-      { locationId, source: "Google", rating: 2, comment: "Slow dinner service, waited 40 minutes", category: "wait_time", resolved: false, createdAt: new Date(now - 5 * 86400000 + 20 * 3600000) },
-      { locationId, source: "OpenTable", rating: 5, comment: "Perfect date night spot", category: "ambiance", createdAt: new Date(now - 1 * 86400000 + 20 * 3600000) },
-      { locationId, source: "OpenTable", rating: 4, comment: "Lovely ambiance, dessert was excellent", category: "food_quality", createdAt: new Date(now - 4 * 86400000 + 19 * 3600000) },
-      { locationId, source: "OpenTable", rating: 3, comment: "Reservation mix-up caused a delay", category: "service", resolved: true, createdAt: new Date(now - 8 * 86400000 + 18 * 3600000) },
-      { locationId, source: "Yelp", rating: 4, comment: "Loved the pizza", category: "food_quality" },
-      { locationId, source: "Google", rating: 5, comment: "Best lunch special in town", category: "food_quality", createdAt: new Date(now - 3 * 86400000 + 12 * 3600000) },
+      { locationId, source: "Google", rating: 5, comment: "Best brisket in Austin — bark was perfect!", category: "food_quality" },
+      { locationId, source: "Google", rating: 4, comment: "Ribs were fall-off-the-bone. Sweet tea refills were fast.", category: "food_quality" },
+      { locationId, source: "Google", rating: 3, comment: "Saturday wait was 35 minutes — worth it but plan ahead", category: "wait_time", resolved: false, createdAt: new Date(now - 2 * 86400000 + 19 * 3600000) },
+      { locationId, source: "Yelp", rating: 5, comment: "Pulled pork sandwich and slaw — unreal", category: "food_quality" },
+      { locationId, source: "OpenTable", rating: 4, comment: "Great family spot — kids loved the mac & cheese", category: "ambiance", createdAt: new Date(now - 4 * 86400000 + 18 * 3600000) },
+      { locationId, source: "Google", rating: 2, comment: "Ran out of burnt ends before 7pm on Friday", category: "food_quality", resolved: true, createdAt: new Date(now - 6 * 86400000 + 20 * 3600000) },
+      { locationId, source: "Yelp", rating: 5, comment: "Pitmaster sampler is the move — share with a friend", category: "food_quality" },
+      { locationId, source: "Google", rating: 4, comment: "Solid happy hour bourbon lemonade", category: "food_quality", createdAt: new Date(now - 3 * 86400000 + 17 * 3600000) },
     ],
   });
 
   await prisma.vendorInvoice.createMany({
     data: [
-      { locationId, vendor: "Ocean Fresh", amount: 1250, category: "Seafood", priceChangePct: 8.2, invoiceDate: new Date(now - 5 * 86400000) },
-      { locationId, vendor: "Ocean Fresh", amount: 1180, category: "Seafood", priceChangePct: 4.1, invoiceDate: new Date(now - 35 * 86400000) },
-      { locationId, vendor: "Ocean Fresh", amount: 1100, category: "Seafood", priceChangePct: 2.0, invoiceDate: new Date(now - 65 * 86400000) },
-      { locationId, vendor: "Green Valley", amount: 380, category: "Produce", priceChangePct: 3.1, invoiceDate: new Date(now - 7 * 86400000) },
-      { locationId, vendor: "Green Valley", amount: 350, category: "Produce", priceChangePct: 1.5, invoiceDate: new Date(now - 37 * 86400000) },
-      { locationId, vendor: "Dairy Direct", amount: 520, category: "Dairy", priceChangePct: -1.2, invoiceDate: new Date(now - 10 * 86400000) },
-      { locationId, vendor: "Bulk Foods Co", amount: 290, category: "Dry goods", priceChangePct: 4.5, invoiceDate: new Date(now - 12 * 86400000) },
-      { locationId, vendor: "Harbor Seafood Supply", amount: 1050, category: "Seafood", priceChangePct: 1.8, invoiceDate: new Date(now - 14 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", amount: 2840, category: "Meat", priceChangePct: 6.8, invoiceDate: new Date(now - 5 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", amount: 2650, category: "Meat", priceChangePct: 4.2, invoiceDate: new Date(now - 35 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", amount: 2480, category: "Meat", priceChangePct: 2.5, invoiceDate: new Date(now - 65 * 86400000) },
+      { locationId, vendor: "Green Valley Produce", amount: 420, category: "Produce", priceChangePct: 3.1, invoiceDate: new Date(now - 7 * 86400000) },
+      { locationId, vendor: "Texas Fuel & Wood", amount: 660, category: "Fuel", priceChangePct: 8.5, invoiceDate: new Date(now - 9 * 86400000) },
+      { locationId, vendor: "Smokehouse Supply", amount: 380, category: "Dry goods", priceChangePct: 1.2, invoiceDate: new Date(now - 11 * 86400000) },
+      { locationId, vendor: "Farm Fresh Poultry", amount: 540, category: "Poultry", priceChangePct: 3.8, invoiceDate: new Date(now - 14 * 86400000) },
+      { locationId, vendor: "Local Bakery Co", amount: 290, category: "Bakery", priceChangePct: 2.0, invoiceDate: new Date(now - 16 * 86400000) },
     ],
   });
 
   await prisma.vendorPriceHistory.createMany({
     data: [
-      { locationId, vendor: "Ocean Fresh", itemName: "Salmon fillets", category: "Seafood", unitPrice: 12.5, unit: "lbs", effectiveDate: new Date(now - 5 * 86400000) },
-      { locationId, vendor: "Ocean Fresh", itemName: "Salmon fillets", category: "Seafood", unitPrice: 11.5, unit: "lbs", effectiveDate: new Date(now - 40 * 86400000) },
-      { locationId, vendor: "Harbor Seafood Supply", itemName: "Salmon fillets", category: "Seafood", unitPrice: 10.8, unit: "lbs", effectiveDate: new Date(now - 3 * 86400000) },
-      { locationId, vendor: "Harbor Seafood Supply", itemName: "Salmon fillets", category: "Seafood", unitPrice: 11.0, unit: "lbs", effectiveDate: new Date(now - 45 * 86400000) },
-      { locationId, vendor: "Green Valley", itemName: "Romaine lettuce", category: "Produce", unitPrice: 2.5, unit: "heads", effectiveDate: new Date(now - 7 * 86400000) },
-      { locationId, vendor: "Green Valley", itemName: "Romaine lettuce", category: "Produce", unitPrice: 2.3, unit: "heads", effectiveDate: new Date(now - 42 * 86400000) },
-      { locationId, vendor: "Farm Direct Produce", itemName: "Romaine lettuce", category: "Produce", unitPrice: 2.1, unit: "heads", effectiveDate: new Date(now - 8 * 86400000) },
-      { locationId, vendor: "Dairy Direct", itemName: "Mozzarella", category: "Dairy", unitPrice: 6.0, unit: "lbs", effectiveDate: new Date(now - 10 * 86400000) },
-      { locationId, vendor: "Dairy Direct", itemName: "Mozzarella", category: "Dairy", unitPrice: 6.1, unit: "lbs", effectiveDate: new Date(now - 50 * 86400000) },
-      { locationId, vendor: "Bulk Foods Co", itemName: "Flour", category: "Dry goods", unitPrice: 1.2, unit: "lbs", effectiveDate: new Date(now - 12 * 86400000) },
-      { locationId, vendor: "Bulk Foods Co", itemName: "Flour", category: "Dry goods", unitPrice: 1.1, unit: "lbs", effectiveDate: new Date(now - 55 * 86400000) },
-      { locationId, vendor: "Mill & Grain Co", itemName: "Flour", category: "Dry goods", unitPrice: 1.05, unit: "lbs", effectiveDate: new Date(now - 15 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", itemName: "Beef brisket", category: "Meat", unitPrice: 6.8, unit: "lbs", effectiveDate: new Date(now - 5 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", itemName: "Beef brisket", category: "Meat", unitPrice: 6.4, unit: "lbs", effectiveDate: new Date(now - 40 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", itemName: "Pork shoulder", category: "Meat", unitPrice: 3.2, unit: "lbs", effectiveDate: new Date(now - 5 * 86400000) },
+      { locationId, vendor: "Hill Country Meats", itemName: "St. Louis ribs", category: "Meat", unitPrice: 14.5, unit: "racks", effectiveDate: new Date(now - 8 * 86400000) },
+      { locationId, vendor: "Green Valley Produce", itemName: "Cabbage", category: "Produce", unitPrice: 2.2, unit: "heads", effectiveDate: new Date(now - 7 * 86400000) },
+      { locationId, vendor: "Green Valley Produce", itemName: "Cabbage", category: "Produce", unitPrice: 2.0, unit: "heads", effectiveDate: new Date(now - 42 * 86400000) },
+      { locationId, vendor: "Smokehouse Supply", itemName: "House BBQ sauce", category: "Dry goods", unitPrice: 18.0, unit: "gal", effectiveDate: new Date(now - 10 * 86400000) },
+      { locationId, vendor: "Bulk Foods Co", itemName: "Elbow macaroni", category: "Dry goods", unitPrice: 1.4, unit: "lbs", effectiveDate: new Date(now - 12 * 86400000) },
+      { locationId, vendor: "Texas Fuel & Wood", itemName: "Oak smoking wood", category: "Fuel", unitPrice: 22.0, unit: "bags", effectiveDate: new Date(now - 9 * 86400000) },
+      { locationId, vendor: "Farm Fresh Poultry", itemName: "Chicken quarters", category: "Poultry", unitPrice: 1.85, unit: "each", effectiveDate: new Date(now - 14 * 86400000) },
     ],
   });
 
-  if (inventory[0]) {
+  const brisketInv = inventory.find((i) => i.name === "Beef brisket");
+  if (brisketInv) {
     await prisma.inventoryWaste.createMany({
       data: [
-        { locationId, inventoryItemId: inventory[0].id, itemName: inventory[0].name, quantity: 2, unit: inventory[0].unit, cost: 25, reason: "spoilage" },
-        { locationId, itemName: "Prep trim", quantity: 5, unit: "lbs", cost: 18, reason: "prep waste" },
-        { locationId, itemName: "Expired dairy", quantity: 1, unit: "lbs", cost: 8, reason: "spoilage" },
+        { locationId, inventoryItemId: brisketInv.id, itemName: brisketInv.name, quantity: 4, unit: brisketInv.unit, cost: 27, reason: "trim waste" },
+        { locationId, itemName: "Brisket trim — unsellable", quantity: 6, unit: "lbs", cost: 22, reason: "prep waste" },
+        { locationId, itemName: "Over-smoked rib batch", quantity: 2, unit: "racks", cost: 29, reason: "quality hold" },
       ],
     });
   }
 
   await prisma.externalFactor.createMany({
     data: [
-      { locationId, date: new Date(now - 3 * 86400000), factorType: "weather", description: "Rainy day — delivery +25%", impactPct: 25 },
-      { locationId, date: new Date(now - 7 * 86400000), factorType: "event", description: "Concert at arena nearby", impactPct: 40 },
-      { locationId, date: new Date(now - 14 * 86400000), factorType: "holiday", description: "Local festival weekend", impactPct: 18 },
-      { locationId, date: new Date(now - 10 * 86400000), factorType: "sports", description: "Home game at stadium — pre/post crowds", impactPct: 35 },
-      { locationId, date: new Date(now - 5 * 86400000), factorType: "tourism", description: "Convention center conference week", impactPct: 22 },
-      { locationId, date: new Date(now - 21 * 86400000), factorType: "school", description: "University graduation weekend", impactPct: -12 },
+      { locationId, date: new Date(now - 3 * 86400000), factorType: "weather", description: "Rainy evening — dine-in -15%, delivery +30%", impactPct: 12 },
+      { locationId, date: new Date(now - 7 * 86400000), factorType: "event", description: "UT football game day — lunch rush +45%", impactPct: 45 },
+      { locationId, date: new Date(now - 14 * 86400000), factorType: "holiday", description: "Memorial Day weekend — catering spike", impactPct: 28 },
+      { locationId, date: new Date(now - 10 * 86400000), factorType: "sports", description: "ACL Fest nearby — late-night bar sales up", impactPct: 32 },
+      { locationId, date: new Date(now - 5 * 86400000), factorType: "tourism", description: "SXSW overflow week — walk-ins up", impactPct: 38 },
+      { locationId, date: new Date(now - 21 * 86400000), factorType: "school", description: "Spring break — family lunch traffic down", impactPct: -10 },
     ],
   });
 
@@ -158,30 +168,32 @@ export async function seedAnalyticsSampleData(locationId: string) {
       where: { locationId },
       create: {
         locationId,
-        url: "https://pinnaclerestaurant.com",
+        url: "https://smokyoakbbq.com",
         connected: true,
-        visitors30d: 4820,
-        pageViews30d: 12450,
-        sessions30d: 6180,
-        bounceRate: 42.5,
-        avgSessionSec: 118,
+        visitors30d: 6120,
+        pageViews30d: 14800,
+        sessions30d: 7340,
+        bounceRate: 38.2,
+        avgSessionSec: 132,
         topPages: JSON.stringify([
-          { path: "/", views: 4730 },
-          { path: "/menu", views: 2988 },
-          { path: "/reservations", views: 1992 },
+          { path: "/", views: 5120 },
+          { path: "/menu", views: 3840 },
+          { path: "/catering", views: 1920 },
+          { path: "/about", views: 1180 },
         ]),
         referrers: JSON.stringify([
-          { source: "Google Search", pct: 42 },
-          { source: "Instagram", pct: 24 },
-          { source: "Direct", pct: 18 },
+          { source: "Google Search", pct: 48 },
+          { source: "Instagram", pct: 22 },
+          { source: "Direct", pct: 16 },
         ]),
         lastSyncedAt: new Date(),
       },
       update: {
+        url: "https://smokyoakbbq.com",
         connected: true,
-        visitors30d: 4820,
-        pageViews30d: 12450,
-        sessions30d: 6180,
+        visitors30d: 6120,
+        pageViews30d: 14800,
+        sessions30d: 7340,
         lastSyncedAt: new Date(),
       },
     });

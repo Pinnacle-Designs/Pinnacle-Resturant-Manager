@@ -5,48 +5,64 @@ export async function seedKitchenSample(locationId: string) {
   const stations = await ensureKitchenStations(locationId);
   const bySlug = Object.fromEntries(stations.map((s) => [s.slug, s]));
 
-  let ribeye = await prisma.menuItem.findFirst({ where: { locationId, name: "Ribeye Steak" } });
-  if (ribeye && !ribeye.kitchenStationId) {
-    await prisma.menuItem.update({
-      where: { id: ribeye.id },
-      data: { kitchenStationId: bySlug.grill?.id, defaultCourse: "MAIN" },
-    });
+  const smokedItems = await prisma.menuItem.findMany({
+    where: { locationId, category: "Smoked Meats" },
+  });
+  for (const item of smokedItems) {
+    if (!item.kitchenStationId) {
+      await prisma.menuItem.update({
+        where: { id: item.id },
+        data: { kitchenStationId: bySlug.smoker?.id ?? bySlug.grill?.id, defaultCourse: "MAIN" },
+      });
+    }
   }
 
-  let shake = await prisma.menuItem.findFirst({ where: { locationId, name: "Chocolate Shake" } });
-  if (!shake) {
-    shake = await prisma.menuItem.create({
-      data: {
-        locationId,
-        name: "Chocolate Shake",
-        description: "Hand-spun",
-        price: 6.99,
-        category: "Beverages",
-        kitchenStationId: bySlug["service-bar"]?.id,
-        defaultCourse: "BEVERAGE",
-        posGridIndex: 22,
-      },
-    });
+  const sideItems = await prisma.menuItem.findMany({
+    where: { locationId, category: "Sides" },
+  });
+  for (const item of sideItems) {
+    if (!item.kitchenStationId) {
+      await prisma.menuItem.update({
+        where: { id: item.id },
+        data: { kitchenStationId: bySlug.fry?.id ?? bySlug.cold?.id, defaultCourse: "MAIN" },
+      });
+    }
   }
 
-  if (!ribeye) {
-    ribeye = await prisma.menuItem.findFirst({ where: { locationId, name: "Ribeye Steak" } });
+  const sandwichItems = await prisma.menuItem.findMany({
+    where: { locationId, category: "Sandwiches" },
+  });
+  for (const item of sandwichItems) {
+    if (!item.kitchenStationId) {
+      await prisma.menuItem.update({
+        where: { id: item.id },
+        data: { kitchenStationId: bySlug.cold?.id, defaultCourse: "MAIN" },
+      });
+    }
   }
+
+  const brisket = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Smoked Brisket Plate" },
+  });
+  const ribs = await prisma.menuItem.findFirst({
+    where: { locationId, name: "St. Louis Ribs (Half Rack)" },
+  });
 
   let combo = await prisma.menuItem.findFirst({
-    where: { locationId, name: "Steak & Shake Combo" },
+    where: { locationId, name: "Pitmaster Sampler" },
   });
-  if (!combo && ribeye && shake) {
+  if (!combo && brisket && ribs) {
     combo = await prisma.menuItem.create({
       data: {
         locationId,
-        name: "Steak & Shake Combo",
-        description: "Ribeye + hand-spun shake",
-        price: 42.99,
-        category: "Entrees",
+        name: "Pitmaster Sampler",
+        description: "Brisket plate + half rack ribs",
+        price: 39.99,
+        category: "Smoked Meats",
+        salesCategory: "FOOD",
         isCombo: true,
         defaultCourse: "MAIN",
-        posGridIndex: 3,
+        posGridIndex: 5,
       },
     });
 
@@ -54,57 +70,32 @@ export async function seedKitchenSample(locationId: string) {
       data: [
         {
           comboItemId: combo.id,
-          componentItemId: ribeye.id,
+          componentItemId: brisket.id,
           quantity: 1,
-          kitchenStationId: bySlug.grill?.id,
+          kitchenStationId: bySlug.smoker?.id ?? bySlug.grill?.id,
           sortOrder: 0,
         },
         {
           comboItemId: combo.id,
-          componentItemId: shake.id,
+          componentItemId: ribs.id,
           quantity: 1,
-          kitchenStationId: bySlug["service-bar"]?.id,
+          kitchenStationId: bySlug.smoker?.id ?? bySlug.grill?.id,
           sortOrder: 1,
         },
       ],
     });
   }
 
-  const pizza = await prisma.menuItem.findFirst({
-    where: { locationId, category: "Pizza" },
+  const sweetTea = await prisma.menuItem.findFirst({
+    where: { locationId, name: "Sweet Tea" },
   });
-  if (pizza) {
+  if (sweetTea && !sweetTea.kitchenStationId) {
     await prisma.menuItem.update({
-      where: { id: pizza.id },
-      data: { kitchenStationId: bySlug.pizza?.id, defaultCourse: "MAIN" },
+      where: { id: sweetTea.id },
+      data: {
+        kitchenStationId: bySlug["service-bar"]?.id,
+        defaultCourse: "BEVERAGE",
+      },
     });
-
-    const existingPie = await prisma.modifierGroup.findFirst({
-      where: { locationId, slug: "pizza-toppings-half" },
-    });
-    if (!existingPie) {
-      await prisma.modifierGroup.create({
-        data: {
-          locationId,
-          name: "Half-and-half toppings",
-          slug: "pizza-toppings-half",
-          menuItemId: pizza.id,
-          required: false,
-          minSelect: 0,
-          maxSelect: 8,
-          layout: "FRACTIONAL_PIE",
-          sortOrder: 0,
-          options: {
-            create: [
-              { name: "Pepperoni", sortOrder: 0, priceDelta: 1.5, fractionCoverage: "WHOLE" },
-              { name: "Mushroom", sortOrder: 1, priceDelta: 1.25, fractionCoverage: "WHOLE" },
-              { name: "Sausage", sortOrder: 2, priceDelta: 1.5, fractionCoverage: "WHOLE" },
-              { name: "Light sauce", sortOrder: 3, priceDelta: 0, fractionCoverage: "WHOLE" },
-              { name: "Extra cheese", sortOrder: 4, priceDelta: 2, fractionCoverage: "WHOLE" },
-            ],
-          },
-        },
-      });
-    }
   }
 }

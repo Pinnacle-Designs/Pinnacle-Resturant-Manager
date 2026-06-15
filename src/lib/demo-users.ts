@@ -9,11 +9,11 @@ export const DEMO_USERS: Array<{
   name: string;
   role: AppRole;
 }> = [
-  { email: "owner@pinnacle.com", password: "demo1234", name: "Alex Owner", role: "OWNER" },
-  { email: "manager@pinnacle.com", password: "demo1234", name: "Jordan Manager", role: "MANAGER" },
-  { email: "server@pinnacle.com", password: "demo1234", name: "Sam Server", role: "SERVER" },
-  { email: "kitchen@pinnacle.com", password: "demo1234", name: "Chris Kitchen", role: "KITCHEN" },
-  { email: "host@pinnacle.com", password: "demo1234", name: "Taylor Host", role: "HOST" },
+  { email: "owner@pinnacle.com", password: "demo1234", name: "Marcus Reed", role: "OWNER" },
+  { email: "manager@pinnacle.com", password: "demo1234", name: "Elena Vasquez", role: "MANAGER" },
+  { email: "server@pinnacle.com", password: "demo1234", name: "Priya Nair", role: "SERVER" },
+  { email: "kitchen@pinnacle.com", password: "demo1234", name: "Marcus Reed", role: "KITCHEN" },
+  { email: "host@pinnacle.com", password: "demo1234", name: "Riley Brooks", role: "HOST" },
 ];
 
 /** Private plan-tier test accounts — local dev only (see planDemoLoginEnabled). */

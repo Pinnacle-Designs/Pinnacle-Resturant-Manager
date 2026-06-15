@@ -2,12 +2,12 @@ import { prisma } from "./prisma";
 
 export type DemoMode = "seeded" | "fresh";
 
-export const DEMO_LOCATION_SAMPLE = "Demo - Sample Data";
+export const DEMO_LOCATION_SAMPLE = "Smoky Oak BBQ";
 export const DEMO_LOCATION_BLANK = "Demo - Blank Slate";
 
-/** Legacy names before ASCII hyphen fix */
+/** Legacy names before rebrand / ASCII hyphen fix */
 const LEGACY_DEMO_NAMES: Record<DemoMode, string[]> = {
-  seeded: [DEMO_LOCATION_SAMPLE, "Demo — Sample Data"],
+  seeded: [DEMO_LOCATION_SAMPLE, "Demo - Sample Data", "Demo — Sample Data"],
   fresh: [DEMO_LOCATION_BLANK, "Demo — Blank Slate"],
 };
 
@@ -20,7 +20,7 @@ async function seedWebsiteConnection(locationId: string) {
     where: { locationId },
     create: {
       locationId,
-      url: "https://pinnaclerestaurant.com",
+      url: "https://smokyoakbbq.com",
       connected: true,
       visitors30d: 4820,
       pageViews30d: 12450,
@@ -44,7 +44,7 @@ async function seedWebsiteConnection(locationId: string) {
       lastSyncedAt: new Date(),
     },
     update: {
-      url: "https://pinnaclerestaurant.com",
+      url: "https://smokyoakbbq.com",
       connected: true,
       visitors30d: 4820,
       pageViews30d: 12450,
@@ -75,7 +75,7 @@ async function seedHiringSample(locationId: string) {
     (await prisma.jobPosting.create({
       data: {
         locationId,
-        title: "Server — evenings",
+        title: "Server — smokehouse floor",
         role: "Server",
         applyCode: "DEMO1",
         active: true,
@@ -83,10 +83,10 @@ async function seedHiringSample(locationId: string) {
     }));
 
   const pipeline = [
-    { name: "Alex Rivera", phone: "+15559001001", status: "NEW" as const, role: "Server" },
-    { name: "Jordan Lee", phone: "+15559001002", status: "INTERVIEW_SCHEDULED" as const, role: "Bartender" },
-    { name: "Sam Ortiz", phone: "+15559001003", status: "OFFERED" as const, role: "Host" },
-    { name: "Taylor Brooks", phone: "+15559001004", status: "HIRED" as const, role: "Server" },
+    { name: "Miguel Santos", phone: "+15559001001", status: "NEW" as const, role: "Server" },
+    { name: "Rebecca Huang", phone: "+15559001002", status: "INTERVIEW_SCHEDULED" as const, role: "Bartender" },
+    { name: "Devon Price", phone: "+15559001003", status: "OFFERED" as const, role: "Host" },
+    { name: "Aisha Coleman", phone: "+15559001004", status: "HIRED" as const, role: "Line Cook" },
   ];
 
   for (const row of pipeline) {
@@ -244,12 +244,13 @@ async function seedComplianceSample(locationId: string) {
         locationId,
         incidentType: "WORKPLACE_INJURY",
         category: "burn",
-        description: "Minor grease splash on forearm during lunch rush — treated with burn gel, returned to station.",
+        description:
+          "Minor steam burn on wrist while pulling pork shoulder from the holding warmer — treated with burn gel, returned to line.",
         staffMemberId: cook?.id,
         severity: "LOW",
         oshaRecordable: false,
-        actionTaken: "First aid applied; non-recordable per OSHA guidance.",
-        reportedByName: "Demo Manager",
+        actionTaken: "First aid applied; smoker gloves reissued. Non-recordable per OSHA guidance.",
+        reportedByName: "Elena Vasquez",
       },
     });
   }
@@ -259,20 +260,20 @@ async function seedRetentionSample(locationId: string) {
   const { subMonths, subDays } = await import("date-fns");
 
   let former = await prisma.staffMember.findFirst({
-    where: { locationId, name: "Chris Alvarez (Former)" },
+    where: { locationId, name: "Noah Pierce (Former)" },
   });
   if (!former) {
     former = await prisma.staffMember.create({
       data: {
         locationId,
-        name: "Chris Alvarez (Former)",
+        name: "Noah Pierce (Former)",
         role: "Server",
-        email: "chris.former@example.com",
+        email: "noah.former@example.com",
         hourlyRate: 14,
         active: false,
         hireDate: subMonths(new Date(), 8),
         terminatedAt: subMonths(new Date(), 1),
-        terminationReason: "Voluntary — schedule conflict",
+        terminationReason: "Voluntary — moved out of town",
       },
     });
 
@@ -312,31 +313,31 @@ async function seedRetentionSample(locationId: string) {
 
   const feedbackCount = await prisma.shiftFeedback.count({ where: { locationId } });
   if (feedbackCount === 0) {
-    const sarah = await prisma.staffMember.findFirst({
-      where: { locationId, name: { contains: "Sarah" } },
+    const priya = await prisma.staffMember.findFirst({
+      where: { locationId, name: { contains: "Priya" } },
     });
-    const maria = await prisma.staffMember.findFirst({
-      where: { locationId, role: { contains: "Chef" } },
+    const marcus = await prisma.staffMember.findFirst({
+      where: { locationId, role: { contains: "Pitmaster" } },
     });
-    if (sarah) {
+    if (priya) {
       await prisma.shiftFeedback.create({
         data: {
           locationId,
-          staffMemberId: sarah.id,
-          authorName: "Demo Manager",
+          staffMemberId: priya.id,
+          authorName: "Marcus Reed",
           kind: "SHOUT_OUT",
-          content: "Handled a 12-top flawlessly during Friday rush — guests asked for her by name.",
+          content: "Handled a 10-top family reunion during Saturday lunch rush — comps and refires were flawless.",
         },
       });
     }
-    if (maria) {
+    if (marcus) {
       await prisma.shiftFeedback.create({
         data: {
           locationId,
-          staffMemberId: maria.id,
-          authorName: "Demo Manager",
+          staffMemberId: marcus.id,
+          authorName: "Elena Vasquez",
           kind: "NOTE",
-          content: "Strong expo communication during brunch; consider for lead cook training.",
+          content: "Brisket batch held perfectly through dinner service; consider training line cooks on his rest-and-hold routine.",
         },
       });
     }
@@ -347,27 +348,27 @@ async function seedSocialAccounts(locationId: string) {
   const accounts = [
     {
       platform: "INSTAGRAM" as const,
-      accountName: "@pinnaclerestaurant",
-      profileUrl: "https://instagram.com/pinnaclerestaurant",
-      followers: 4200,
+      accountName: "@smokyoakbbq",
+      profileUrl: "https://instagram.com/smokyoakbbq",
+      followers: 6200,
     },
     {
       platform: "FACEBOOK" as const,
-      accountName: "Pinnacle Restaurant",
-      profileUrl: "https://facebook.com/pinnaclerestaurant",
-      followers: 3100,
+      accountName: "Smoky Oak BBQ",
+      profileUrl: "https://facebook.com/smokyoakbbq",
+      followers: 4800,
     },
     {
       platform: "TIKTOK" as const,
-      accountName: "@pinnaclerestaurant",
-      profileUrl: "https://tiktok.com/@pinnaclerestaurant",
-      followers: 8900,
+      accountName: "@smokyoakbbq",
+      profileUrl: "https://tiktok.com/@smokyoakbbq",
+      followers: 12400,
     },
     {
       platform: "X" as const,
-      accountName: "@pinnaclerest",
-      profileUrl: "https://x.com/pinnaclerest",
-      followers: 1200,
+      accountName: "@smokyoakbbq",
+      profileUrl: "https://x.com/smokyoakbbq",
+      followers: 2100,
     },
   ];
 
@@ -429,49 +430,129 @@ export async function seedLocationData(locationId: string) {
 
   await prisma.menuItem.createMany({
     data: [
-      { locationId, name: "Grilled Salmon", description: "Atlantic salmon with lemon butter", price: 28.99, category: "Entrees" },
-      { locationId, name: "Caesar Salad", description: "Romaine, parmesan, croutons", price: 12.99, category: "Salads" },
-      { locationId, name: "Margherita Pizza", description: "Fresh mozzarella, basil, tomato", price: 16.99, category: "Pizza" },
-      { locationId, name: "Chocolate Lava Cake", description: "Warm cake with vanilla ice cream", price: 9.99, category: "Desserts" },
-      { locationId, name: "House Red Wine", description: "Glass of Cabernet Sauvignon", price: 11.99, category: "Beverages" },
+      {
+        locationId,
+        name: "Smoked Brisket Plate",
+        description: "Sliced USDA Choice brisket with two sides",
+        price: 24.99,
+        category: "Smoked Meats",
+        salesCategory: "FOOD",
+        posGridIndex: 0,
+      },
+      {
+        locationId,
+        name: "St. Louis Ribs (Half Rack)",
+        description: "Dry-rubbed, oak-smoked, house glaze",
+        price: 22.99,
+        category: "Smoked Meats",
+        salesCategory: "FOOD",
+        posGridIndex: 1,
+      },
+      {
+        locationId,
+        name: "Pulled Pork Sandwich",
+        description: "Chopped shoulder, pickles, slaw on brioche",
+        price: 14.99,
+        category: "Sandwiches",
+        salesCategory: "FOOD",
+        posGridIndex: 2,
+      },
+      {
+        locationId,
+        name: "Smoked Chicken Quarter",
+        description: "Quarter bird with Alabama white sauce",
+        price: 16.99,
+        category: "Smoked Meats",
+        salesCategory: "FOOD",
+        posGridIndex: 3,
+      },
+      {
+        locationId,
+        name: "Mac & Cheese",
+        description: "Three-cheese baked side",
+        price: 5.99,
+        category: "Sides",
+        salesCategory: "FOOD",
+        posGridIndex: 10,
+      },
+      {
+        locationId,
+        name: "Coleslaw",
+        description: "Creamy vinegar slaw",
+        price: 4.99,
+        category: "Sides",
+        salesCategory: "FOOD",
+        posGridIndex: 11,
+      },
+      {
+        locationId,
+        name: "Sweet Tea",
+        description: "House-brewed, refills included",
+        price: 3.49,
+        category: "Beverages",
+        salesCategory: "NA_BEVERAGE",
+        posGridIndex: 20,
+      },
+      {
+        locationId,
+        name: "Peach Cobbler",
+        description: "Warm cobbler with vanilla ice cream",
+        price: 7.99,
+        category: "Desserts",
+        salesCategory: "FOOD",
+        posGridIndex: 30,
+      },
     ],
   });
 
   await prisma.inventoryItem.createMany({
     data: [
-      { locationId, name: "Salmon fillets", quantity: 8, unit: "lbs", minQuantity: 10, costPerUnit: 12.5, previousCostPerUnit: 11.5, portionSize: 0.5, yieldPct: 92, supplier: "Ocean Fresh" },
-      { locationId, name: "Romaine lettuce", quantity: 15, unit: "heads", minQuantity: 10, costPerUnit: 2.5, previousCostPerUnit: 2.3, portionSize: 0.25, yieldPct: 85, supplier: "Green Valley" },
-      { locationId, name: "Mozzarella", quantity: 3, unit: "lbs", minQuantity: 5, costPerUnit: 6.0, previousCostPerUnit: 6.1, portionSize: 0.15, yieldPct: 98, supplier: "Dairy Direct" },
-      { locationId, name: "Olive oil", quantity: 2, unit: "bottles", minQuantity: 3, costPerUnit: 15.0, portionSize: 0.02, yieldPct: 100, supplier: "Mediterranean Imports" },
-      { locationId, name: "Flour", quantity: 20, unit: "lbs", minQuantity: 10, costPerUnit: 1.2, previousCostPerUnit: 1.1, portionSize: 0.5, yieldPct: 100, supplier: "Bulk Foods Co" },
-      { locationId, name: "Chicken breast", quantity: 6, unit: "lbs", minQuantity: 12, costPerUnit: 4.5, previousCostPerUnit: 4.2, portionSize: 0.4, yieldPct: 90, supplier: "Farm Fresh Poultry" },
+      { locationId, name: "Beef brisket", quantity: 42, unit: "lbs", minQuantity: 30, costPerUnit: 6.8, previousCostPerUnit: 6.4, portionSize: 0.45, yieldPct: 88, supplier: "Hill Country Meats" },
+      { locationId, name: "Pork shoulder", quantity: 28, unit: "lbs", minQuantity: 20, costPerUnit: 3.2, previousCostPerUnit: 3.0, portionSize: 0.35, yieldPct: 85, supplier: "Hill Country Meats" },
+      { locationId, name: "St. Louis ribs", quantity: 18, unit: "racks", minQuantity: 12, costPerUnit: 14.5, previousCostPerUnit: 13.8, portionSize: 0.5, yieldPct: 90, supplier: "Hill Country Meats" },
+      { locationId, name: "Chicken quarters", quantity: 24, unit: "each", minQuantity: 16, costPerUnit: 1.85, previousCostPerUnit: 1.75, portionSize: 1, yieldPct: 92, supplier: "Farm Fresh Poultry" },
+      { locationId, name: "Brioche buns", quantity: 120, unit: "each", minQuantity: 80, costPerUnit: 0.55, portionSize: 1, yieldPct: 100, supplier: "Local Bakery Co" },
+      { locationId, name: "BBQ dry rub", quantity: 8, unit: "lbs", minQuantity: 4, costPerUnit: 9.5, portionSize: 0.02, yieldPct: 100, supplier: "Smokehouse Supply" },
+      { locationId, name: "House BBQ sauce", quantity: 6, unit: "gal", minQuantity: 3, costPerUnit: 18.0, portionSize: 0.05, yieldPct: 100, supplier: "Smokehouse Supply" },
+      { locationId, name: "Cabbage", quantity: 14, unit: "heads", minQuantity: 8, costPerUnit: 2.2, previousCostPerUnit: 2.0, portionSize: 0.15, yieldPct: 82, supplier: "Green Valley Produce" },
+      { locationId, name: "Elbow macaroni", quantity: 16, unit: "lbs", minQuantity: 10, costPerUnit: 1.4, portionSize: 0.12, yieldPct: 100, supplier: "Bulk Foods Co" },
+      { locationId, name: "Oak smoking wood", quantity: 12, unit: "bags", minQuantity: 6, costPerUnit: 22.0, portionSize: 0.25, yieldPct: 100, supplier: "Texas Fuel & Wood" },
     ],
   });
 
   await prisma.staffMember.createMany({
     data: [
-      { locationId, name: "Maria Garcia", role: "Head Chef", email: "maria@pinnacle.com", hourlyRate: 28 },
-      { locationId, name: "James Wilson", role: "Sous Chef", email: "james@pinnacle.com", hourlyRate: 22 },
-      { locationId, name: "Sarah Chen", role: "Server", email: "sarah@pinnacle.com", hourlyRate: 15 },
-      { locationId, name: "David Park", role: "Bartender", email: "david@pinnacle.com", hourlyRate: 18 },
+      { locationId, name: "Marcus Reed", role: "Pitmaster", email: "marcus@smokyoakbbq.com", hourlyRate: 28 },
+      { locationId, name: "Elena Vasquez", role: "Line Cook", email: "elena@smokyoakbbq.com", hourlyRate: 19 },
+      { locationId, name: "Priya Nair", role: "Server", email: "priya@smokyoakbbq.com", hourlyRate: 12 },
+      { locationId, name: "David Park", role: "Bartender", email: "david@smokyoakbbq.com", hourlyRate: 16 },
+      { locationId, name: "Riley Brooks", role: "Host", email: "riley@smokyoakbbq.com", hourlyRate: 13 },
     ],
   });
 
   await prisma.table.createMany({
     data: [
       { locationId, number: 1, capacity: 2, status: "available" },
-      { locationId, number: 2, capacity: 4, status: "available" },
-      { locationId, number: 3, capacity: 4, status: "occupied" },
-      { locationId, number: 4, capacity: 6, status: "available" },
-      { locationId, number: 5, capacity: 8, status: "reserved" },
+      { locationId, number: 2, capacity: 2, status: "occupied" },
+      { locationId, number: 3, capacity: 4, status: "available" },
+      { locationId, number: 4, capacity: 4, status: "occupied" },
+      { locationId, number: 5, capacity: 4, status: "available" },
+      { locationId, number: 6, capacity: 6, status: "reserved" },
+      { locationId, number: 7, capacity: 6, status: "available" },
+      { locationId, number: 8, capacity: 6, status: "available" },
+      { locationId, number: 9, capacity: 8, status: "occupied" },
+      { locationId, number: 10, capacity: 8, status: "available" },
+      { locationId, number: 11, capacity: 4, status: "available" },
+      { locationId, number: 12, capacity: 4, status: "available" },
     ],
   });
 
   await prisma.expense.createMany({
     data: [
-      { locationId, description: "Weekly produce delivery", amount: 450, category: "Food & Supplies" },
-      { locationId, description: "Electricity bill", amount: 320, category: "Utilities" },
-      { locationId, description: "Equipment maintenance", amount: 180, category: "Maintenance" },
+      { locationId, description: "Oak wood & charcoal delivery", amount: 680, category: "Food & Supplies" },
+      { locationId, description: "Brisket & rib vendor invoice", amount: 2140, category: "Food & Supplies" },
+      { locationId, description: "Smoker maintenance & thermometers", amount: 420, category: "Maintenance" },
+      { locationId, description: "Electricity — walk-in & smokers", amount: 890, category: "Utilities" },
     ],
   });
 
@@ -495,10 +576,21 @@ export async function getOrCreateDemoLocation(mode: DemoMode) {
     where: { name: { in: LEGACY_DEMO_NAMES[mode] } },
   });
   if (existing) {
-    if (existing.name !== name) {
+    const seededMeta =
+      mode === "seeded"
+        ? {
+            name,
+            plan: "PRO" as const,
+            address: "1847 Oak Lane, Austin, TX 78701",
+            phone: "(512) 555-0147",
+            seatCount: 76,
+          }
+        : { name, plan: "PRO" as const };
+
+    if (existing.name !== name || mode === "seeded") {
       return prisma.location.update({
         where: { id: existing.id },
-        data: { name, plan: "PRO" },
+        data: seededMeta,
       });
     }
     if (existing.plan !== "PRO") {
@@ -513,7 +605,9 @@ export async function getOrCreateDemoLocation(mode: DemoMode) {
   return prisma.location.create({
     data: {
       name,
-      address: mode === "seeded" ? "123 Restaurant Row" : "Add your address",
+      address: mode === "seeded" ? "1847 Oak Lane, Austin, TX 78701" : "Add your address",
+      phone: mode === "seeded" ? "(512) 555-0147" : undefined,
+      seatCount: mode === "seeded" ? 76 : undefined,
       plan: "PRO",
     },
   });

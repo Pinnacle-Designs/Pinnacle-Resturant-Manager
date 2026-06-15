@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
 export const DEFAULT_KITCHEN_STATIONS = [
-  { name: "Grill", slug: "grill", outputKind: "KDS", color: "#ea580c", sortOrder: 0 },
+  { name: "Smoker Pit", slug: "smoker", outputKind: "KDS", color: "#b45309", sortOrder: 0 },
   { name: "Fry", slug: "fry", outputKind: "KDS", color: "#ca8a04", sortOrder: 1 },
-  { name: "Cold / Salad", slug: "cold", outputKind: "KDS", color: "#16a34a", sortOrder: 2 },
-  { name: "Pizza", slug: "pizza", outputKind: "KDS", color: "#dc2626", sortOrder: 3 },
-  { name: "Service Bar", slug: "service-bar", outputKind: "PRINTER", color: "#7c3aed", sortOrder: 4 },
-  { name: "Expo", slug: "expo", outputKind: "KDS", color: "#0ea5e9", sortOrder: 5 },
+  { name: "Cold / Prep", slug: "cold", outputKind: "KDS", color: "#16a34a", sortOrder: 2 },
+  { name: "Service Bar", slug: "service-bar", outputKind: "PRINTER", color: "#7c3aed", sortOrder: 3 },
+  { name: "Expo", slug: "expo", outputKind: "KDS", color: "#0ea5e9", sortOrder: 4 },
 ] as const;
 
 export type KitchenStationDto = {
@@ -55,16 +54,19 @@ export async function getKitchenStationMap(locationId: string) {
 
 /** Category → default station slug heuristics when menu item has no explicit station. */
 const CATEGORY_STATION_SLUG: Record<string, string> = {
-  Entrees: "grill",
-  Burgers: "grill",
-  Pizza: "pizza",
-  Salads: "cold",
-  Appetizers: "cold",
+  "Smoked Meats": "smoker",
+  Sandwiches: "cold",
   Sides: "fry",
+  Appetizers: "fry",
   Desserts: "cold",
   Beer: "service-bar",
   Cocktails: "service-bar",
   Beverages: "service-bar",
+  // Legacy categories from older seeds
+  Entrees: "smoker",
+  Burgers: "smoker",
+  Pizza: "smoker",
+  Salads: "cold",
 };
 
 export function defaultStationSlugForCategory(category: string): string {
