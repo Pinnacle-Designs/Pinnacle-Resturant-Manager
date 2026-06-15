@@ -10,6 +10,11 @@ export type Permission =
   | "view_receipts"
   | "edit_staff"
   | "manage_schedule"
+  | "manage_payroll"
+  | "request_ewa"
+  | "view_own_schedule"
+  | "clock_in"
+  | "approve_shift_swaps"
   | "manage_orders"
   | "manage_menu"
   | "manage_inventory"
@@ -27,6 +32,11 @@ export const ALL_PERMISSIONS: Permission[] = [
   "view_receipts",
   "edit_staff",
   "manage_schedule",
+  "manage_payroll",
+  "request_ewa",
+  "view_own_schedule",
+  "clock_in",
+  "approve_shift_swaps",
   "manage_orders",
   "manage_menu",
   "manage_inventory",
@@ -49,6 +59,11 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   view_receipts: "View receipts",
   edit_staff: "Edit staff roster",
   manage_schedule: "Manage schedules",
+  manage_payroll: "Manage payroll & tips",
+  request_ewa: "Request earned wage access",
+  view_own_schedule: "View own schedule",
+  clock_in: "Clock in & out",
+  approve_shift_swaps: "Approve shift swaps",
   manage_orders: "Manage orders",
   manage_menu: "Manage menu",
   manage_inventory: "Manage inventory",
@@ -62,11 +77,11 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
   {
     label: "Administration",
-    permissions: ["manage_permissions", "edit_staff", "manage_schedule"],
+    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps"],
   },
   {
     label: "Financial",
-    permissions: ["view_finances", "view_salaries", "view_receipts", "view_analytics"],
+    permissions: ["view_finances", "view_salaries", "view_receipts", "view_analytics", "manage_payroll"],
   },
   {
     label: "Operations",
@@ -95,6 +110,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "view_receipts",
     "edit_staff",
     "manage_schedule",
+    "manage_payroll",
+    "approve_shift_swaps",
+    "view_own_schedule",
+    "clock_in",
     "manage_orders",
     "manage_menu",
     "manage_inventory",
@@ -104,9 +123,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "place_orders",
     "add_to_check",
   ],
-  SERVER: ["place_orders", "add_to_check"],
-  KITCHEN: ["place_orders", "add_to_check"],
-  HOST: ["place_orders", "add_to_check"],
+  SERVER: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in"],
+  KITCHEN: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in"],
+  HOST: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in"],
 };
 
 const NAV_PERMISSION_MAP: Record<string, Permission> = {
@@ -115,6 +134,7 @@ const NAV_PERMISSION_MAP: Record<string, Permission> = {
   "/social": "manage_social",
   "/analytics": "view_analytics",
   "/staff": "edit_staff",
+  "/timeclock": "clock_in",
   "/menu": "manage_menu",
   "/inventory": "manage_inventory",
   "/tables": "manage_tables",
@@ -133,6 +153,9 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/ai": "view_insights",
   "/api/receipts": "view_receipts",
   "/api/permissions": "manage_permissions",
+  "/api/payroll": "manage_payroll",
+  "/api/timeclock": "clock_in",
+  "/api/shift-swaps": "view_own_schedule",
 };
 
 function routeBase(pathname: string): string {

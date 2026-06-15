@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
       email: body.email,
       phone: body.phone,
       hourlyRate: body.hourlyRate ?? 0,
+      isTippedEmployee: body.isTippedEmployee ?? false,
+      tipPoints: body.tipPoints ?? 1,
       active: body.active ?? true,
       imageUrl: body.imageUrl,
     },

@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       date: new Date(body.date),
       startTime: body.startTime,
       endTime: body.endTime,
+      workRole: body.workRole || null,
       notes: body.notes || null,
     },
     include: { staffMember: true },

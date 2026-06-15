@@ -14,10 +14,14 @@ interface StaffMember {
   email: string | null;
   phone: string | null;
   hourlyRate?: number;
+  isTippedEmployee?: boolean;
+  tipPoints?: number;
   active: boolean;
 }
 
-const ROLES = ["Head Chef", "Sous Chef", "Server", "Bartender", "Host", "Manager", "Busser", "Dishwasher"];
+import { JOB_ROLES, TIPPED_JOB_ROLES } from "@/lib/payroll/job-roles";
+
+const ROLES = JOB_ROLES;
 
 export function StaffClient({
   initialStaff,
@@ -37,6 +41,8 @@ export function StaffClient({
     email: "",
     phone: "",
     hourlyRate: "",
+    isTippedEmployee: false,
+    tipPoints: "1",
     active: true,
   });
   const [saving, setSaving] = useState(false);
@@ -49,7 +55,7 @@ export function StaffClient({
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", role: "Server", email: "", phone: "", hourlyRate: "", active: true });
+    setForm({ name: "", role: "Server", email: "", phone: "", hourlyRate: "", isTippedEmployee: true, tipPoints: "1", active: true });
     setError(null);
     setModalOpen(true);
   };
@@ -62,6 +68,8 @@ export function StaffClient({
       email: member.email || "",
       phone: member.phone || "",
       hourlyRate: String(member.hourlyRate),
+      isTippedEmployee: member.isTippedEmployee ?? TIPPED_JOB_ROLES.has(member.role as never),
+      tipPoints: String(member.tipPoints ?? 1),
       active: member.active,
     });
     setError(null);
@@ -81,6 +89,8 @@ export function StaffClient({
         email: form.email || null,
         phone: form.phone || null,
         hourlyRate: parseFloat(form.hourlyRate) || 0,
+        isTippedEmployee: form.isTippedEmployee,
+        tipPoints: parseFloat(form.tipPoints) || 1,
         active: form.active,
       };
       if (editing) {
@@ -164,7 +174,17 @@ export function StaffClient({
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </FormField>
           <FormField label="Role">
-            <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            <Select
+              value={form.role}
+              onChange={(e) => {
+                const role = e.target.value;
+                setForm({
+                  ...form,
+                  role,
+                  isTippedEmployee: TIPPED_JOB_ROLES.has(role as never),
+                });
+              }}
+            >
               {ROLES.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
@@ -186,6 +206,27 @@ export function StaffClient({
               <Select value={form.active ? "true" : "false"} onChange={(e) => setForm({ ...form, active: e.target.value === "true" })}>
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
+              </Select>
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Tip pool points">
+              <Input
+                type="number"
+                step="0.1"
+                value={form.tipPoints}
+                onChange={(e) => setForm({ ...form, tipPoints: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Tipped employee">
+              <Select
+                value={form.isTippedEmployee ? "true" : "false"}
+                onChange={(e) =>
+                  setForm({ ...form, isTippedEmployee: e.target.value === "true" })
+                }
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
               </Select>
             </FormField>
           </div>

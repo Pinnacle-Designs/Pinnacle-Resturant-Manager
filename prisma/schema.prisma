@@ -117,6 +117,39 @@ enum PaymentProviderPurpose {
   POS
 }
 
+enum TipPoolMode {
+  INDIVIDUAL
+  FULL_POOL
+  POINTS
+  ROLE_WEIGHTED
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}
+
+enum EwaAdvanceStatus {
+  PENDING
+  PAID
+  DEDUCTED
+  CANCELLED
+}
+
+enum ShiftSwapKind {
+  SWAP
+  BID
+  DROP
+}
+
+enum ShiftSwapStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -150,6 +183,13 @@ model Location {
   nextBillingDate DateTime?
   setupComplete Boolean  @default(true)
   onboardingStep Int    @default(0)
+  latitude       Float?
+  longitude      Float?
+  geoFenceRadiusM Int     @default(150)
+  geoClockInRequired Boolean @default(true)
+  targetLaborPct Float   @default(30)
+  mealBreakMinutes Int   @default(30)
+  restBreakMinutes Int   @default(10)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -177,6 +217,12 @@ model Location {
   rolePermissionSets RolePermissionSet[]
   userPermissionOverrides UserPermissionOverride[]
   paymentProviderConnections PaymentProviderConnection[]
+  payrollSettings      PayrollSettings?
+  tipPoolRuns          TipPoolRun[]
+  payPeriods           PayPeriod[]
+  ewaAdvances          EwaAdvance[]
+  timeEntries          TimeEntry[]
+  shiftSwapRequests    ShiftSwapRequest[]
 }
 
 model PaymentProviderConnection {
@@ -260,33 +306,232 @@ model StaffMember {
   id         String   @id @default(cuid())
   locationId String
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  userId     String?  @unique
   name       String
   role       String
   email      String?
   phone      String?
   hourlyRate Float    @default(0)
+  isTippedEmployee Boolean @default(false)
+  tipPoints  Float    @default(1)
   active     Boolean  @default(true)
   imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   shifts     Shift[]
+  roleRates  StaffRoleRate[]
+  servedOrders Order[] @relation("OrderServer")
+  tipAllocations TipPoolAllocation[]
+  payrollLineItems PayrollLineItem[]
+  ewaAdvances EwaAdvance[]
+  timeEntries TimeEntry[]
+  swapRequestsAsRequester ShiftSwapRequest[] @relation("SwapRequester")
+  swapRequestsAsCounterparty ShiftSwapRequest[] @relation("SwapCounterparty")
 }
 
 model Shift {
   id            String      @id @default(cuid())
   locationId    String
   location      Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  staffMemberId String
-  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  staffMemberId String?
+  staffMember   StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
   date          DateTime
   startTime     String
   endTime       String
+  workRole      String?
   notes         String?
+  isOpen        Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  timeEntries   TimeEntry[]
+  swapRequests  ShiftSwapRequest[] @relation("SwapShift")
+  offerSwapRequests ShiftSwapRequest[] @relation("SwapOffer")
 
   @@index([locationId, date])
   @@index([staffMemberId, date])
+}
+
+model TimeEntry {
+  id              String      @id @default(cuid())
+  locationId      String
+  location        Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staffMemberId   String
+  staffMember     StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  userId          String?
+  shiftId         String?
+  shift           Shift?      @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  clockInAt       DateTime
+  clockOutAt      DateTime?
+  clockInLat      Float?
+  clockInLng      Float?
+  clockOutLat     Float?
+  clockOutLng     Float?
+  geoVerifiedIn   Boolean     @default(false)
+  geoVerifiedOut  Boolean     @default(false)
+  mealBreakTaken  Boolean?
+  restBreakTaken  Boolean?
+  breakAttestedAt DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([locationId, clockInAt])
+  @@index([staffMemberId, clockInAt])
+}
+
+model ShiftSwapRequest {
+  id                  String          @id @default(cuid())
+  locationId          String
+  location            Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  kind                ShiftSwapKind
+  status              ShiftSwapStatus @default(PENDING)
+  shiftId             String
+  shift               Shift           @relation("SwapShift", fields: [shiftId], references: [id], onDelete: Cascade)
+  requesterStaffId    String
+  requesterStaff      StaffMember     @relation("SwapRequester", fields: [requesterStaffId], references: [id], onDelete: Cascade)
+  counterpartyStaffId String?
+  counterpartyStaff   StaffMember?    @relation("SwapCounterparty", fields: [counterpartyStaffId], references: [id], onDelete: SetNull)
+  offerShiftId        String?
+  offerShift          Shift?          @relation("SwapOffer", fields: [offerShiftId], references: [id], onDelete: SetNull)
+  message             String?
+  reviewedByUserId    String?
+  reviewedAt          DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([locationId, status])
+  @@index([requesterStaffId])
+}
+
+model StaffRoleRate {
+  id            String      @id @default(cuid())
+  staffMemberId String
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  role          String
+  hourlyRate    Float
+  tipPoints     Float       @default(1)
+  isTippedRole  Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([staffMemberId, role])
+}
+
+model PayrollSettings {
+  id                      String      @id @default(cuid())
+  locationId              String      @unique
+  location                Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  minimumWage             Float       @default(7.25)
+  tipCredit               Float       @default(5.12)
+  tippedMinCashWage       Float       @default(2.13)
+  weeklyOtThresholdHours  Float       @default(40)
+  dailyOtThresholdHours   Float?
+  otMultiplier            Float       @default(1.5)
+  useBlendedOtRate        Boolean     @default(true)
+  splitShiftEnabled       Boolean     @default(false)
+  splitShiftPremiumHours  Float       @default(1)
+  splitShiftMinGapMinutes Int         @default(60)
+  tipPoolMode             TipPoolMode @default(INDIVIDUAL)
+  tipPoolRoles            String?
+  ewaEnabled              Boolean     @default(false)
+  ewaMaxPercent           Float       @default(50)
+  ewaMaxPerAdvance        Float       @default(200)
+  ewaFeeFlat              Float       @default(0)
+  payPeriodDays           Int         @default(14)
+  updatedAt               DateTime    @updatedAt
+}
+
+model TipPoolRun {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  periodStart DateTime
+  periodEnd   DateTime
+  totalTips   Float
+  mode        TipPoolMode
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  allocations TipPoolAllocation[]
+}
+
+model TipPoolAllocation {
+  id              String      @id @default(cuid())
+  tipPoolRunId    String
+  tipPoolRun      TipPoolRun  @relation(fields: [tipPoolRunId], references: [id], onDelete: Cascade)
+  staffMemberId   String
+  staffMember     StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  hoursWorked     Float
+  tipPoints       Float
+  sharePercent    Float
+  tipsAmount      Float
+  tipCreditMakeup Float       @default(0)
+
+  @@index([tipPoolRunId])
+}
+
+model PayPeriod {
+  id          String           @id @default(cuid())
+  locationId  String
+  location    Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime
+  status      PayrollRunStatus @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  runs        PayrollRun[]
+  ewaAdvances EwaAdvance[]
+
+  @@index([locationId, startDate])
+}
+
+model PayrollRun {
+  id          String           @id @default(cuid())
+  payPeriodId String
+  payPeriod   PayPeriod        @relation(fields: [payPeriodId], references: [id], onDelete: Cascade)
+  locationId  String
+  status      PayrollRunStatus @default(DRAFT)
+  finalizedAt DateTime?
+  createdAt   DateTime         @default(now())
+  lineItems   PayrollLineItem[]
+}
+
+model PayrollLineItem {
+  id                String      @id @default(cuid())
+  payrollRunId      String
+  payrollRun        PayrollRun  @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  staffMemberId     String
+  staffMember       StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  regularHours      Float
+  overtimeHours     Float
+  splitShiftHours   Float       @default(0)
+  regularPay        Float
+  overtimePay       Float
+  splitShiftPay     Float       @default(0)
+  tipsAllocated     Float       @default(0)
+  tipCreditMakeup   Float       @default(0)
+  grossPay          Float
+  ewaDeductions     Float       @default(0)
+  netPay            Float
+  rateBreakdown     String?
+
+  @@index([payrollRunId])
+}
+
+model EwaAdvance {
+  id              String           @id @default(cuid())
+  locationId      String
+  location        Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staffMemberId   String
+  staffMember     StaffMember      @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  payPeriodId     String?
+  payPeriod       PayPeriod?       @relation(fields: [payPeriodId], references: [id], onDelete: SetNull)
+  amount          Float
+  fee             Float            @default(0)
+  status          EwaAdvanceStatus @default(PENDING)
+  earnedAtRequest Float
+  requestedAt     DateTime         @default(now())
+  paidAt          DateTime?
+
+  @@index([locationId, staffMemberId])
 }
 
 model Table {
@@ -306,6 +551,8 @@ model Order {
   location          Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
   tableId           String?
   table             Table?      @relation(fields: [tableId], references: [id])
+  serverStaffId     String?
+  serverStaff       StaffMember? @relation("OrderServer", fields: [serverStaffId], references: [id], onDelete: SetNull)
   status            OrderStatus @default(PENDING)
   totalAmount       Float       @default(0)
   guestCount        Int         @default(1)

@@ -19,6 +19,7 @@ export async function PATCH(
       date: body.date ? new Date(body.date) : undefined,
       startTime: body.startTime,
       endTime: body.endTime,
+      workRole: body.workRole !== undefined ? body.workRole || null : undefined,
       notes: body.notes,
     },
     include: { staffMember: true },

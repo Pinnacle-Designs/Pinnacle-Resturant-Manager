@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Calendar } from "lucide-react";
+import { Users, Calendar, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StaffClient } from "@/components/staff/StaffClient";
 import { ScheduleClient } from "@/components/staff/ScheduleClient";
+import { PayrollClient } from "@/components/staff/PayrollClient";
 
 interface StaffMember {
   id: string;
@@ -14,22 +15,26 @@ interface StaffMember {
   email: string | null;
   phone: string | null;
   hourlyRate?: number;
+  isTippedEmployee?: boolean;
+  tipPoints?: number;
   active: boolean;
 }
 
-type Tab = "team" | "schedule";
+type Tab = "team" | "schedule" | "payroll";
 
 export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   const { can } = useAuth();
   const canEdit = can("edit_staff");
   const canSchedule = can("manage_schedule");
+  const canPayroll = can("manage_payroll");
 
-  const defaultTab: Tab = canSchedule ? "schedule" : "team";
+  const defaultTab: Tab = canPayroll ? "payroll" : canSchedule ? "schedule" : "team";
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [staff, setStaff] = useState(initialStaff);
 
   const tabs = (
     [
+      { id: "payroll" as Tab, label: "Payroll", icon: Banknote, show: canPayroll },
       { id: "schedule" as Tab, label: "Schedule", icon: Calendar, show: canSchedule },
       { id: "team" as Tab, label: "Team", icon: Users, show: true },
     ] as { id: Tab; label: string; icon: typeof Users; show: boolean }[]
@@ -56,7 +61,9 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
         </div>
       )}
 
-      {tab === "schedule" && canSchedule ? (
+      {tab === "payroll" && canPayroll ? (
+        <PayrollClient staff={staff} />
+      ) : tab === "schedule" && canSchedule ? (
         <ScheduleClient staff={staff} />
       ) : (
         <StaffClient initialStaff={staff} onStaffChange={setStaff} canEdit={canEdit} />

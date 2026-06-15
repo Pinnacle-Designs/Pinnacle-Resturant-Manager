@@ -16,6 +16,7 @@ import {
   LogOut,
   Share2,
   BarChart3,
+  Clock,
   Settings,
   Shield,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   brain: Brain,
   "share-2": Share2,
   "bar-chart-3": BarChart3,
+  clock: Clock,
 };
 
 export function Sidebar() {

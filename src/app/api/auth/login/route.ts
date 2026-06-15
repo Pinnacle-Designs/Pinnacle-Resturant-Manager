@@ -9,8 +9,9 @@ import { enrichUserWithPlan } from "@/lib/location-plan";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
-import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled } from "@/lib/demo-users";
+import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled, devDemoLoginEnabled } from "@/lib/demo-users";
 import { resolveUserWorkspace } from "@/lib/user-workspace";
+import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { privateJsonResponse } from "@/lib/secure-response";
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
   if (
     !useDemoWorkspace &&
     isDemoAccountEmail(email) &&
-    !(isPlanDemoAccountEmail(email) && planDemoLoginEnabled())
+    !devDemoLoginEnabled()
   ) {
     return privateJsonResponse(
       {
@@ -90,7 +91,16 @@ export async function POST(request: NextRequest) {
     }
   } else {
     try {
-      workspace = await resolveUserWorkspace(user);
+      if (devDemoLoginEnabled() && isDemoAccountEmail(email)) {
+        workspace = await setupDemoWorkspace("seeded");
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { locationId: workspace.locationId },
+        });
+        user.locationId = workspace.locationId;
+      } else {
+        workspace = await resolveUserWorkspace(user);
+      }
     } catch (err) {
       console.error("User workspace resolution failed:", err);
       workspaceError = err instanceof Error ? err.message : "Could not open your workspace";

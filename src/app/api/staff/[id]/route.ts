@@ -20,6 +20,8 @@ export async function PATCH(
       email: body.email,
       phone: body.phone,
       hourlyRate: body.hourlyRate,
+      isTippedEmployee: body.isTippedEmployee,
+      tipPoints: body.tipPoints,
       active: body.active,
       imageUrl: body.imageUrl,
     },

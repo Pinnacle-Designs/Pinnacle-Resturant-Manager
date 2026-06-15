@@ -32,6 +32,7 @@ export const NAV_ITEMS = [
   { href: "/menu", label: "Menu", icon: "utensils" },
   { href: "/inventory", label: "Inventory", icon: "package" },
   { href: "/staff", label: "Staff", icon: "users" },
+  { href: "/timeclock", label: "Time Clock", icon: "clock" },
   { href: "/tables", label: "Tables", icon: "layout-grid" },
   { href: "/orders", label: "Orders", icon: "clipboard-list" },
   { href: "/finances", label: "Finances", icon: "dollar-sign" },
@@ -44,6 +45,7 @@ export const NAV_ITEMS = [
 export const MOBILE_PRIMARY_NAV_HREFS = [
   "/dashboard",
   "/orders",
+  "/timeclock",
   "/insights",
   "/inventory",
   "/analytics",

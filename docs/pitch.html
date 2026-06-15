@@ -27,22 +27,7 @@
 </head>
 <body>
 
-  <header class="nav">
-    <div class="container">
-      <div class="nav-inner">
-        <a href="./index.html" class="nav-logo-link"><img src="./assets/logo-nav.svg" alt="Pinnacle Restaurant Manager" class="nav-logo" width="200" height="40" /></a>
-        <nav class="nav-links" aria-label="Main">
-          <a href="./index.html#top">Live Demo</a>
-          <a href="./index.html#features">Features</a>
-          <a href="./index.html#pricing">Pricing</a>
-          <a href="./pitch.html" aria-current="page">Investors</a>
-        </nav>
-        <div class="nav-actions">
-          <a href="./index.html#top" class="btn btn-primary">Try live demo</a>
-        </div>
-      </div>
-    </div>
-  </header>
+  <header class="nav" id="site-nav"></header>
 
   <main>
     <section class="pitch-hero">
@@ -150,7 +135,6 @@
   </footer>
 
   <script>
-    document.getElementById("year").textContent = String(new Date().getFullYear());
     (function () {
       var base = (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/");
 
@@ -165,6 +149,12 @@
       }
 
       loadScript(base + "config.js")
+        .then(function () {
+          return loadScript(base + "site-nav.js");
+        })
+        .then(function () {
+          return loadScript(base + "live-demo.js");
+        })
         .then(function () {
           return loadScript(base + "pitch-request.js");
         })

@@ -70,6 +70,11 @@ export function planDemoLoginEnabled(): boolean {
   );
 }
 
+/** True when embed demo accounts (owner@pinnacle.com, etc.) may sign in via /login. */
+export function devDemoLoginEnabled(): boolean {
+  return planDemoLoginEnabled();
+}
+
 /** Create or reset all embed demo login accounts. */
 export async function seedDemoUsers() {
   for (const user of DEMO_USERS) {

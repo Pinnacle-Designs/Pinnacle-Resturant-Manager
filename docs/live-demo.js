@@ -505,8 +505,15 @@
     }
   }
 
+  function initPageLinks() {
+    resolveAppUrl().then(function (url) {
+      if (url) wireOptionalAppLinks(url);
+    });
+  }
+
   function init() {
     initHeroDemo();
+    initPageLinks();
     initNav();
     var year = document.getElementById("year");
     if (year) year.textContent = new Date().getFullYear();

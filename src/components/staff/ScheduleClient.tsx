@@ -24,6 +24,7 @@ import {
   roleColor,
   SHIFT_PRESETS,
 } from "@/lib/schedule";
+import { JOB_ROLES } from "@/lib/payroll/job-roles";
 import { cn } from "@/lib/utils";
 
 interface StaffMember {
@@ -39,6 +40,7 @@ interface Shift {
   date: string;
   startTime: string;
   endTime: string;
+  workRole: string | null;
   notes: string | null;
   staffMember: StaffMember;
 }
@@ -52,6 +54,7 @@ const emptyForm = {
   date: "",
   startTime: "09:00",
   endTime: "17:00",
+  workRole: "",
   notes: "",
 };
 
@@ -116,6 +119,7 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
       date: toDateKey(shift.date),
       startTime: shift.startTime,
       endTime: shift.endTime,
+      workRole: shift.workRole || "",
       notes: shift.notes || "",
     });
     setError(null);
@@ -139,6 +143,7 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
         date: form.date,
         startTime: form.startTime,
         endTime: form.endTime,
+        workRole: form.workRole || null,
         notes: form.notes || null,
       };
       if (editing) {
@@ -294,12 +299,15 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
                               onClick={() => openEdit(shift)}
                               className={cn(
                                 "rounded-md border px-2 py-1.5 text-left text-xs transition-opacity hover:opacity-80",
-                                roleColor(member.role)
+                                roleColor(shift.workRole || member.role)
                               )}
                             >
                               <div className="font-medium">
                                 {formatShiftTime(shift.startTime, shift.endTime)}
                               </div>
+                              {shift.workRole && shift.workRole !== member.role && (
+                                <div className="text-[10px] opacity-80">as {shift.workRole}</div>
+                              )}
                               {shift.notes && (
                                 <div className="mt-0.5 truncate opacity-75">{shift.notes}</div>
                               )}
@@ -384,6 +392,19 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
               />
             </FormField>
           </div>
+          <FormField label="Role worked this shift (dual-rate pay)">
+            <Select
+              value={form.workRole}
+              onChange={(e) => setForm({ ...form, workRole: e.target.value })}
+            >
+              <option value="">Default ({activeStaff.find((s) => s.id === form.staffMemberId)?.role ?? "staff role"})</option>
+              {JOB_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </Select>
+          </FormField>
           {form.startTime && form.endTime && (
             <p className="text-sm text-slate-500">
               Duration: {shiftDurationHours(form.startTime, form.endTime).toFixed(1)} hours
