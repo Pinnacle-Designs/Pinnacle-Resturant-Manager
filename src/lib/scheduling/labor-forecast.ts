@@ -1,4 +1,4 @@
-import { addDays, format, getDay, startOfDay, subWeeks } from "date-fns";
+import { format, getDay, startOfDay, subWeeks } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getWeekDays, shiftDurationHours } from "@/lib/schedule";
 
@@ -122,17 +122,10 @@ export async function computeWeekLaborForecast(
 
     const recommendedHours =
       predictedSales > 0
-        ? predictedSales / (DEFAULT_SALES_PER_LABOR_HOUR * (targetLaborPct / 100) / (targetLaborPct / 100))
-        : 0;
-    const targetHours =
-      predictedSales > 0 && targetLaborPct > 0
-        ? (predictedSales * (targetLaborPct / 100)) /
-          ((scheduledLaborCost / Math.max(scheduledHours, 0.01)) || 15)
+        ? predictedSales / DEFAULT_SALES_PER_LABOR_HOUR
         : Math.max(scheduledHours, 4);
 
-    const recHours = predictedSales > 0
-      ? predictedSales / DEFAULT_SALES_PER_LABOR_HOUR
-      : targetHours;
+    const recHours = recommendedHours;
 
     const laborPct =
       predictedSales > 0 ? (scheduledLaborCost / predictedSales) * 100 : 0;

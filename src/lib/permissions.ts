@@ -15,6 +15,7 @@ export type Permission =
   | "view_own_schedule"
   | "clock_in"
   | "approve_shift_swaps"
+  | "manage_hiring"
   | "manage_orders"
   | "manage_menu"
   | "manage_inventory"
@@ -37,6 +38,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "view_own_schedule",
   "clock_in",
   "approve_shift_swaps",
+  "manage_hiring",
   "manage_orders",
   "manage_menu",
   "manage_inventory",
@@ -64,6 +66,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   view_own_schedule: "View own schedule",
   clock_in: "Clock in & out",
   approve_shift_swaps: "Approve shift swaps",
+  manage_hiring: "Manage hiring & ATS",
   manage_orders: "Manage orders",
   manage_menu: "Manage menu",
   manage_inventory: "Manage inventory",
@@ -77,7 +80,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
   {
     label: "Administration",
-    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps"],
+    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps", "manage_hiring"],
   },
   {
     label: "Financial",
@@ -112,6 +115,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "manage_schedule",
     "manage_payroll",
     "approve_shift_swaps",
+    "manage_hiring",
     "view_own_schedule",
     "clock_in",
     "manage_orders",
@@ -154,6 +158,7 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/receipts": "view_receipts",
   "/api/permissions": "manage_permissions",
   "/api/payroll": "manage_payroll",
+  "/api/hiring": "manage_hiring",
   "/api/timeclock": "clock_in",
   "/api/shift-swaps": "view_own_schedule",
 };

@@ -232,7 +232,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
 
   const scheduledHours = shifts.reduce((s, sh) => s + shiftHours(sh.startTime, sh.endTime), 0);
   const laborCost = shifts.reduce(
-    (s, sh) => s + shiftHours(sh.startTime, sh.endTime) * sh.staffMember.hourlyRate,
+    (s, sh) => s + shiftHours(sh.startTime, sh.endTime) * (sh.staffMember?.hourlyRate ?? 0),
     0
   );
   const weeksInPeriod = Math.max(PERIOD_DAYS / 7, 1);
@@ -1028,7 +1028,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     const startH = hourFromTime(sh.startTime);
     const endH = hourFromTime(sh.endTime);
     const endHour = endH <= startH ? endH + 24 : endH;
-    const rate = sh.staffMember.hourlyRate;
+    const rate = sh.staffMember?.hourlyRate ?? 0;
     for (let h = startH; h < endHour; h++) {
       const hour = h % 24;
       if (!laborHourMap[hour]) laborHourMap[hour] = { laborHours: 0, laborCost: 0 };
@@ -1064,7 +1064,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
   };
   for (const sh of shifts) {
     const hrs = shiftHours(sh.startTime, sh.endTime);
-    const cost = hrs * sh.staffMember.hourlyRate;
+    const cost = hrs * (sh.staffMember?.hourlyRate ?? 0);
     const dp = daypartFromHour(hourFromTime(sh.startTime));
     shiftLaborByDaypart[dp].hours += hrs;
     shiftLaborByDaypart[dp].laborCost += cost;

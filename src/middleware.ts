@@ -23,6 +23,11 @@ const PUBLIC_PATHS = [
   "/api/webhooks/stripe",
   "/api/account/billing/square/callback",
   "/api/account/billing/stripe/connect/callback",
+  "/apply",
+  "/onboard",
+  "/api/hiring/apply",
+  "/api/hiring/onboarding",
+  "/api/hiring/webhook/sms",
 ];
 
 function applyFramePolicy(request: NextRequest, response: NextResponse): NextResponse {

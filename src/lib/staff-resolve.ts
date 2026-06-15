@@ -19,7 +19,7 @@ export async function resolveStaffMemberForUser(
     where: {
       locationId,
       active: true,
-      email: { equals: user.email, mode: "insensitive" },
+      email: user.email.toLowerCase(),
     },
   });
   if (byEmail) {

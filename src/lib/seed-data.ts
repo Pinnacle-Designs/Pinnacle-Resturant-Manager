@@ -56,6 +56,85 @@ async function seedWebsiteConnection(locationId: string) {
   });
 }
 
+async function seedHiringSample(locationId: string) {
+  const existing = await prisma.application.count({ where: { locationId } });
+  if (existing > 0) return;
+
+  const { generateOnboardingToken } = await import("@/lib/hiring/utils");
+
+  await prisma.hiringSettings.upsert({
+    where: { locationId },
+    create: { locationId, applyKeyword: "APPLY", applyPhone: "+15551234567" },
+    update: {},
+  });
+
+  const posting = await prisma.jobPosting.create({
+    data: {
+      locationId,
+      title: "Server — evenings",
+      role: "Server",
+      applyCode: "DEMO1",
+      active: true,
+    },
+  });
+
+  const pipeline = [
+    { name: "Alex Rivera", phone: "+15559001001", status: "NEW" as const, role: "Server" },
+    { name: "Jordan Lee", phone: "+15559001002", status: "INTERVIEW_SCHEDULED" as const, role: "Bartender" },
+    { name: "Sam Ortiz", phone: "+15559001003", status: "OFFERED" as const, role: "Host" },
+    { name: "Taylor Brooks", phone: "+15559001004", status: "HIRED" as const, role: "Server" },
+  ];
+
+  for (const row of pipeline) {
+    const applicant = await prisma.applicant.create({
+      data: {
+        locationId,
+        name: row.name,
+        phone: row.phone,
+        email: `${row.name.split(" ")[0].toLowerCase()}@example.com`,
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        locationId,
+        applicantId: applicant.id,
+        jobPostingId: posting.id,
+        role: row.role,
+        source: row.status === "NEW" ? "SMS" : "WEB",
+        status: row.status,
+        hiredAt: row.status === "HIRED" ? new Date() : null,
+      },
+    });
+
+    if (row.status === "INTERVIEW_SCHEDULED") {
+      await prisma.interview.create({
+        data: {
+          applicationId: application.id,
+          scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    if (row.status === "HIRED") {
+      await prisma.onboardingPacket.create({
+        data: {
+          locationId,
+          applicationId: application.id,
+          token: generateOnboardingToken(),
+          status: "PENDING",
+          documents: {
+            create: ["I9", "W4", "DIRECT_DEPOSIT"].map((docType) => ({
+              docType: docType as "I9" | "W4" | "DIRECT_DEPOSIT",
+              data: "{}",
+            })),
+          },
+        },
+      });
+    }
+  }
+}
+
 async function seedSocialAccounts(locationId: string) {
   const accounts = [
     {
@@ -124,6 +203,7 @@ export async function seedLocationData(locationId: string) {
     if (orderCount < 5) {
       await import("@/lib/analytics/seed-sample").then((m) => m.seedAnalyticsSampleData(locationId));
     }
+    await seedHiringSample(locationId);
     return {
       message: "Already seeded for this location",
       locationId,
@@ -182,6 +262,7 @@ export async function seedLocationData(locationId: string) {
 
   await seedSocialAccounts(locationId);
   await import("@/lib/analytics/seed-sample").then((m) => m.seedAnalyticsSampleData(locationId));
+  await seedHiringSample(locationId);
 
   return { message: "Seed data created successfully", locationId, alreadySeeded: false, partial: false };
 }

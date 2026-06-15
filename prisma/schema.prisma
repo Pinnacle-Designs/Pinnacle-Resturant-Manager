@@ -150,6 +150,40 @@ enum ShiftSwapStatus {
   CANCELLED
 }
 
+enum ApplicationStatus {
+  NEW
+  SCREENING
+  INTERVIEW_SCHEDULED
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ApplicationSource {
+  TEXT_APPLY
+  WEB
+  WALK_IN
+  REFERRAL
+}
+
+enum SmsDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum OnboardingPacketStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETE
+}
+
+enum OnboardingDocType {
+  I9
+  W4
+  DIRECT_DEPOSIT
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -223,6 +257,12 @@ model Location {
   ewaAdvances          EwaAdvance[]
   timeEntries          TimeEntry[]
   shiftSwapRequests    ShiftSwapRequest[]
+  hiringSettings       HiringSettings?
+  jobPostings          JobPosting[]
+  applicants           Applicant[]
+  applications         Application[]
+  smsMessages          SmsMessage[]
+  onboardingPackets    OnboardingPacket[]
 }
 
 model PaymentProviderConnection {
@@ -401,6 +441,140 @@ model ShiftSwapRequest {
 
   @@index([locationId, status])
   @@index([requesterStaffId])
+}
+
+model HiringSettings {
+  id           String   @id @default(cuid())
+  locationId   String   @unique
+  location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  applyPhone   String?
+  applyKeyword String   @default("APPLY")
+  smsEnabled   Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+}
+
+model JobPosting {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  title       String
+  role        String
+  description String?
+  applyCode   String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  applications Application[]
+
+  @@unique([locationId, applyCode])
+}
+
+model Applicant {
+  id           String        @id @default(cuid())
+  locationId   String
+  location     Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  email        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+  smsMessages  SmsMessage[]
+
+  @@unique([locationId, phone])
+}
+
+model Application {
+  id            String            @id @default(cuid())
+  locationId    String
+  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  applicantId   String
+  applicant     Applicant         @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  jobPostingId  String?
+  jobPosting    JobPosting?       @relation(fields: [jobPostingId], references: [id], onDelete: SetNull)
+  role          String
+  source        ApplicationSource @default(WEB)
+  status        ApplicationStatus @default(NEW)
+  notes         String?
+  appliedAt     DateTime          @default(now())
+  hiredAt       DateTime?
+  updatedAt     DateTime          @updatedAt
+  interviews    Interview[]
+  onboardingPacket OnboardingPacket?
+
+  @@index([locationId, status])
+  @@index([applicantId])
+}
+
+model Interview {
+  id              String      @id @default(cuid())
+  applicationId   String
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheduledAt     DateTime
+  reminderSentAt  DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model SmsMessage {
+  id            String       @id @default(cuid())
+  locationId    String
+  location      Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  applicantId   String?
+  applicant     Applicant?   @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  direction     SmsDirection
+  toPhone       String
+  fromPhone     String
+  body          String
+  status        String       @default("queued")
+  externalId    String?
+  createdAt     DateTime     @default(now())
+
+  @@index([locationId, applicantId])
+  @@index([toPhone])
+}
+
+model OnboardingPacket {
+  id             String                 @id @default(cuid())
+  locationId     String
+  location       Location               @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  applicationId  String                 @unique
+  application    Application            @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  token          String                 @unique
+  status         OnboardingPacketStatus @default(PENDING)
+  staffMemberId  String?
+  completedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  documents      OnboardingDocument[]
+  acknowledgments HandbookAcknowledgment[]
+}
+
+model OnboardingDocument {
+  id            String            @id @default(cuid())
+  packetId      String
+  packet        OnboardingPacket  @relation(fields: [packetId], references: [id], onDelete: Cascade)
+  docType       OnboardingDocType
+  data          String
+  signatureName String?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([packetId, docType])
+}
+
+model HandbookAcknowledgment {
+  id            String           @id @default(cuid())
+  packetId      String
+  packet        OnboardingPacket @relation(fields: [packetId], references: [id], onDelete: Cascade)
+  policyKey     String
+  policyTitle   String
+  signatureName String
+  signedAt      DateTime         @default(now())
+
+  @@unique([packetId, policyKey])
 }
 
 model StaffRoleRate {

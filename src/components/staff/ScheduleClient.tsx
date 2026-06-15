@@ -26,6 +26,7 @@ import {
 } from "@/lib/schedule";
 import { JOB_ROLES } from "@/lib/payroll/job-roles";
 import { cn } from "@/lib/utils";
+import { LaborForecastPanel } from "@/components/staff/LaborForecastPanel";
 
 interface StaffMember {
   id: string;
@@ -203,6 +204,8 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
 
   return (
     <>
+      <LaborForecastPanel weekStart={weekStart} staff={activeStaff} onShiftAdded={fetchShifts} />
+
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Button

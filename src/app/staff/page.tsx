@@ -21,7 +21,9 @@ export default async function StaffPage() {
       <PageHeader
         title="Staff"
         description={
-          user && hasPermissionInList(user.permissions, "manage_payroll")
+          user && hasPermissionInList(user.permissions, "manage_hiring")
+            ? "Hiring pipeline, text-to-apply, payroll, schedules, and team"
+            : user && hasPermissionInList(user.permissions, "manage_payroll")
             ? "Payroll, schedules, tip pooling, and team roster"
             : user && hasPermissionInList(user.permissions, "edit_staff")
               ? "Manage your team and build weekly schedules"

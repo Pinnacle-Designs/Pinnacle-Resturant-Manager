@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Calendar, Banknote } from "lucide-react";
+import { Users, Calendar, Banknote, ArrowLeftRight, CalendarDays, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StaffClient } from "@/components/staff/StaffClient";
 import { ScheduleClient } from "@/components/staff/ScheduleClient";
 import { PayrollClient } from "@/components/staff/PayrollClient";
+import { MyScheduleClient } from "@/components/staff/MyScheduleClient";
+import { ShiftSwapClient } from "@/components/staff/ShiftSwapClient";
+import { HiringClient } from "@/components/staff/HiringClient";
 
 interface StaffMember {
   id: string;
@@ -20,22 +23,36 @@ interface StaffMember {
   active: boolean;
 }
 
-type Tab = "team" | "schedule" | "payroll";
+type Tab = "team" | "schedule" | "payroll" | "my_schedule" | "swaps" | "hiring";
 
 export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   const { can } = useAuth();
   const canEdit = can("edit_staff");
   const canSchedule = can("manage_schedule");
   const canPayroll = can("manage_payroll");
+  const canHiring = can("manage_hiring");
+  const canOwnSchedule = can("view_own_schedule");
+  const canSwaps = canOwnSchedule || can("approve_shift_swaps");
 
-  const defaultTab: Tab = canPayroll ? "payroll" : canSchedule ? "schedule" : "team";
+  const defaultTab: Tab = canHiring
+    ? "hiring"
+    : canPayroll
+      ? "payroll"
+      : canSchedule
+        ? "schedule"
+        : canOwnSchedule
+          ? "my_schedule"
+          : "team";
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [staff, setStaff] = useState(initialStaff);
 
   const tabs = (
     [
+      { id: "hiring" as Tab, label: "Hiring", icon: UserPlus, show: canHiring },
       { id: "payroll" as Tab, label: "Payroll", icon: Banknote, show: canPayroll },
       { id: "schedule" as Tab, label: "Schedule", icon: Calendar, show: canSchedule },
+      { id: "my_schedule" as Tab, label: "My schedule", icon: CalendarDays, show: canOwnSchedule && !canSchedule },
+      { id: "swaps" as Tab, label: "Shift swaps", icon: ArrowLeftRight, show: canSwaps },
       { id: "team" as Tab, label: "Team", icon: Users, show: true },
     ] as { id: Tab; label: string; icon: typeof Users; show: boolean }[]
   ).filter((t) => t.show);
@@ -61,10 +78,16 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
         </div>
       )}
 
-      {tab === "payroll" && canPayroll ? (
+      {tab === "hiring" && canHiring ? (
+        <HiringClient />
+      ) : tab === "payroll" && canPayroll ? (
         <PayrollClient staff={staff} />
       ) : tab === "schedule" && canSchedule ? (
         <ScheduleClient staff={staff} />
+      ) : tab === "my_schedule" && canOwnSchedule ? (
+        <MyScheduleClient />
+      ) : tab === "swaps" && canSwaps ? (
+        <ShiftSwapClient />
       ) : (
         <StaffClient initialStaff={staff} onStaffChange={setStaff} canEdit={canEdit} />
       )}

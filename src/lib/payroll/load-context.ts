@@ -73,7 +73,9 @@ export async function loadPayrollPreview(
       tipPoints: s.tipPoints,
       active: s.active,
     })),
-    shifts.map((sh) => ({
+    shifts
+      .filter((sh): sh is typeof sh & { staffMemberId: string } => sh.staffMemberId != null)
+      .map((sh) => ({
       id: sh.id,
       staffMemberId: sh.staffMemberId,
       date: sh.date,
