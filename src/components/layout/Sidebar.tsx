@@ -22,6 +22,7 @@ import {
   Zap,
   ChefHat,
   Truck,
+  ThermometerSnowflake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -49,6 +50,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   zap: Zap,
   "chef-hat": ChefHat,
   truck: Truck,
+  "thermometer-snowflake": ThermometerSnowflake,
 };
 
 export function Sidebar() {

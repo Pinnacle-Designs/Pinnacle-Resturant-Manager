@@ -33,6 +33,7 @@ export const NAV_ITEMS = [
   { href: "/boh", label: "BOH", icon: "chef-hat" },
   { href: "/kds", label: "KDS", icon: "chef-hat" },
   { href: "/inventory", label: "Inventory", icon: "package" },
+  { href: "/walk-in", label: "Walk-In", icon: "thermometer-snowflake" },
   { href: "/loading-dock", label: "Loading Dock", icon: "truck" },
   { href: "/staff", label: "Staff", icon: "users" },
   { href: "/timeclock", label: "Time Clock", icon: "clock" },
@@ -50,6 +51,6 @@ export const MOBILE_PRIMARY_NAV_HREFS = [
   "/orders",
   "/timeclock",
   "/insights",
-  "/inventory",
+  "/walk-in",
   "/analytics",
 ] as const;

@@ -30,9 +30,9 @@ export function parseScaleWeightLine(line: string): { value: number; unit: strin
   return null;
 }
 
+import { convertQuantity } from "@/lib/walk-in/unit-convert";
+
 export function gramsToInventoryUnit(value: number, unit: string): number {
-  if (unit === "kg") return value;
-  if (unit === "lbs") return value;
-  if (unit === "oz") return value;
+  if (unit === "g" || unit === "grams") return convertQuantity(value, "g", "lbs");
   return value;
 }

@@ -20,6 +20,7 @@ import {
   Zap,
   ChefHat,
   Truck,
+  ThermometerSnowflake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOBILE_PRIMARY_NAV_HREFS, NAV_ITEMS } from "@/lib/constants";
@@ -58,6 +59,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   zap: Zap,
   "chef-hat": ChefHat,
   truck: Truck,
+  "thermometer-snowflake": ThermometerSnowflake,
 };
 
 function mobileNavLabel(item: NavItem) {

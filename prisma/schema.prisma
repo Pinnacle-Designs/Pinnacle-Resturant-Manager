@@ -333,6 +333,9 @@ model Location {
   vendorPurchaseOrders VendorPurchaseOrder[]
   goodsReceipts        GoodsReceipt[]
   vendorCredits        VendorCredit[]
+  storageZones         StorageZone[]
+  inventoryLots        InventoryLot[]
+  countSessions        InventoryCountSession[]
 }
 
 model KitchenStation {
@@ -662,6 +665,10 @@ model InventoryItem {
   portionSize   Float?
   yieldPct      Float    @default(100)
   supplier      String?
+  storageZoneId String?
+  storageZone   StorageZone? @relation(fields: [storageZoneId], references: [id], onDelete: SetNull)
+  alternateUnits String?
+  countByWeight Boolean  @default(false)
   lastRestocked DateTime?
   imageUrl      String?
   createdAt     DateTime @default(now())
@@ -672,8 +679,99 @@ model InventoryItem {
   purchaseOrderLines PurchaseOrderLine[]
   goodsReceiptLines  GoodsReceiptLine[]
   invoiceLines       VendorInvoiceLine[]
+  lots               InventoryLot[]
+  countRouteSteps    CountRouteStep[]
+  countLines         InventoryCountLine[]
 
   @@unique([locationId, barcode])
+}
+
+model StorageZone {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  items         InventoryItem[]
+  routeSteps    CountRouteStep[]
+  countSessions InventoryCountSession[]
+  lots          InventoryLot[]
+
+  @@unique([locationId, slug])
+  @@index([locationId, sortOrder])
+}
+
+model CountRouteStep {
+  id              String         @id @default(cuid())
+  zoneId          String
+  zone            StorageZone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  customLabel     String?
+  sortOrder       Int            @default(0)
+
+  @@index([zoneId, sortOrder])
+}
+
+model InventoryLot {
+  id              String         @id @default(cuid())
+  locationId      String
+  location        Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  zoneId          String?
+  zone            StorageZone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  lotNumber       String?
+  quantity        Float
+  unit            String
+  receivedAt      DateTime       @default(now())
+  expiresAt       DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([locationId, expiresAt])
+  @@index([inventoryItemId, receivedAt])
+}
+
+model InventoryCountSession {
+  id          String       @id @default(cuid())
+  locationId  String
+  location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  zoneId      String?
+  zone        StorageZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  status      String       @default("IN_PROGRESS")
+  startedBy   String?
+  startedAt   DateTime     @default(now())
+  finalizedAt DateTime?
+  notes       String?
+  createdAt   DateTime     @default(now())
+
+  lines InventoryCountLine[]
+
+  @@index([locationId, status])
+}
+
+model InventoryCountLine {
+  id              String                @id @default(cuid())
+  sessionId       String
+  session         InventoryCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem         @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  bookQty         Float
+  countedQty      Float
+  unit            String
+  countUnit       String?
+  weighedGrams    Float?
+  variance        Float                 @default(0)
+  notes           String?
+  countedAt       DateTime              @default(now())
+  clientId        String?
+
+  @@index([sessionId])
+  @@index([inventoryItemId])
 }
 
 model StaffMember {
@@ -1364,6 +1462,9 @@ model InventoryWaste {
   unit            String
   cost            Float
   reason          String
+  recordedBy      String?
+  countSessionId  String?
+  lotId           String?
   date            DateTime       @default(now())
   createdAt       DateTime       @default(now())
 }

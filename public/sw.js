@@ -1,5 +1,24 @@
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open("walk-in-v1").then((cache) =>
+      cache.addAll(["/api/walk-in/catalog"]).catch(() => undefined)
+    )
+  );
   self.skipWaiting();
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.url.includes("/api/walk-in/catalog")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open("walk-in-v1").then((cache) => cache.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+  }
 });
 
 self.addEventListener("activate", (event) => {
