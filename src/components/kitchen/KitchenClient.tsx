@@ -19,7 +19,7 @@ import {
 import { Button, Badge, StatCard } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
 import { formatYieldNote } from "@/lib/kitchen/yield";
-import { DAYPART_SHORT } from "@/lib/kitchen/daypart";
+import { DAYPART_SHORT, MEAL_DAYPARTS } from "@/lib/kitchen/daypart";
 import { formatPortionLabel, roundKitchenQty, scaleRecipeQty } from "@/lib/kitchen/portion";
 
 interface CostLine {
@@ -103,6 +103,9 @@ interface PrepTask {
   sellableQtyNeeded: number;
   onHand: number;
   prepQty: number;
+  carryoverQty?: number;
+  availableQty?: number;
+  stillNeedQty?: number;
   yieldPct: number;
   forMenuItems: string[];
   priority: string;
@@ -118,11 +121,22 @@ interface PrepDaypartBlock {
   tasks: PrepTask[];
 }
 
+interface PrepTotalBlock {
+  label: string;
+  forecastCovers: number;
+  breakfastCovers: number;
+  lunchCovers: number;
+  dinnerCovers: number;
+  carryoverFromDate?: string;
+  tasks: PrepTask[];
+}
+
 interface PrepList {
   date: string;
   dayOfWeek: string;
   forecastCovers: number;
   menuItems: PrepMenuItem[];
+  totalPrep: PrepTotalBlock;
   dayparts: PrepDaypartBlock[];
   tasks: PrepTask[];
   summary: string;
@@ -147,6 +161,119 @@ function scaleRecipeSpecLocal(spec: KitchenRecipeSpec, plates: number): KitchenR
       };
     }),
   };
+}
+
+function TotalPrepSection({ total }: { total: PrepTotalBlock }) {
+  const hasCarryover = total.tasks.some((t) => (t.carryoverQty ?? 0) > 0);
+
+  return (
+    <section className="rounded-xl border-2 border-orange-200 bg-orange-50/40">
+      <div className="border-b border-orange-200 px-4 py-3">
+        <h3 className="font-semibold text-slate-900">{total.label}</h3>
+        <div className="mt-2 flex flex-wrap gap-2 text-sm">
+          <Badge className="bg-white text-slate-800">~{total.forecastCovers} covers total</Badge>
+          <Badge className="bg-amber-100 text-amber-900">Breakfast {total.breakfastCovers}</Badge>
+          <Badge className="bg-orange-100 text-orange-900">Lunch {total.lunchCovers}</Badge>
+          <Badge className="bg-indigo-100 text-indigo-900">Dinner {total.dinnerCovers}</Badge>
+          {hasCarryover && total.carryoverFromDate && (
+            <Badge className="bg-emerald-100 text-emerald-900">
+              Leftover prep from {total.carryoverFromDate}
+            </Badge>
+          )}
+        </div>
+        {hasCarryover && (
+          <p className="mt-2 text-xs text-slate-600">
+            Unsold prep from yesterday (forecast minus sales) counts toward today&apos;s available stock — use
+            lined product first before pulling new.
+          </p>
+        )}
+      </div>
+      {total.tasks.length === 0 ? (
+        <p className="px-4 py-6 text-sm text-slate-600">
+          No recipe ingredients forecast for breakfast, lunch, or dinner on this day.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-white/80 text-left text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-2">Ingredient</th>
+                <th className="px-4 py-2">Prep for full day</th>
+                <th className="px-4 py-2">Sellable output</th>
+                {hasCarryover && <th className="px-4 py-2">Leftover</th>}
+                <th className="px-4 py-2">On hand</th>
+                <th className="px-4 py-2">Still need</th>
+                <th className="px-4 py-2">Menu items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {total.tasks.map((task) => {
+                const carryover = task.carryoverQty ?? 0;
+                const stillNeed =
+                  task.stillNeedQty ?? Math.max(0, roundKitchenQty(task.prepQty - task.onHand - carryover));
+                return (
+                  <tr
+                    key={task.ingredient}
+                    className={`border-t border-orange-100 ${task.priority === "HIGH" ? "bg-orange-50" : "bg-white/60"}`}
+                  >
+                    <td className="px-4 py-2.5 font-medium text-slate-900">
+                      {task.ingredient}
+                      {task.priority === "HIGH" && (
+                        <Badge className="ml-2 bg-orange-200 text-orange-900">Low stock</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 font-semibold text-slate-900">
+                      {task.prepQty} {task.unit}
+                      {task.yieldPct < 100 && (
+                        <span className="block text-xs font-normal text-slate-500">
+                          {task.rawQtyNeeded} {task.unit} raw @ {task.yieldPct}% yield
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-600">
+                      {task.sellableQtyNeeded} {task.unit}
+                      {task.yieldPct < 100 && (
+                        <span className="block text-xs text-slate-500">
+                          after {formatYieldNote(task.rawQtyNeeded, task.yieldPct, task.unit)}
+                        </span>
+                      )}
+                    </td>
+                    {hasCarryover && (
+                      <td className="px-4 py-2.5 text-emerald-800">
+                        {carryover > 0 ? (
+                          <span className="font-medium">
+                            {carryover} {task.unit}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-2.5 text-slate-600">
+                      {task.onHand} {task.unit}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {stillNeed > 0 ? (
+                        <span className="font-medium text-orange-800">
+                          {stillNeed} {task.unit}
+                        </span>
+                      ) : (
+                        <span className="text-emerald-700">Covered</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-slate-500">
+                      {task.forMenuItems.slice(0, 3).join(", ")}
+                      {task.forMenuItems.length > 3 ? ` +${task.forMenuItems.length - 3}` : ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function PrepMenuItemCard({ item, showPlating = true }: { item: PrepMenuItem; showPlating?: boolean }) {
@@ -370,7 +497,7 @@ export function KitchenClient() {
         <StatCard label="Menu items costed" value={costing.length} subtext="Live from inventory prices" />
         <StatCard label="Avg margin" value={`${avgMargin.toFixed(1)}%`} />
         <StatCard label="Below 60% margin" value={lowMargin} subtext="Review pricing" />
-        <StatCard label="Menu items to prep" value={prepList?.menuItems.length ?? 0} subtext="Full-day forecast" />
+        <StatCard label="Ingredients to prep" value={prepList?.totalPrep.tasks.length ?? 0} subtext="B + L + D combined" />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
@@ -597,10 +724,14 @@ export function KitchenClient() {
               )}
 
               <div className="space-y-8">
+                {prepList.totalPrep && (
+                  <TotalPrepSection total={prepList.totalPrep} />
+                )}
+
                 {prepList.menuItems.length > 0 && (
                   <section>
                     <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Full day — all menu items
+                      By menu item — full day (breakfast + lunch + dinner)
                     </h3>
                     <div className="space-y-3">
                       {prepList.menuItems.map((item) => (
@@ -611,7 +742,7 @@ export function KitchenClient() {
                 )}
 
                 {prepList.dayparts
-                  .filter((block) => block.daypart !== "late" || block.menuItems.length > 0)
+                  .filter((block) => MEAL_DAYPARTS.includes(block.daypart as (typeof MEAL_DAYPARTS)[number]))
                   .map((block) => (
                     <section key={block.daypart}>
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">

@@ -45,12 +45,20 @@ export interface PrepMenuItem {
 }
 
 export interface PrepTask {
+  inventoryItemId?: string;
   ingredient: string;
   unit: string;
   rawQtyNeeded: number;
   sellableQtyNeeded: number;
   onHand: number;
+  /** Gross prep needed for the full day (before carryover / on-hand). */
   prepQty: number;
+  /** Unsold prep from yesterday (forecast minus sales usage). */
+  carryoverQty: number;
+  /** onHand + carryoverQty — available before new prep. */
+  availableQty: number;
+  /** max(0, prepQty - availableQty) */
+  stillNeedQty: number;
   yieldPct: number;
   forMenuItems: string[];
   priority: "HIGH" | "NORMAL";
@@ -66,11 +74,23 @@ export interface PrepDaypartBlock {
   tasks: PrepTask[];
 }
 
+export interface PrepTotalBlock {
+  label: string;
+  forecastCovers: number;
+  breakfastCovers: number;
+  lunchCovers: number;
+  dinnerCovers: number;
+  /** Date (YYYY-MM-DD) carryover was computed from — typically yesterday. */
+  carryoverFromDate?: string;
+  tasks: PrepTask[];
+}
+
 export interface PrepList {
   date: string;
   dayOfWeek: string;
   forecastCovers: number;
   menuItems: PrepMenuItem[];
+  totalPrep: PrepTotalBlock;
   dayparts: PrepDaypartBlock[];
   tasks: PrepTask[];
   summary: string;
@@ -348,6 +368,214 @@ function mergeDailyMenuItems(dayparts: PrepDaypartBlock[]): PrepMenuItem[] {
   return [...map.values()].sort((a, b) => b.forecastPlates - a.forecastPlates);
 }
 
+/** Combined ingredient need for breakfast + lunch + dinner. */
+function aggregateMealIngredientNeed(dayparts: PrepDaypartBlock[]): Map<
+  string,
+  { raw: number; sellable: number; unit: string; yieldPct: number; menus: Set<string> }
+> {
+  const ingredientNeed = new Map<
+    string,
+    { raw: number; sellable: number; unit: string; yieldPct: number; menus: Set<string> }
+  >();
+
+  for (const block of dayparts) {
+    if (!MEAL_DAYPARTS.includes(block.daypart as MealDaypart)) continue;
+    for (const item of block.menuItems) {
+      for (const ing of item.ingredients) {
+        const existing = ingredientNeed.get(ing.inventoryItemId) ?? {
+          raw: 0,
+          sellable: 0,
+          unit: ing.unit,
+          yieldPct: ing.yieldPct,
+          menus: new Set<string>(),
+        };
+        existing.raw += ing.rawQtyNeeded;
+        existing.sellable += ing.sellableQtyNeeded;
+        existing.menus.add(item.menuItemName);
+        ingredientNeed.set(ing.inventoryItemId, existing);
+      }
+    }
+  }
+
+  return ingredientNeed;
+}
+
+/** Raw ingredient usage from sold orders on a single calendar day. */
+function computeIngredientUsageForDate(
+  date: Date,
+  orders: Array<{
+    createdAt: Date;
+    items: Array<{ menuItemId: string; quantity: number }>;
+  }>,
+  menuItems: Array<{
+    id: string;
+    recipeLines: Array<{
+      quantity: number;
+      inventoryItemId: string;
+      inventoryItem: { yieldPct: number };
+    }>;
+  }>
+): Map<string, number> {
+  const dk = dateKey(date);
+  const menuMap = new Map(menuItems.map((m) => [m.id, m]));
+  const usage = new Map<string, number>();
+
+  for (const order of orders) {
+    if (dateKey(order.createdAt) !== dk) continue;
+    for (const item of order.items) {
+      const menu = menuMap.get(item.menuItemId);
+      if (!menu) continue;
+      for (const line of menu.recipeLines) {
+        const yieldPct = line.inventoryItem.yieldPct ?? 100;
+        const sellableUsed = line.quantity * item.quantity;
+        const rawUsed = sellableUsed / (yieldPct / 100);
+        usage.set(
+          line.inventoryItemId,
+          round1((usage.get(line.inventoryItemId) ?? 0) + rawUsed)
+        );
+      }
+    }
+  }
+
+  return usage;
+}
+
+/** Leftover prep = yesterday's forecast minus what actually sold (raw qty). */
+function computeCarryoverMap(
+  yesterdayDayparts: PrepDaypartBlock[],
+  yesterdayUsage: Map<string, number>
+): Map<string, number> {
+  const need = aggregateMealIngredientNeed(yesterdayDayparts);
+  const carryover = new Map<string, number>();
+
+  for (const [inventoryItemId, n] of need) {
+    const used = yesterdayUsage.get(inventoryItemId) ?? 0;
+    const leftover = Math.max(0, round1(n.raw - used));
+    if (leftover > 0) carryover.set(inventoryItemId, leftover);
+  }
+
+  return carryover;
+}
+
+type MenuItemWithRecipes = Array<{
+  id: string;
+  name: string;
+  category: string;
+  recipeLines: Array<{
+    quantity: number;
+    inventoryItemId: string;
+    inventoryItem: { name: string; unit: string; yieldPct: number; portionSize: number | null };
+  }>;
+}>;
+
+function buildDaypartsForDate(
+  targetDate: Date,
+  menuItems: MenuItemWithRecipes,
+  dailyMenu: Map<string, DailyBucket>,
+  dailyCovers: Map<string, Map<Daypart, number>>,
+  invMap: Map<string, { id: string; name: string; unit: string; quantity: number; minQuantity: number }>,
+  fallbackByDaypart: Map<Daypart, Map<string, number>>
+): PrepDaypartBlock[] {
+  const targetDow = targetDate.getDay();
+  const dayparts: PrepDaypartBlock[] = [];
+  const daypartOrder: Daypart[] = [...MEAL_DAYPARTS, "late"];
+
+  for (const dp of daypartOrder) {
+    const { forecast, trendPct } = forecastCoversForDaypart(targetDow, dp, dailyCovers);
+    const forecastQty = (menuItemId: string) =>
+      forecastMenuQty(menuItemId, targetDow, dp, dailyMenu, fallbackByDaypart);
+
+    const menuItemBlocks = buildMenuItemPrep(
+      menuItems,
+      forecastQty,
+      invMap,
+      dp,
+      targetDow,
+      dailyMenu
+    );
+    const tasks = buildIngredientTasks(menuItems, forecastQty, invMap, dp);
+
+    if (dp === "late" && menuItemBlocks.length === 0 && forecast === 0) continue;
+
+    dayparts.push({
+      daypart: dp,
+      label: DAYPART_LABELS[dp],
+      forecastCovers: forecast,
+      trendVsWeekAvgPct: trendPct,
+      menuItems: menuItemBlocks,
+      tasks,
+    });
+  }
+
+  return dayparts;
+}
+
+/** Combined ingredient prep for breakfast + lunch + dinner (on-hand + yesterday carryover deducted once). */
+function buildTotalPrepTasks(
+  dayparts: PrepDaypartBlock[],
+  invMap: Map<string, { id: string; name: string; unit: string; quantity: number; minQuantity: number }>,
+  carryover: Map<string, number> = new Map()
+): PrepTask[] {
+  const ingredientNeed = aggregateMealIngredientNeed(dayparts);
+
+  const tasks: PrepTask[] = [];
+  for (const [inventoryItemId, need] of ingredientNeed) {
+    const inv = invMap.get(inventoryItemId);
+    if (!inv) continue;
+
+    const dayTotal = round1(need.raw);
+    const carryoverQty = round1(carryover.get(inventoryItemId) ?? 0);
+    const availableQty = round1(inv.quantity + carryoverQty);
+    const stillNeedQty = Math.max(0, round1(dayTotal - availableQty));
+
+    tasks.push({
+      inventoryItemId,
+      ingredient: inv.name,
+      unit: need.unit,
+      rawQtyNeeded: dayTotal,
+      sellableQtyNeeded: round1(need.sellable),
+      onHand: inv.quantity,
+      prepQty: dayTotal,
+      carryoverQty,
+      availableQty,
+      stillNeedQty,
+      yieldPct: need.yieldPct,
+      forMenuItems: [...need.menus].sort(),
+      priority: stillNeedQty > 0 || inv.quantity < inv.minQuantity ? "HIGH" : "NORMAL",
+      daypart: "lunch",
+    });
+  }
+
+  tasks.sort((a, b) => b.stillNeedQty - a.stillNeedQty || b.prepQty - a.prepQty);
+
+  return tasks;
+}
+
+function buildTotalPrepBlock(
+  dayparts: PrepDaypartBlock[],
+  invMap: Map<string, { id: string; name: string; unit: string; quantity: number; minQuantity: number }>,
+  carryover: Map<string, number> = new Map(),
+  carryoverFromDate?: string
+): PrepTotalBlock {
+  const covers = (dp: MealDaypart) =>
+    dayparts.find((b) => b.daypart === dp)?.forecastCovers ?? 0;
+
+  const breakfastCovers = covers("breakfast");
+  const lunchCovers = covers("lunch");
+  const dinnerCovers = covers("dinner");
+  const forecastCovers = breakfastCovers + lunchCovers + dinnerCovers;
+
+  return {
+    label: "Total prep — all ingredients for breakfast + lunch + dinner",
+    forecastCovers,
+    breakfastCovers,
+    lunchCovers,
+    dinnerCovers,
+    carryoverFromDate,
+    tasks: buildTotalPrepTasks(dayparts, invMap, carryover),
+  };
+}
+
 function buildIngredientTasks(
   menuItems: Array<{
     id: string;
@@ -405,6 +633,9 @@ function buildIngredientTasks(
       sellableQtyNeeded: round1(need.sellable),
       onHand: inv.quantity,
       prepQty: prepQty > 0 ? prepQty : round1(need.raw),
+      carryoverQty: 0,
+      availableQty: inv.quantity,
+      stillNeedQty: prepQty > 0 ? prepQty : 0,
       yieldPct: need.yieldPct,
       forMenuItems: [...need.menus],
       priority: prepQty > 0 || inv.quantity < inv.minQuantity ? "HIGH" : "NORMAL",
@@ -423,7 +654,9 @@ function buildIngredientTasks(
 function buildAiInsight(
   dayOfWeek: string,
   dayparts: PrepDaypartBlock[],
-  forecastCovers: number
+  forecastCovers: number,
+  carryover?: Map<string, number>,
+  carryoverFromDate?: string
 ): string {
   const parts: string[] = [];
   const mealBlocks = dayparts.filter((d) => MEAL_DAYPARTS.includes(d.daypart as MealDaypart));
@@ -455,7 +688,25 @@ function buildAiInsight(
     return `Prep forecast for ${dayOfWeek}: limited history — using blended sales velocity (~${forecastCovers} covers).`;
   }
 
-  return `${dayOfWeek} prep plan from ${LOOKBACK_DAYS}-day trends: ${parts.join(". ")}.`;
+  let insight = `${dayOfWeek} prep plan from ${LOOKBACK_DAYS}-day trends: ${parts.join(". ")}.`;
+
+  if (carryover && carryover.size > 0 && carryoverFromDate) {
+    const top = [...carryover.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id, qty]) => {
+        const name =
+          dayparts
+            .flatMap((d) => d.menuItems)
+            .flatMap((m) => m.ingredients)
+            .find((i) => i.inventoryItemId === id)?.ingredient ?? "ingredient";
+        return `${name} (${qty})`;
+      })
+      .join(", ");
+    insight += ` Use leftover prep from ${carryoverFromDate} first${top ? ` — ${top}` : ""}.`;
+  }
+
+  return insight;
 }
 
 export async function generatePrepList(locationId: string, targetDate = new Date()): Promise<PrepList> {
@@ -485,59 +736,53 @@ export async function generatePrepList(locationId: string, targetDate = new Date
   const { dailyMenu, dailyCovers } = buildDailySalesMatrix(orders);
   const fallbackByDaypart = buildFallbackByDaypart(dailyMenu);
 
-  const dayparts: PrepDaypartBlock[] = [];
-  const allTasks: PrepTask[] = [];
+  const dayparts = buildDaypartsForDate(
+    targetDate,
+    menuItems,
+    dailyMenu,
+    dailyCovers,
+    invMap,
+    fallbackByDaypart
+  );
 
-  const daypartOrder: Daypart[] = [...MEAL_DAYPARTS, "late"];
+  const yesterday = addDays(startOfDay(targetDate), -1);
+  const yesterdayDayparts = buildDaypartsForDate(
+    yesterday,
+    menuItems,
+    dailyMenu,
+    dailyCovers,
+    invMap,
+    fallbackByDaypart
+  );
+  const yesterdayUsage = computeIngredientUsageForDate(yesterday, orders, menuItems);
+  const carryover = computeCarryoverMap(yesterdayDayparts, yesterdayUsage);
+  const carryoverFromDate = dateKey(yesterday);
 
-  for (const dp of daypartOrder) {
-    const { forecast, trendPct } = forecastCoversForDaypart(targetDow, dp, dailyCovers);
+  const dailyMenuItems = mergeDailyMenuItems(
+    dayparts.filter((d) => MEAL_DAYPARTS.includes(d.daypart as MealDaypart))
+  );
+  const totalPrep = buildTotalPrepBlock(dayparts, invMap, carryover, carryoverFromDate);
 
-    const forecastQty = (menuItemId: string) =>
-      forecastMenuQty(menuItemId, targetDow, dp, dailyMenu, fallbackByDaypart);
-
-    const menuItemBlocks = buildMenuItemPrep(
-      menuItems,
-      forecastQty,
-      invMap,
-      dp,
-      targetDow,
-      dailyMenu
-    );
-    const tasks = buildIngredientTasks(menuItems, forecastQty, invMap, dp);
-
-    if (dp === "late" && menuItemBlocks.length === 0 && forecast === 0) continue;
-
-    dayparts.push({
-      daypart: dp,
-      label: DAYPART_LABELS[dp],
-      forecastCovers: forecast,
-      trendVsWeekAvgPct: trendPct,
-      menuItems: menuItemBlocks,
-      tasks,
-    });
-    allTasks.push(...tasks);
-  }
-
-  const dailyMenuItems = mergeDailyMenuItems(dayparts);
-
-  const forecastCovers = dayparts
-    .filter((d) => MEAL_DAYPARTS.includes(d.daypart as MealDaypart))
-    .reduce((s, d) => s + d.forecastCovers, 0);
+  const forecastCovers = totalPrep.forecastCovers;
 
   const menuItemCount = dailyMenuItems.length;
-  const ingredientLines = dailyMenuItems.reduce((s, m) => s + m.ingredients.length, 0);
-  const summary = `${menuItemCount} menu items · ${ingredientLines} ingredient prep lines for ${dayOfWeek} — forecast from ${LOOKBACK_DAYS}-day trends (~${forecastCovers} covers)`;
+  const ingredientLines = totalPrep.tasks.length;
+  const carryoverCount = carryover.size;
+  const summary =
+    carryoverCount > 0
+      ? `${menuItemCount} menu items · ${ingredientLines} ingredient types for ${dayOfWeek} — full-day prep (~${forecastCovers} covers) · ${carryoverCount} with leftover prep from ${carryoverFromDate}`
+      : `${menuItemCount} menu items · ${ingredientLines} ingredient types for ${dayOfWeek} — full-day prep totals (~${forecastCovers} covers)`;
 
   return {
     date: dateKey(targetDate),
     dayOfWeek,
     forecastCovers,
     menuItems: dailyMenuItems,
+    totalPrep,
     dayparts,
-    tasks: allTasks,
+    tasks: totalPrep.tasks,
     summary,
-    aiInsight: buildAiInsight(dayOfWeek, dayparts, forecastCovers),
+    aiInsight: buildAiInsight(dayOfWeek, dayparts, forecastCovers, carryover, carryoverFromDate),
   };
 }
 
@@ -556,23 +801,38 @@ export function scalePrepList(prepList: PrepList, multiplier: number, note?: str
     ingredients: m.ingredients.map(scaleIng),
   });
 
-  const scale = (t: PrepTask): PrepTask => ({
-    ...t,
-    rawQtyNeeded: round1(t.rawQtyNeeded * multiplier),
-    prepQty: round1(t.prepQty * multiplier),
-  });
+  const scaleTask = (t: PrepTask): PrepTask => {
+    const prepQty = round1(t.prepQty * multiplier);
+    const stillNeedQty = Math.max(0, round1(prepQty - t.availableQty));
+    return {
+      ...t,
+      rawQtyNeeded: round1(t.rawQtyNeeded * multiplier),
+      sellableQtyNeeded: round1(t.sellableQtyNeeded * multiplier),
+      prepQty,
+      stillNeedQty,
+      priority: stillNeedQty > 0 ? "HIGH" : "NORMAL",
+    };
+  };
 
   return {
     ...prepList,
     forecastCovers: Math.round(prepList.forecastCovers * multiplier),
     menuItems: prepList.menuItems.map(scaleMenu),
+    totalPrep: {
+      ...prepList.totalPrep,
+      forecastCovers: Math.round(prepList.totalPrep.forecastCovers * multiplier),
+      breakfastCovers: Math.round(prepList.totalPrep.breakfastCovers * multiplier),
+      lunchCovers: Math.round(prepList.totalPrep.lunchCovers * multiplier),
+      dinnerCovers: Math.round(prepList.totalPrep.dinnerCovers * multiplier),
+      tasks: prepList.totalPrep.tasks.map(scaleTask),
+    },
     dayparts: prepList.dayparts.map((d) => ({
       ...d,
       forecastCovers: Math.round(d.forecastCovers * multiplier),
       menuItems: d.menuItems.map(scaleMenu),
-      tasks: d.tasks.map(scale),
+      tasks: d.tasks.map(scaleTask),
     })),
-    tasks: prepList.tasks.map(scale),
+    tasks: prepList.totalPrep.tasks.map(scaleTask),
     summary: note ? `${prepList.summary} · ${note}` : prepList.summary,
   };
 }
