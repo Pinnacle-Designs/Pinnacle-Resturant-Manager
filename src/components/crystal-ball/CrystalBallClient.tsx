@@ -378,7 +378,7 @@ export function CrystalBallClient() {
                 </tbody>
               </table>
             </section>
-          )}
+          ) : null}
         </div>
       ) : null}
 

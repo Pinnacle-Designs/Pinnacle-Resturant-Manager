@@ -122,7 +122,7 @@ export async function finalizeCountSession(sessionId: string, locationId: string
       action: "COUNT_FINALIZE",
       entity: "count_session",
       entityId: sessionId,
-      details: `Walk-in count finalized — ${session.lines.length} lines, zone ${session.zone?.name ?? "all"}`,
+      details: `Walk-in count finalized — ${updated.lines.length} lines, zone ${updated.zone?.name ?? "all"}`,
     },
   });
 

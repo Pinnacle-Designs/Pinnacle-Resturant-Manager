@@ -577,15 +577,7 @@ function buildTotalPrepBlock(
 }
 
 function buildIngredientTasks(
-  menuItems: Array<{
-    id: string;
-    name: string;
-    recipeLines: Array<{
-      quantity: number;
-      inventoryItemId: string;
-      inventoryItem: { name: string; unit: string; yieldPct: number; quantity: number; minQuantity: number };
-    }>;
-  }>,
+  menuItems: MenuItemWithRecipes,
   forecastQty: (menuItemId: string) => number,
   invMap: Map<string, { id: string; name: string; unit: string; quantity: number; minQuantity: number }>,
   daypart: Daypart

@@ -196,12 +196,12 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/retention": "manage_retention",
   "/api/boh": "manage_boh",
   "/api/kitchen": "manage_menu",
+  "/api/kitchen/kds": "manage_boh",
   "/api/back-office": "view_analytics",
   "/api/crystal-ball": "view_analytics",
   "/api/purchasing": "manage_inventory",
   "/api/inventory": "manage_inventory",
   "/api/walk-in": "manage_inventory",
-  "/api/kitchen": "manage_boh",
   "/api/pos": "place_orders",
   "/api/timeclock": "clock_in",
   "/api/shift-swaps": "view_own_schedule",
@@ -216,6 +216,7 @@ function routeBase(pathname: string): string {
   if (pathname.startsWith("/api/retention/feedback")) return "/api/retention";
   if (pathname.startsWith("/api/retention")) return "/api/retention";
   if (pathname.startsWith("/api/boh")) return "/api/boh";
+  if (pathname.startsWith("/api/kitchen/kds")) return "/api/kitchen/kds";
   if (pathname.startsWith("/api/kitchen")) return "/api/kitchen";
   if (pathname.startsWith("/api/pos/layout")) return "/api/pos";
   if (pathname.startsWith("/api/pos")) return "/api/pos";
