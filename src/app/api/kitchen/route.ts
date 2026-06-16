@@ -6,17 +6,27 @@ import {
   recalculateAllRecipeCosts,
 } from "@/lib/kitchen/dynamic-costing";
 import { generatePrepList } from "@/lib/kitchen/prep-list";
+import { getKitchenRecipeSpecs } from "@/lib/kitchen/recipe-specs";
 import { prisma } from "@/lib/prisma";
 import { parseAllergens, ALLERGEN_LABELS } from "@/lib/kitchen/allergens";
+
+function parseTargetDate(searchParams: URLSearchParams): Date {
+  const raw = searchParams.get("date");
+  if (!raw) return new Date();
+  const parsed = new Date(raw + "T12:00:00");
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 export async function GET(request: NextRequest) {
   const { error } = await requirePermission(request, "manage_menu");
   if (error) return error;
 
   const locationId = await getLocationIdFromRequest(request);
-  const [costing, prepList, allergenInsights] = await Promise.all([
+  const targetDate = parseTargetDate(request.nextUrl.searchParams);
+  const prepList = await generatePrepList(locationId, targetDate);
+  const [costing, recipeSpecs, allergenInsights] = await Promise.all([
     getKitchenCostingDashboard(locationId),
-    generatePrepList(locationId),
+    getKitchenRecipeSpecs(locationId, prepList),
     prisma.businessInsight.findMany({
       where: {
         locationId,
@@ -32,6 +42,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     costing,
     prepList,
+    recipeSpecs,
     allergenAlerts: allergenInsights,
     allergenLabels: ALLERGEN_LABELS,
   });

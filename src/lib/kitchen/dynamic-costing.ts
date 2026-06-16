@@ -5,6 +5,7 @@ import {
   lineTheoreticalCost,
 } from "@/lib/menu/recipe";
 import { parseAllergens, mergeMenuAllergens } from "./allergens";
+import { formatPortionLabel } from "./portion";
 
 export interface MenuCostRow {
   id: string;
@@ -21,6 +22,8 @@ export interface MenuCostRow {
     unit: string;
     yieldPct: number;
     sellableQty: number;
+    portionSize: number | null;
+    portionLabel: string;
     lineCost: number;
     costPerUnit: number;
   }[];
@@ -94,6 +97,7 @@ function buildCostRow(
         unit: string;
         costPerUnit: number;
         yieldPct: number;
+        portionSize: number | null;
       };
     }>;
   },
@@ -120,6 +124,12 @@ function buildCostRow(
         unit: line.inventoryItem.unit,
         yieldPct,
         sellableQty: line.quantity,
+        portionSize: line.inventoryItem.portionSize,
+        portionLabel: formatPortionLabel(
+          line.quantity,
+          line.inventoryItem.unit,
+          line.inventoryItem.portionSize
+        ),
         lineCost: lineTheoreticalCost(
           line.quantity,
           line.inventoryItem.costPerUnit,

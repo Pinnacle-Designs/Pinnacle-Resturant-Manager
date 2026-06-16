@@ -10,10 +10,17 @@ import {
   Printer,
   TrendingDown,
   TrendingUp,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  ChefHat,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Button, Badge, StatCard } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
-import { formatYieldNote } from "@/lib/kitchen/prep-list";
+import { formatYieldNote } from "@/lib/kitchen/yield";
+import { DAYPART_SHORT } from "@/lib/kitchen/daypart";
+import { formatPortionLabel, roundKitchenQty, scaleRecipeQty } from "@/lib/kitchen/portion";
 
 interface CostLine {
   ingredient: string;
@@ -21,6 +28,8 @@ interface CostLine {
   unit: string;
   yieldPct: number;
   sellableQty: number;
+  portionSize: number | null;
+  portionLabel: string;
   lineCost: number;
 }
 
@@ -36,6 +45,57 @@ interface MenuCostRow {
   lines: CostLine[];
 }
 
+interface PrepIngredientLine {
+  ingredient: string;
+  unit: string;
+  perPlateQty: number;
+  perPlateLabel: string;
+  portionSize: number | null;
+  rawQtyNeeded: number;
+  sellableQtyNeeded: number;
+  prepQty: number;
+  yieldPct: number;
+  onHand: number;
+  priority: string;
+}
+
+interface PrepMenuItem {
+  menuItemId: string;
+  menuItemName: string;
+  category: string;
+  forecastPlates: number;
+  trendVsWeekAvgPct: number;
+  portionSpec: string;
+  platingNotes: string;
+  plateware: string | null;
+  garnish: string | null;
+  ingredients: PrepIngredientLine[];
+}
+
+interface KitchenRecipeLine {
+  ingredient: string;
+  unit: string;
+  perPlateQty: number;
+  perPlateLabel: string;
+  portionSize: number | null;
+  yieldPct: number;
+  scaledSellableQty: number;
+  scaledRawQty: number;
+  scaledLabel: string;
+}
+
+interface KitchenRecipeSpec {
+  menuItemId: string;
+  name: string;
+  category: string;
+  portionSpec: string;
+  platingNotes: string;
+  plateware: string | null;
+  garnish: string | null;
+  forecastPlates: number;
+  lines: KitchenRecipeLine[];
+}
+
 interface PrepTask {
   ingredient: string;
   unit: string;
@@ -46,21 +106,203 @@ interface PrepTask {
   yieldPct: number;
   forMenuItems: string[];
   priority: string;
+  daypart: string;
+}
+
+interface PrepDaypartBlock {
+  daypart: string;
+  label: string;
+  forecastCovers: number;
+  trendVsWeekAvgPct: number;
+  menuItems: PrepMenuItem[];
+  tasks: PrepTask[];
 }
 
 interface PrepList {
   date: string;
+  dayOfWeek: string;
   forecastCovers: number;
+  menuItems: PrepMenuItem[];
+  dayparts: PrepDaypartBlock[];
   tasks: PrepTask[];
   summary: string;
+  aiInsight: string;
 }
 
-type Tab = "costing" | "yield" | "prep" | "allergens";
+type Tab = "costing" | "yield" | "prep" | "recipes" | "allergens";
+
+function scaleRecipeSpecLocal(spec: KitchenRecipeSpec, plates: number): KitchenRecipeSpec {
+  const count = Math.max(0.5, plates);
+  return {
+    ...spec,
+    forecastPlates: roundKitchenQty(count),
+    lines: spec.lines.map((line) => {
+      const scaledSellable = scaleRecipeQty(line.perPlateQty, count);
+      const scaledRaw = roundKitchenQty(scaledSellable / (line.yieldPct / 100));
+      return {
+        ...line,
+        scaledSellableQty: scaledSellable,
+        scaledRawQty: scaledRaw,
+        scaledLabel: formatPortionLabel(scaledSellable, line.unit, line.portionSize),
+      };
+    }),
+  };
+}
+
+function PrepMenuItemCard({ item, showPlating = true }: { item: PrepMenuItem; showPlating?: boolean }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white">
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
+        <div>
+          <p className="font-semibold text-slate-900">{item.menuItemName}</p>
+          <p className="text-xs text-slate-500">{item.category}</p>
+          {showPlating && item.portionSpec && (
+            <p className="mt-1 text-xs text-orange-800">{item.portionSpec}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Badge className="bg-slate-100 text-slate-800">~{item.forecastPlates} plates</Badge>
+          {item.trendVsWeekAvgPct !== 0 && (
+            <span className={item.trendVsWeekAvgPct > 0 ? "text-emerald-700" : "text-amber-700"}>
+              {item.trendVsWeekAvgPct > 0 ? "+" : ""}
+              {item.trendVsWeekAvgPct}%
+            </span>
+          )}
+        </div>
+      </div>
+      {showPlating && (item.platingNotes || item.plateware) && (
+        <div className="border-b border-slate-100 bg-orange-50/50 px-4 py-2.5 text-xs text-slate-700">
+          {item.plateware && (
+            <p>
+              <UtensilsCrossed className="mr-1 inline h-3.5 w-3.5 text-orange-600" />
+              {item.plateware}
+              {item.garnish ? ` · ${item.garnish}` : ""}
+            </p>
+          )}
+          {item.platingNotes && <p className="mt-1 leading-relaxed">{item.platingNotes}</p>}
+        </div>
+      )}
+      {item.ingredients.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-slate-500">No recipe linked — add ingredients on the Menu page.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-2">Ingredient</th>
+                <th className="px-4 py-2">Per plate</th>
+                <th className="px-4 py-2">Prep total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {item.ingredients.map((ing) => (
+                <tr key={ing.ingredient} className="border-t border-slate-100">
+                  <td className="px-4 py-2 font-medium text-slate-800">{ing.ingredient}</td>
+                  <td className="px-4 py-2 text-slate-600">{ing.perPlateLabel}</td>
+                  <td className="px-4 py-2 text-slate-800">
+                    <strong>{ing.prepQty} {ing.unit}</strong> raw
+                    {ing.yieldPct < 100 && (
+                      <span className="block text-xs text-slate-500">
+                        → {formatYieldNote(ing.prepQty, ing.yieldPct, ing.unit)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function RecipeSpecCard({
+  spec,
+  plateCount,
+  onPlateCountChange,
+}: {
+  spec: KitchenRecipeSpec;
+  plateCount: number;
+  onPlateCountChange: (n: number) => void;
+}) {
+  const scaled = scaleRecipeSpecLocal(spec, plateCount);
+  const fromPrep = spec.forecastPlates > 0 && plateCount === spec.forecastPlates;
+
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+        <div>
+          <p className="font-semibold text-slate-900">{spec.name}</p>
+          <p className="text-xs text-slate-500">{spec.category}</p>
+          <p className="mt-1 text-xs font-medium text-orange-800">{spec.portionSpec}</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <label className="text-xs text-slate-500">
+            Plate count
+            {fromPrep && <span className="ml-1 text-indigo-600">(from prep list)</span>}
+          </label>
+          <input
+            type="number"
+            min={0.5}
+            step={0.5}
+            value={plateCount}
+            onChange={(e) => onPlateCountChange(parseFloat(e.target.value) || 1)}
+            className="w-20 rounded border border-slate-200 px-2 py-1 text-right text-sm"
+          />
+        </div>
+      </div>
+      {(spec.platingNotes || spec.plateware) && (
+        <div className="border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-xs text-slate-700">
+          {spec.plateware && (
+            <p className="font-medium">
+              {spec.plateware}
+              {spec.garnish ? ` · Garnish: ${spec.garnish}` : ""}
+            </p>
+          )}
+          <p className="mt-1 leading-relaxed">{spec.platingNotes}</p>
+        </div>
+      )}
+      {scaled.lines.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-slate-500">Build recipe on Menu → Edit item.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-2">Ingredient</th>
+              <th className="px-4 py-2">Per plate</th>
+              <th className="px-4 py-2">For {scaled.forecastPlates} plates</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scaled.lines.map((line) => (
+              <tr key={line.ingredient} className="border-t border-slate-100">
+                <td className="px-4 py-2 font-medium">{line.ingredient}</td>
+                <td className="px-4 py-2 text-slate-600">{line.perPlateLabel}</td>
+                <td className="px-4 py-2">
+                  <span className="font-medium text-slate-900">{line.scaledLabel}</span>
+                  {line.yieldPct < 100 && (
+                    <span className="block text-xs text-slate-500">
+                      {line.scaledRawQty} {line.unit} raw @ {line.yieldPct}% yield
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </article>
+  );
+}
 
 export function KitchenClient() {
   const [tab, setTab] = useState<Tab>("costing");
   const [costing, setCosting] = useState<MenuCostRow[]>([]);
   const [prepList, setPrepList] = useState<PrepList | null>(null);
+  const [recipeSpecs, setRecipeSpecs] = useState<KitchenRecipeSpec[]>([]);
+  const [plateOverrides, setPlateOverrides] = useState<Record<string, number>>({});
+  const [prepDate, setPrepDate] = useState(() => new Date().toISOString().split("T")[0]!);
   const [allergenAlerts, setAllergenAlerts] = useState<{ title: string; description: string }[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,15 +311,17 @@ export function KitchenClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/kitchen");
+      const res = await fetch(`/api/kitchen?date=${prepDate}`);
       const data = await res.json();
       setCosting(data.costing ?? []);
       setPrepList(data.prepList ?? null);
+      setRecipeSpecs(data.recipeSpecs ?? []);
+      setPlateOverrides({});
       setAllergenAlerts(data.allergenAlerts ?? []);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [prepDate]);
 
   useEffect(() => {
     load();
@@ -93,6 +337,12 @@ export function KitchenClient() {
     }
   };
 
+  const shiftPrepDate = (days: number) => {
+    const d = new Date(prepDate + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    setPrepDate(d.toISOString().split("T")[0]!);
+  };
+
   const printPrepList = () => {
     window.print();
   };
@@ -105,10 +355,14 @@ export function KitchenClient() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "costing", label: "Recipe Costing" },
+    { id: "recipes", label: "Recipes & Plating" },
     { id: "yield", label: "Yield" },
     { id: "prep", label: "Prep List" },
     { id: "allergens", label: "Allergens" },
   ];
+
+  const getPlateCount = (spec: KitchenRecipeSpec) =>
+    plateOverrides[spec.menuItemId] ?? (spec.forecastPlates > 0 ? spec.forecastPlates : 1);
 
   return (
     <div>
@@ -116,7 +370,7 @@ export function KitchenClient() {
         <StatCard label="Menu items costed" value={costing.length} subtext="Live from inventory prices" />
         <StatCard label="Avg margin" value={`${avgMargin.toFixed(1)}%`} />
         <StatCard label="Below 60% margin" value={lowMargin} subtext="Review pricing" />
-        <StatCard label="Prep tasks today" value={prepList?.tasks.length ?? 0} />
+        <StatCard label="Menu items to prep" value={prepList?.menuItems.length ?? 0} subtext="Full-day forecast" />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
@@ -207,13 +461,13 @@ export function KitchenClient() {
                             <td colSpan={5} className="px-4 py-3">
                               <div className="space-y-1 text-xs text-slate-600">
                                 {row.lines.map((l) => (
-                                  <div key={l.ingredient} className="flex justify-between">
+                                  <div key={l.ingredient} className="flex justify-between gap-4">
                                     <span>
-                                      {l.ingredient}: {l.sellableQty} {l.unit} sellable
+                                      {l.ingredient}: {l.portionLabel}
                                       {l.yieldPct < 100 && (
                                         <span className="text-slate-400">
                                           {" "}
-                                          ({formatYieldNote(l.rawQty, l.yieldPct, l.unit)})
+                                          ({formatYieldNote(l.rawQty, l.yieldPct, l.unit)} raw)
                                         </span>
                                       )}
                                     </span>
@@ -228,6 +482,38 @@ export function KitchenClient() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "recipes" && (
+            <div className="space-y-4">
+              <div className="card">
+                <h2 className="mb-1 flex items-center gap-2 font-semibold">
+                  <ChefHat className="h-5 w-5 text-orange-600" />
+                  Recipes, portions &amp; plating
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Per-plate builds with standard portion sizes. Plate counts default from the prep list forecast for{" "}
+                  {prepList?.dayOfWeek ?? "today"} — adjust any item to scale ingredient totals.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {recipeSpecs
+                  .filter((s) => s.lines.length > 0)
+                  .map((spec) => (
+                    <RecipeSpecCard
+                      key={spec.menuItemId}
+                      spec={spec}
+                      plateCount={getPlateCount(spec)}
+                      onPlateCountChange={(n) =>
+                        setPlateOverrides((prev) => ({ ...prev, [spec.menuItemId]: n }))
+                      }
+                    />
+                  ))}
+                {recipeSpecs.every((s) => s.lines.length === 0) && (
+                  <p className="text-slate-500">Add recipes on the Menu page to see builds here.</p>
+                )}
               </div>
             </div>
           )}
@@ -275,47 +561,113 @@ export function KitchenClient() {
             <div className="card print:shadow-none" id="prep-list">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">Daily Prep List — {prepList.date}</h2>
+                  <h2 className="font-semibold">
+                    Prep List — {prepList.dayOfWeek}, {prepList.date}
+                  </h2>
                   <p className="text-sm text-slate-500">{prepList.summary}</p>
                 </div>
-                <Button variant="secondary" onClick={printPrepList}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(-1)} aria-label="Previous day">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <input
+                    type="date"
+                    value={prepDate}
+                    onChange={(e) => setPrepDate(e.target.value)}
+                    className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(1)} aria-label="Next day">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button variant="secondary" onClick={printPrepList}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-3">
-                {prepList.tasks.length === 0 ? (
-                  <p className="text-slate-500">On-hand stock covers forecasted sales.</p>
-                ) : (
-                  prepList.tasks.map((task) => (
-                    <div
-                      key={task.ingredient}
-                      className={`rounded-lg border p-4 ${
-                        task.priority === "HIGH" ? "border-orange-200 bg-orange-50" : "border-slate-200"
-                      }`}
-                    >
-                      <div className="flex justify-between">
-                        <p className="font-semibold">{task.ingredient}</p>
-                        {task.priority === "HIGH" && (
-                          <Badge className="bg-orange-200 text-orange-900">Priority</Badge>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm">
-                        Prep <strong>{task.prepQty} {task.unit}</strong> raw
-                        {task.yieldPct < 100 && (
-                          <span className="text-slate-600">
-                            {" "}
-                            → {formatYieldNote(task.prepQty, task.yieldPct, task.unit)}
-                          </span>
-                        )}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        On hand: {task.onHand} {task.unit} · Need: {task.rawQtyNeeded} {task.unit} raw for{" "}
-                        {task.forMenuItems.join(", ")}
-                      </p>
+
+              {prepList.aiInsight && (
+                <div className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                  <p className="flex items-start gap-2 font-medium">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+                    Auto-generated from day-of-week &amp; meal-period trends
+                  </p>
+                  <p className="mt-1 text-indigo-800">{prepList.aiInsight}</p>
+                </div>
+              )}
+
+              <div className="space-y-8">
+                {prepList.menuItems.length > 0 && (
+                  <section>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Full day — all menu items
+                    </h3>
+                    <div className="space-y-3">
+                      {prepList.menuItems.map((item) => (
+                        <PrepMenuItemCard key={item.menuItemId} item={item} />
+                      ))}
                     </div>
-                  ))
+                  </section>
                 )}
+
+                {prepList.dayparts
+                  .filter((block) => block.daypart !== "late" || block.menuItems.length > 0)
+                  .map((block) => (
+                    <section key={block.daypart}>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <div>
+                          <h3 className="font-semibold text-slate-900">
+                            {DAYPART_SHORT[block.daypart as keyof typeof DAYPART_SHORT] ?? block.daypart}
+                          </h3>
+                          <p className="text-xs text-slate-500">{block.label}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-slate-600">~{block.forecastCovers} covers</span>
+                          {block.trendVsWeekAvgPct !== 0 && (
+                            <span
+                              className={
+                                block.trendVsWeekAvgPct > 0 ? "text-emerald-700" : "text-amber-700"
+                              }
+                            >
+                              {block.trendVsWeekAvgPct > 0 ? (
+                                <TrendingUp className="mr-0.5 inline h-3.5 w-3.5" />
+                              ) : (
+                                <TrendingDown className="mr-0.5 inline h-3.5 w-3.5" />
+                              )}
+                              {block.trendVsWeekAvgPct > 0 ? "+" : ""}
+                              {block.trendVsWeekAvgPct}% vs weekly avg
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {block.menuItems.length === 0 ? (
+                        <p className="text-sm text-slate-500">No forecasted sales for {block.daypart}.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {block.menuItems.map((item) => (
+                            <PrepMenuItemCard key={`${block.daypart}-${item.menuItemId}`} item={item} />
+                          ))}
+                        </div>
+                      )}
+                      {block.tasks.length > 0 && (
+                        <details className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3">
+                          <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                            Ingredient rollup ({block.tasks.length} net prep after on-hand)
+                          </summary>
+                          <div className="mt-3 space-y-2">
+                            {block.tasks.map((task) => (
+                              <div key={`${block.daypart}-rollup-${task.ingredient}`} className="text-sm text-slate-600">
+                                <strong>{task.ingredient}</strong> — prep {task.prepQty} {task.unit}
+                                {task.priority === "HIGH" && (
+                                  <Badge className="ml-2 bg-orange-200 text-orange-900">Priority</Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </section>
+                  ))}
               </div>
             </div>
           )}

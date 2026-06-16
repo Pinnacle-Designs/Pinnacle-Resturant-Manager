@@ -39,14 +39,54 @@ export function CrystalBallClient() {
     }>;
     adjustedPrep: {
       date: string;
+      dayOfWeek?: string;
       forecastCovers: number;
       summary: string;
+      aiInsight?: string;
+      menuItems?: Array<{
+        menuItemId: string;
+        menuItemName: string;
+        category: string;
+        forecastPlates: number;
+        trendVsWeekAvgPct: number;
+        ingredients: Array<{
+          ingredient: string;
+          unit: string;
+          prepQty: number;
+          rawQtyNeeded: number;
+        }>;
+      }>;
+      dayparts?: Array<{
+        daypart: string;
+        label: string;
+        forecastCovers: number;
+        trendVsWeekAvgPct: number;
+        menuItems?: Array<{
+          menuItemId: string;
+          menuItemName: string;
+          category: string;
+          forecastPlates: number;
+          ingredients: Array<{
+            ingredient: string;
+            unit: string;
+            prepQty: number;
+          }>;
+        }>;
+        tasks: Array<{
+          ingredient: string;
+          unit: string;
+          rawQtyNeeded: number;
+          prepQty: number;
+          priority: string;
+        }>;
+      }>;
       tasks: Array<{
         ingredient: string;
         unit: string;
         rawQtyNeeded: number;
         prepQty: number;
         priority: string;
+        daypart?: string;
         overlayNote?: string;
       }>;
       overlay?: { condition: string; drivers: string[] };
@@ -208,38 +248,137 @@ export function CrystalBallClient() {
       ) : null}
 
       {data && tab === "prep" ? (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">{data.adjustedPrep.summary}</p>
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Ingredient</th>
-                  <th className="px-4 py-3">Prep qty</th>
-                  <th className="px-4 py-3">Raw needed</th>
-                  <th className="px-4 py-3">Priority</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.adjustedPrep.tasks.slice(0, 20).map((t) => (
-                  <tr key={t.ingredient} className="border-t border-slate-100">
-                    <td className="px-4 py-3 font-medium">{t.ingredient}</td>
-                    <td className="px-4 py-3">
-                      {t.prepQty} {t.unit}
-                    </td>
-                    <td className="px-4 py-3">
-                      {t.rawQtyNeeded} {t.unit}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge className={t.priority === "HIGH" ? "bg-orange-100 text-orange-800" : ""}>
-                        {t.priority}
-                      </Badge>
-                    </td>
+        <div className="space-y-6">
+          <div>
+            <p className="text-sm text-slate-600">{data.adjustedPrep.summary}</p>
+            {data.adjustedPrep.aiInsight ? (
+              <p className="mt-2 text-sm text-indigo-800">{data.adjustedPrep.aiInsight}</p>
+            ) : null}
+          </div>
+          {(data.adjustedPrep.menuItems ?? []).length > 0 ? (
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-700">By menu item (full day)</h3>
+              {data.adjustedPrep.menuItems!.map((item) => (
+                <article key={item.menuItemId} className="rounded-xl border border-slate-200 bg-white">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+                    <div>
+                      <p className="font-medium text-slate-900">{item.menuItemName}</p>
+                      <p className="text-xs text-slate-500">{item.category}</p>
+                    </div>
+                    <Badge className="bg-slate-100 text-slate-800">~{item.forecastPlates} plates</Badge>
+                  </div>
+                  <ul className="divide-y divide-slate-100 text-sm">
+                    {item.ingredients.map((ing) => (
+                      <li key={ing.ingredient} className="flex justify-between px-4 py-2">
+                        <span>{ing.ingredient}</span>
+                        <span className="text-slate-600">
+                          {ing.prepQty} {ing.unit}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </section>
+          ) : null}
+          {(data.adjustedPrep.dayparts ?? []).length > 0 ? (
+            data.adjustedPrep.dayparts!
+              .filter((b) => b.daypart !== "late" || (b.menuItems?.length ?? 0) > 0 || b.tasks.length > 0)
+              .map((block) => (
+                <section key={block.daypart} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-slate-900">{block.label}</h3>
+                    <p className="text-xs text-slate-500">
+                      ~{block.forecastCovers} covers
+                      {block.trendVsWeekAvgPct !== 0
+                        ? ` · ${block.trendVsWeekAvgPct > 0 ? "+" : ""}${block.trendVsWeekAvgPct}% vs weekly avg`
+                        : ""}
+                    </p>
+                  </div>
+                  {(block.menuItems ?? []).length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {block.menuItems!.map((item) => (
+                        <div key={item.menuItemId} className="px-4 py-3">
+                          <p className="font-medium text-slate-900">
+                            {item.menuItemName}{" "}
+                            <span className="text-slate-500">(~{item.forecastPlates})</span>
+                          </p>
+                          <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                            {item.ingredients.map((ing) => (
+                              <li key={ing.ingredient}>
+                                {ing.ingredient}: {ing.prepQty} {ing.unit}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ) : block.tasks.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-slate-500">No forecast for this period.</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                        <tr>
+                          <th className="px-4 py-3">Ingredient</th>
+                          <th className="px-4 py-3">Prep qty</th>
+                          <th className="px-4 py-3">Raw needed</th>
+                          <th className="px-4 py-3">Priority</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.tasks.map((t) => (
+                          <tr key={`${block.daypart}-${t.ingredient}`} className="border-t border-slate-100">
+                            <td className="px-4 py-3 font-medium">{t.ingredient}</td>
+                            <td className="px-4 py-3">
+                              {t.prepQty} {t.unit}
+                            </td>
+                            <td className="px-4 py-3">
+                              {t.rawQtyNeeded} {t.unit}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className={t.priority === "HIGH" ? "bg-orange-100 text-orange-800" : ""}>
+                                {t.priority}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              ))
+          ) : (data.adjustedPrep.menuItems ?? []).length === 0 ? (
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Ingredient</th>
+                    <th className="px-4 py-3">Prep qty</th>
+                    <th className="px-4 py-3">Raw needed</th>
+                    <th className="px-4 py-3">Priority</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+                </thead>
+                <tbody>
+                  {data.adjustedPrep.tasks.slice(0, 20).map((t) => (
+                    <tr key={t.ingredient} className="border-t border-slate-100">
+                      <td className="px-4 py-3 font-medium">{t.ingredient}</td>
+                      <td className="px-4 py-3">
+                        {t.prepQty} {t.unit}
+                      </td>
+                      <td className="px-4 py-3">
+                        {t.rawQtyNeeded} {t.unit}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={t.priority === "HIGH" ? "bg-orange-100 text-orange-800" : ""}>
+                          {t.priority}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
         </div>
       ) : null}
 
