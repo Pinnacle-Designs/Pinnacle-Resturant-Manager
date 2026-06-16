@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLocationIdFromRequest } from "@/lib/location";
+import { ensureDefaultStorageZones, syncRouteStepForItem } from "@/lib/walk-in/storage-zones";
 
 export async function GET(request: NextRequest) {
   const locationId = await getLocationIdFromRequest(request);
+  await ensureDefaultStorageZones(locationId);
   const items = await prisma.inventoryItem.findMany({
     where: { locationId },
+    include: { storageZone: { select: { id: true, name: true } } },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(items);
@@ -27,8 +30,14 @@ export async function POST(request: NextRequest) {
       supplier: body.supplier,
       imageUrl: body.imageUrl,
       barcode: body.barcode ? String(body.barcode).replace(/\D/g, "") || null : null,
+      storageZoneId: body.storageZoneId ?? null,
     },
+    include: { storageZone: { select: { id: true, name: true, slug: true } } },
   });
+
+  if (item.storageZoneId) {
+    await syncRouteStepForItem(item.id, item.storageZoneId);
+  }
 
   await prisma.activityLog.create({
     data: {

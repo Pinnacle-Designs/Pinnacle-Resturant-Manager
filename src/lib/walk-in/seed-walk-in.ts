@@ -1,28 +1,24 @@
 import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { defaultAlternatesForUnit } from "./unit-convert";
-
-const DEFAULT_ZONES = [
-  { name: "Walk-In Cooler", slug: "walk-in", sortOrder: 0 },
-  { name: "Dry Storage", slug: "dry", sortOrder: 1 },
-  { name: "Freezer", slug: "freezer", sortOrder: 2 },
-  { name: "Bar Cooler", slug: "bar", sortOrder: 3 },
-];
+import { ensureDefaultStorageZones } from "./storage-zones";
 
 export async function seedWalkInSample(locationId: string) {
-  const existing = await prisma.storageZone.count({ where: { locationId } });
-  if (existing > 0) return;
+  await ensureDefaultStorageZones(locationId);
 
-  const zones = [];
-  for (const z of DEFAULT_ZONES) {
-    const zone = await prisma.storageZone.create({
-      data: { locationId, ...z },
-    });
-    zones.push(zone);
-  }
+  const routeCount = await prisma.countRouteStep.count({
+    where: { zone: { locationId } },
+  });
+  if (routeCount > 0) return;
 
-  const walkIn = zones.find((z) => z.slug === "walk-in")!;
-  const dry = zones.find((z) => z.slug === "dry")!;
+  const zones = await prisma.storageZone.findMany({
+    where: { locationId },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const walkIn = zones.find((z) => z.slug === "walk-in");
+  const dry = zones.find((z) => z.slug === "dry");
+  if (!walkIn || !dry) return;
 
   const inventory = await prisma.inventoryItem.findMany({
     where: { locationId },
@@ -45,22 +41,14 @@ export async function seedWalkInSample(locationId: string) {
   const walkInItems = inventory.filter((_, i) => i % 3 === 0).slice(0, 12);
   for (const [sortOrder, item] of walkInItems.entries()) {
     await prisma.countRouteStep.create({
-      data: {
-        zoneId: walkIn.id,
-        inventoryItemId: item.id,
-        sortOrder,
-      },
+      data: { zoneId: walkIn.id, inventoryItemId: item.id, sortOrder },
     });
   }
 
   const dryItems = inventory.filter((_, i) => i % 3 === 1).slice(0, 8);
   for (const [sortOrder, item] of dryItems.entries()) {
     await prisma.countRouteStep.create({
-      data: {
-        zoneId: dry.id,
-        inventoryItemId: item.id,
-        sortOrder,
-      },
+      data: { zoneId: dry.id, inventoryItemId: item.id, sortOrder },
     });
   }
 

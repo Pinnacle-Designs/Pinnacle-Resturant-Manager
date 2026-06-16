@@ -199,6 +199,7 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/back-office": "view_analytics",
   "/api/crystal-ball": "view_analytics",
   "/api/purchasing": "manage_inventory",
+  "/api/inventory": "manage_inventory",
   "/api/walk-in": "manage_inventory",
   "/api/kitchen": "manage_boh",
   "/api/pos": "place_orders",

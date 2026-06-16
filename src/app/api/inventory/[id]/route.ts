@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncRouteStepForItem } from "@/lib/walk-in/storage-zones";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,6 +13,8 @@ export async function PATCH(
   const newCost = body.costPerUnit;
   const costChanged =
     newCost !== undefined && existing && newCost !== existing.costPerUnit;
+  const zoneChanged =
+    body.storageZoneId !== undefined && existing && body.storageZoneId !== existing.storageZoneId;
 
   const item = await prisma.inventoryItem.update({
     where: { id },
@@ -26,6 +29,8 @@ export async function PATCH(
       yieldPct: body.yieldPct,
       supplier: body.supplier,
       imageUrl: body.imageUrl,
+      storageZoneId:
+        body.storageZoneId !== undefined ? body.storageZoneId || null : undefined,
       barcode:
         body.barcode !== undefined
           ? body.barcode
@@ -33,7 +38,12 @@ export async function PATCH(
             : null
           : undefined,
     },
+    include: { storageZone: { select: { id: true, name: true, slug: true } } },
   });
+
+  if (zoneChanged) {
+    await syncRouteStepForItem(item.id, item.storageZoneId);
+  }
 
   if (costChanged) {
     const { recalculateRecipesForIngredient } = await import("@/lib/kitchen/dynamic-costing");

@@ -1,16 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Plus, Trash2, Package, ScanLine } from "lucide-react";
-import { Button, Badge, EmptyState } from "@/components/ui";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Package, ScanLine, ClipboardList, MapPin } from "lucide-react";
+import { Button, EmptyState } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
 import { InventoryScanModal } from "@/components/inventory/InventoryScanModal";
+import { StorageZonesPanel, type StorageZoneRow } from "@/components/inventory/StorageZonesPanel";
+import { InventoryItemsByZone } from "@/components/inventory/InventoryItemsByZone";
+import { WalkInClient } from "@/components/walk-in/WalkInClient";
 import type { InventoryItem } from "@/components/inventory/types";
 
-export function InventoryClient({ initialItems }: { initialItems: InventoryItem[] }) {
+type Tab = "items" | "count" | "zones";
+
+const TABS: { id: Tab; label: string; icon: typeof Package }[] = [
+  { id: "items", label: "Items", icon: Package },
+  { id: "count", label: "Zone count", icon: ClipboardList },
+  { id: "zones", label: "Storage zones", icon: MapPin },
+];
+
+function tabFromParam(value: string | null): Tab {
+  if (value === "count" || value === "zones") return value;
+  return "items";
+}
+
+export function InventoryClient({
+  initialItems,
+  initialZones = [],
+  initialTab,
+}: {
+  initialItems: InventoryItem[];
+  initialZones?: StorageZoneRow[];
+  initialTab?: string;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => tabFromParam(initialTab ?? searchParams.get("tab")));
   const [items, setItems] = useState(initialItems);
+  const [zones, setZones] = useState<StorageZoneRow[]>(initialZones);
   const [modalOpen, setModalOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
@@ -24,9 +52,36 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
     yieldPct: "100",
     supplier: "",
     barcode: "",
+    storageZoneId: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setActiveTab = useCallback(
+    (next: Tab) => {
+      setTab(next);
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "items") params.delete("tab");
+      else params.set("tab", next);
+      const qs = params.toString();
+      router.replace(qs ? `/inventory?${qs}` : "/inventory", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  useEffect(() => {
+    setTab(tabFromParam(searchParams.get("tab")));
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (initialZones.length > 0) return;
+    fetch("/api/inventory/storage-zones")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setZones(data);
+      })
+      .catch(() => undefined);
+  }, [initialZones.length]);
 
   const openCreate = () => {
     setEditing(null);
@@ -40,6 +95,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
       yieldPct: "100",
       supplier: "",
       barcode: "",
+      storageZoneId: "",
     });
     setError(null);
     setModalOpen(true);
@@ -57,6 +113,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
       yieldPct: String(item.yieldPct ?? 100),
       supplier: item.supplier || "",
       barcode: item.barcode || "",
+      storageZoneId: item.storageZoneId || "",
     });
     setError(null);
     setModalOpen(true);
@@ -79,6 +136,7 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
         yieldPct: parseFloat(form.yieldPct) || 100,
         supplier: form.supplier || null,
         barcode: form.barcode.replace(/\D/g, "") || null,
+        storageZoneId: form.storageZoneId || null,
       };
       if (editing) {
         const updated = await apiPatch<InventoryItem>(`/api/inventory/${editing.id}`, payload);
@@ -110,89 +168,65 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" onClick={() => setScanOpen(true)}>
-          <ScanLine className="h-4 w-4" />
-          Scan &amp; receive
-        </Button>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Add Item
-        </Button>
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+              tab === id ? "bg-orange-100 text-orange-800" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {items.length === 0 ? (
-        <EmptyState
-          icon={<Package className="h-12 w-12" />}
-          title="No inventory items"
-          description="Scan a barcode to receive stock, or add items manually."
-          action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={() => setScanOpen(true)}>
-                <ScanLine className="h-4 w-4" />
-                Scan &amp; receive
-              </Button>
-              <Button variant="secondary" onClick={openCreate}>
-                Add manually
-              </Button>
-            </div>
-          }
-        />
-      ) : (
-        <div className="overflow-hidden rounded-xl border bg-white">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Item</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Barcode</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Quantity</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Min</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Cost/Unit</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Yield %</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Supplier</th>
-                <th className="px-6 py-3 text-left font-medium text-slate-500">Status</th>
-                <th className="px-6 py-3 text-right font-medium text-slate-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {items.map((item) => {
-                const isLow = item.quantity <= item.minQuantity;
-                return (
-                  <tr key={item.id} className={isLow ? "bg-amber-50" : ""}>
-                    <td className="px-6 py-4 font-medium text-slate-900">{item.name}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-500">
-                      {item.barcode || "—"}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {item.quantity} {item.unit}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {item.minQuantity} {item.unit}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">{formatCurrency(item.costPerUnit)}</td>
-                    <td className="px-6 py-4 text-slate-600">{(item.yieldPct ?? 100).toFixed(0)}%</td>
-                    <td className="px-6 py-4 text-slate-600">{item.supplier || "—"}</td>
-                    <td className="px-6 py-4">
-                      <Badge className={isLow ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-700"}>
-                        {isLow ? "Low Stock" : "OK"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="h-3 w-3 text-red-500" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {tab === "count" && <WalkInClient />}
+
+      {tab === "zones" && <StorageZonesPanel onZonesChange={setZones} />}
+
+      {tab === "items" && (
+        <>
+          <div className="mb-6 flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" onClick={() => setScanOpen(true)}>
+              <ScanLine className="h-4 w-4" />
+              Scan &amp; receive
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
+          </div>
+
+          {items.length === 0 ? (
+            <EmptyState
+              icon={<Package className="h-12 w-12" />}
+              title="No inventory items"
+              description="Scan a barcode to receive stock, or add items manually."
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={() => setScanOpen(true)}>
+                    <ScanLine className="h-4 w-4" />
+                    Scan &amp; receive
+                  </Button>
+                  <Button variant="secondary" onClick={openCreate}>
+                    Add manually
+                  </Button>
+                </div>
+              }
+            />
+          ) : (
+            <InventoryItemsByZone
+              items={items}
+              zones={zones}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
+          )}
+        </>
       )}
 
       <InventoryScanModal
@@ -205,6 +239,19 @@ export function InventoryClient({ initialItems }: { initialItems: InventoryItem[
         <div className="space-y-4">
           <FormField label="Name">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </FormField>
+          <FormField label="Storage zone">
+            <Select
+              value={form.storageZoneId}
+              onChange={(e) => setForm({ ...form, storageZoneId: e.target.value })}
+            >
+              <option value="">Unassigned</option>
+              {zones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.name}
+                </option>
+              ))}
+            </Select>
           </FormField>
           <FormField label="Barcode (optional)">
             <Input

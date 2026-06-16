@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
+import { ensureDefaultStorageZones } from "@/lib/walk-in/storage-zones";
 
 export async function GET() {
   const currentId = await getLocationId();
@@ -20,5 +21,6 @@ export async function POST(request: NextRequest) {
       phone: body.phone || null,
     },
   });
+  await ensureDefaultStorageZones(location.id);
   return NextResponse.json(location);
 }

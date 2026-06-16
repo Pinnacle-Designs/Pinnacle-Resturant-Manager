@@ -1,14 +1,6 @@
-import { PageHeader } from "@/components/ui";
-import { WalkInClient } from "@/components/walk-in/WalkInClient";
+import { redirect } from "next/navigation";
 
+/** Walk-in counting now lives under Inventory → Zone count. */
 export default function WalkInPage() {
-  return (
-    <div>
-      <PageHeader
-        title="Walk-In Count"
-        description="Count in minutes, not hours — scan, weigh, and sync even when the cooler blocks Wi-Fi"
-      />
-      <WalkInClient />
-    </div>
-  );
+  redirect("/inventory?tab=count");
 }

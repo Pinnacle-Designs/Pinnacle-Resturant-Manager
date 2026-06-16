@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { SessionUser } from "./session";
+import { ensureDefaultStorageZones } from "./walk-in/storage-zones";
 
 export async function resolveUserWorkspace(user: SessionUser) {
   if (user.locationId) {
@@ -26,6 +27,8 @@ export async function resolveUserWorkspace(user: SessionUser) {
       plan: "STARTER",
     },
   });
+
+  await ensureDefaultStorageZones(location.id);
 
   await prisma.user.update({
     where: { id: user.id },

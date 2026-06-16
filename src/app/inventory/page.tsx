@@ -2,21 +2,40 @@ import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
 import { PageHeader } from "@/components/ui";
 import { InventoryClient } from "@/components/inventory/InventoryClient";
+import { ensureDefaultStorageZones } from "@/lib/walk-in/storage-zones";
+import { Suspense } from "react";
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const locationId = await getLocationId();
-  const items = await prisma.inventoryItem.findMany({
-    where: { locationId },
-    orderBy: { name: "asc" },
-  });
+  await ensureDefaultStorageZones(locationId);
+
+  const { tab } = await searchParams;
+  const [items, zones] = await Promise.all([
+    prisma.inventoryItem.findMany({
+      where: { locationId },
+      include: { storageZone: { select: { id: true, name: true, slug: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.storageZone.findMany({
+      where: { locationId },
+      orderBy: { sortOrder: "asc" },
+      include: { _count: { select: { items: true, routeSteps: true } } },
+    }),
+  ]);
 
   return (
     <div>
       <PageHeader
         title="Inventory"
-        description="Scan barcodes to receive stock, connect a scale for weights, and track par levels"
+        description="Track stock by storage zone, run shelf-to-sheet counts with scan & scale, and manage par levels"
       />
-      <InventoryClient initialItems={items} />
+      <Suspense fallback={<p className="text-sm text-slate-500">Loading inventory…</p>}>
+        <InventoryClient initialItems={items} initialZones={zones} initialTab={tab} />
+      </Suspense>
     </div>
   );
 }

@@ -1,3 +1,9 @@
+export interface StorageZoneRef {
+  id: string;
+  name: string;
+  slug?: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -9,4 +15,6 @@ export interface InventoryItem {
   yieldPct: number;
   supplier: string | null;
   barcode?: string | null;
+  storageZoneId?: string | null;
+  storageZone?: StorageZoneRef | null;
 }

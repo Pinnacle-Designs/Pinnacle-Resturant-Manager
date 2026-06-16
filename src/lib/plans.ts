@@ -50,7 +50,7 @@ export const PLANS: PlanDefinition[] = [
       "Menu management",
       "Kitchen — recipe costing, yield & prep lists",
       "Basic inventory",
-      "Walk-In mobile counts & FIFO",
+      "Zone-based inventory counts & FIFO",
       "Staff & roles",
       "Basic analytics",
       "Table floor plan",

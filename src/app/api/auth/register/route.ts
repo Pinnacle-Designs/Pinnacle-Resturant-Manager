@@ -4,6 +4,7 @@ import { enrichUserWithPlan } from "@/lib/location-plan";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { parsePlanId } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
+import { ensureDefaultStorageZones } from "@/lib/walk-in/storage-zones";
 import { getClientIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { validatePassword } from "@/lib/password-policy";
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
       onboardingStep: 0,
     },
   });
+
+  await ensureDefaultStorageZones(location.id);
 
   const user = await prisma.user.create({
     data: {
