@@ -43,6 +43,7 @@ export const NAV_ITEMS = [
   { href: "/finances", label: "Finances", icon: "dollar-sign" },
   { href: "/analytics", label: "Analytics", icon: "bar-chart-3" },
   { href: "/back-office", label: "Back Office", icon: "pie-chart" },
+  { href: "/crystal-ball", label: "Crystal Ball", icon: "sparkles" },
   { href: "/social", label: "Social", icon: "share-2" },
   { href: "/insights", label: "Command Center", icon: "brain" },
 ] as const;

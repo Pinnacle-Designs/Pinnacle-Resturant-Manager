@@ -25,6 +25,7 @@ import {
   ThermometerSnowflake,
   Soup,
   PieChart,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -55,6 +56,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "thermometer-snowflake": ThermometerSnowflake,
   soup: Soup,
   "pie-chart": PieChart,
+  sparkles: Sparkles,
 };
 
 export function Sidebar() {

@@ -33,7 +33,7 @@ const STARTER_ROUTES = [
   "/analytics",
 ];
 
-const GROWTH_ROUTES = [...STARTER_ROUTES, "/finances", "/loading-dock", "/back-office"];
+const GROWTH_ROUTES = [...STARTER_ROUTES, "/finances", "/loading-dock", "/back-office", "/crystal-ball"];
 
 const PRO_ROUTES = [...GROWTH_ROUTES, "/social"];
 
@@ -76,6 +76,7 @@ export const PLANS: PlanDefinition[] = [
       "AI Command Center (standard)",
       "Most analytics modules",
       "Back Office — AvT, live COGS & waste dashboards",
+      "Crystal Ball — weather & event forecasting",
     ],
     maxUsers: 10,
     routes: GROWTH_ROUTES,
