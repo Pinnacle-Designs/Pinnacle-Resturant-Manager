@@ -507,6 +507,25 @@ export interface PurchasingHighlights {
       reliabilityScore: number;
     }>;
   };
+  poReceiving?: {
+    pendingCount: number;
+    receivedCount: number;
+    pendingTotal: number;
+    receivedTotal: number;
+    paidCount: number;
+    onHoldCount: number;
+    awaitingInvoiceCount: number;
+    approvedCount: number;
+    orders: Array<{
+      poNumber: string | null;
+      vendor: string | null;
+      status: string;
+      totalAmount: number;
+      receivingGroup: string;
+      paymentStatus: string;
+      paymentDetail: string | null;
+    }>;
+  };
 }
 
 export interface PurchasingAnalytics {

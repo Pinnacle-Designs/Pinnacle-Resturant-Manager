@@ -548,6 +548,22 @@ function ruleBasedSectionInsights(
           category: "FINANCE",
         });
       }
+      const recv = h.poReceiving;
+      if (recv && recv.onHoldCount > 0) {
+        insights.push({
+          title: "PO payment holds",
+          description: `${recv.onHoldCount} purchase order(s) on hold — match discrepancy or open credit. ${recv.paidCount} paid, ${recv.approvedCount} approved to pay.`,
+          severity: "HIGH",
+          category: "FINANCE",
+        });
+      } else if (recv && recv.awaitingInvoiceCount > 0) {
+        insights.push({
+          title: "Received — awaiting invoice",
+          description: `${recv.awaitingInvoiceCount} PO(s) received but not invoiced yet. Scan invoices in POs & Receiving.`,
+          severity: "MEDIUM",
+          category: "INVENTORY",
+        });
+      }
       const sc = h.vendorScorecards;
       if (sc && sc.worstVendor && sc.worstVendor.reliabilityScore < 75) {
         insights.push({

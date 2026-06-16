@@ -10,6 +10,39 @@ export async function seedPurchasingSample(locationId: string) {
   await seedVendorScorecardDemos(locationId);
   await seedDraftPurchaseOrders(locationId);
   await seedInvoiceDigitizationDemos(locationId);
+  await seedPoReceivingPaymentDemo(locationId);
+}
+
+/** Backfill matched + paid invoice on scorecard good PO (idempotent). */
+async function seedPoReceivingPaymentDemo(locationId: string) {
+  const existing = await prisma.vendorInvoice.findFirst({
+    where: { locationId, invoiceNumber: "INV-GV-PAID" },
+  });
+  if (existing) return;
+
+  const goodPo = await prisma.vendorPurchaseOrder.findFirst({
+    where: { locationId, poNumber: "PO-SCORE-GOOD" },
+    include: { receipts: { orderBy: { receivedAt: "desc" }, take: 1 } },
+  });
+  if (!goodPo?.receipts[0]) return;
+
+  await prisma.vendorInvoice.create({
+    data: {
+      locationId,
+      vendor: goodPo.vendor ?? "Green Valley Produce",
+      amount: goodPo.totalAmount,
+      category: "Food & Supplies",
+      invoiceNumber: "INV-GV-PAID",
+      poId: goodPo.id,
+      receiptId: goodPo.receipts[0]!.id,
+      matchStatus: "MATCHED",
+      paidAt: subDays(new Date(), 10),
+    },
+  });
+  await prisma.vendorPurchaseOrder.update({
+    where: { id: goodPo.id },
+    data: { matchStatus: "MATCHED" },
+  });
 }
 
 async function seedThreeWayMatchDemo(locationId: string) {
@@ -413,6 +446,30 @@ async function seedVendorScorecardDemos(locationId: string) {  const marker = aw
       },
     },
   });
+
+  const goodReceipt = await prisma.goodsReceipt.findFirst({
+    where: { poId: goodPo.id },
+    orderBy: { receivedAt: "desc" },
+  });
+  if (goodReceipt) {
+    await prisma.vendorInvoice.create({
+      data: {
+        locationId,
+        vendor: "Green Valley Produce",
+        amount: goodPo.totalAmount,
+        category: "Food & Supplies",
+        invoiceNumber: "INV-GV-PAID",
+        poId: goodPo.id,
+        receiptId: goodReceipt.id,
+        matchStatus: "MATCHED",
+        paidAt: subDays(now, 10),
+      },
+    });
+    await prisma.vendorPurchaseOrder.update({
+      where: { id: goodPo.id },
+      data: { matchStatus: "MATCHED" },
+    });
+  }
 
   // Problem vendor — late delivery + brand substitution
   const oilItem = items.find((i) => /oil/i.test(i.name)) ?? items[1]!;

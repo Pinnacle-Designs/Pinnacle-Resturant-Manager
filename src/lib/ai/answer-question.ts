@@ -699,6 +699,33 @@ function answerFromKeyQuestions(
         }
       }
 
+      const recv = h.poReceiving;
+      if (recv && (recv.pendingCount > 0 || recv.receivedCount > 0)) {
+        lines.push("", "**POs & Receiving:**");
+        lines.push(
+          `**Pending:** ${recv.pendingCount} PO(s) (${fmtMoney(recv.pendingTotal)}) · **Received:** ${recv.receivedCount} PO(s) (${fmtMoney(recv.receivedTotal)})`
+        );
+        if (recv.onHoldCount > 0) {
+          lines.push(`**${recv.onHoldCount} on payment hold** — resolve match discrepancies or open credits before paying.`);
+        }
+        if (recv.paidCount > 0) {
+          lines.push(`**${recv.paidCount} paid** this period.`);
+        }
+        if (recv.awaitingInvoiceCount > 0) {
+          lines.push(`**${recv.awaitingInvoiceCount} received** but still need invoice scan.`);
+        }
+        if (recv.approvedCount > 0) {
+          lines.push(`**${recv.approvedCount} approved to pay** — three-way match passed, no holds.`);
+        }
+        for (const o of recv.orders.slice(0, 6)) {
+          const label = o.poNumber ?? o.vendor ?? "PO";
+          const pay = o.paymentStatus.replace(/_/g, " ").toLowerCase();
+          lines.push(
+            `- **${label}** (${o.receivingGroup}) — ${o.status.replace(/_/g, " ")} · ${fmtMoney(o.totalAmount)} · ${pay}${o.paymentDetail ? ` — ${o.paymentDetail}` : ""}`
+          );
+        }
+      }
+
       const dig = h.invoiceDigitization;
       if (dig) {
         lines.push("", "**Invoice digitization & price auditing:**");
@@ -777,6 +804,53 @@ function answerFromKeyQuestions(
     }
   );
   if (purchasing) return purchasing;
+
+  const poReceiving = tryMatch(
+    [
+      /pos?\s*&\s*receiving|pending po|received po|which po|purchase order.*paid|has.*been paid|payment status|awaiting (delivery|invoice)|approved to pay|on hold.*pay/i,
+      /receiving.*status|did we pay|pay the vendor|unpaid po/i,
+    ],
+    "purchasing",
+    () => {
+      const recv = a.purchasing.highlights?.poReceiving;
+      const lines = ["## POs & Receiving", ""];
+      if (!recv || recv.orders.length === 0) {
+        lines.push("No active purchase orders — create or approve POs in **Purchase Orders**.");
+        return lines.join("\n");
+      }
+      lines.push(
+        `**Pending:** ${recv.pendingCount} (${fmtMoney(recv.pendingTotal)}) · **Received:** ${recv.receivedCount} (${fmtMoney(recv.receivedTotal)})`
+      );
+      lines.push("");
+      const pending = recv.orders.filter((o) => o.receivingGroup === "pending");
+      const received = recv.orders.filter((o) => o.receivingGroup === "received");
+      if (pending.length > 0) {
+        lines.push("### Pending delivery / partial");
+        for (const o of pending) {
+          lines.push(
+            `- **${o.poNumber ?? o.vendor}** — ${o.status.replace(/_/g, " ")} · ${fmtMoney(o.totalAmount)} · **${o.paymentStatus.replace(/_/g, " ")}**${o.paymentDetail ? ` (${o.paymentDetail})` : ""}`
+          );
+        }
+        lines.push("");
+      }
+      if (received.length > 0) {
+        lines.push("### Received");
+        for (const o of received) {
+          lines.push(
+            `- **${o.poNumber ?? o.vendor}** — ${fmtMoney(o.totalAmount)} · **${o.paymentStatus.replace(/_/g, " ")}**${o.paymentDetail ? ` — ${o.paymentDetail}` : ""}`
+          );
+        }
+      }
+      if (recv.onHoldCount > 0) {
+        lines.push("", `⚠️ **${recv.onHoldCount} PO(s) on payment hold** — do not pay until match issues or credits are resolved.`);
+      }
+      if (recv.paidCount > 0) {
+        lines.push(`✓ **${recv.paidCount} PO(s) marked paid.**`);
+      }
+      return lines.join("\n");
+    }
+  );
+  if (poReceiving) return poReceiving;
 
   const threeWay = tryMatch(
     [/three.?way|short.?ship|overbill|hold payment|invoice.*match|match.*invoice|charged for.*not received|did we receive everything/i],

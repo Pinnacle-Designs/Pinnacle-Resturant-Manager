@@ -1691,6 +1691,32 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     /* optional */
   }
 
+  try {
+    const { getPoReceivingSummary } = await import("@/lib/purchasing/po-receiving-status");
+    const poRecv = await getPoReceivingSummary(locationId);
+    purchasingHighlights.poReceiving = {
+      pendingCount: poRecv.pendingCount,
+      receivedCount: poRecv.receivedCount,
+      pendingTotal: poRecv.pendingTotal,
+      receivedTotal: poRecv.receivedTotal,
+      paidCount: poRecv.paidCount,
+      onHoldCount: poRecv.onHoldCount,
+      awaitingInvoiceCount: poRecv.awaitingInvoiceCount,
+      approvedCount: poRecv.approvedCount,
+      orders: poRecv.orders.slice(0, 12).map((o) => ({
+        poNumber: o.poNumber,
+        vendor: o.vendor,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        receivingGroup: o.receivingGroup,
+        paymentStatus: o.paymentStatus,
+        paymentDetail: o.paymentDetail,
+      })),
+    };
+  } catch {
+    /* optional */
+  }
+
   const nextFriday = new Date(now);
   const daysUntilFriday = ((5 - nextFriday.getDay() + 7) % 7) || 7;
   nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);

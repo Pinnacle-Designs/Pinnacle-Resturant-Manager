@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Truck,
   Sparkles,
@@ -28,6 +28,14 @@ import { InvoiceScanModal } from "./InvoiceScanModal";
 import { ThreeWayMatchPanel } from "./ThreeWayMatchPanel";
 import { CreditMemoModal } from "./CreditMemoModal";
 import { VendorScorecardsPanel, type VendorScorecardRow } from "./VendorScorecardsPanel";
+import {
+  derivePoPaymentStatus,
+  getPoReceivingGroup,
+  paymentStatusDetail,
+  PO_PAYMENT_COLORS,
+  PO_PAYMENT_LABELS,
+  type PoPaymentStatus,
+} from "@/lib/purchasing/po-receiving-status";
 
 interface PoSuggestion {
   inventoryItemId: string;
@@ -63,6 +71,17 @@ interface PurchaseOrder {
   submittedAt: string;
   lines: PoLine[];
   receipts: { id: string }[];
+  invoices?: Array<{
+    id: string;
+    vendor: string;
+    amount: number;
+    invoiceNumber: string | null;
+    matchStatus: string;
+    matchNotes: string | null;
+    accountingSyncLocked?: boolean;
+    paymentHoldReason?: string | null;
+    paidAt?: string | null;
+  }>;
 }
 
 interface VendorInvoice {
@@ -387,6 +406,22 @@ export function LoadingDockClient() {
 
   const discrepancyCount = invoices.filter((i) => i.matchStatus === "DISCREPANCY").length;
   const openCredits = credits.filter((c) => c.status === "OPEN");
+
+  const openCreditInvoiceIds = useMemo(
+    () => new Set(openCredits.map((c) => c.invoiceId).filter((id): id is string => Boolean(id))),
+    [openCredits]
+  );
+
+  const { pendingReceivingPos, receivedPos } = useMemo(() => {
+    const pending: PurchaseOrder[] = [];
+    const received: PurchaseOrder[] = [];
+    for (const po of orders) {
+      const group = getPoReceivingGroup(po.status);
+      if (group === "pending") pending.push(po);
+      else if (group === "received") received.push(po);
+    }
+    return { pendingReceivingPos: pending, receivedPos: received };
+  }, [orders]);
 
   const supplierVendors = vendors.filter((v) => v.kind === "supplier");
   const ediVendors = vendors.filter((v) => v.kind === "edi");
@@ -774,59 +809,71 @@ export function LoadingDockClient() {
           )}
 
           {tab === "orders" && (
-            <div className="space-y-4">
-              {orders.length === 0 ? (
-                <div className="card py-8 text-center text-slate-500">No purchase orders yet.</div>
+            <div className="space-y-6">
+              {pendingReceivingPos.length === 0 && receivedPos.length === 0 ? (
+                <div className="card py-8 text-center text-slate-500">
+                  No active purchase orders — approve a Smart PO or create one from Auto-Order.
+                </div>
               ) : (
-                orders.map((po) => (
-                  <div key={po.id} className="card">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {po.poNumber ?? po.id.slice(-8)} — {po.vendor ?? "Vendor"}
-                        </p>
+                <>
+                  {pendingReceivingPos.length > 0 && (
+                    <section>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-slate-900">Pending</h2>
                         <p className="text-sm text-slate-500">
-                          {formatCurrency(po.totalAmount)} · {new Date(po.submittedAt).toLocaleDateString()}
+                          {pendingReceivingPos.length} PO(s) ·{" "}
+                          {formatCurrency(pendingReceivingPos.reduce((s, p) => s + p.totalAmount, 0))}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className={STATUS_COLORS[po.status] ?? "bg-slate-100"}>{po.status}</Badge>
-                        <Badge className={MATCH_COLORS[po.matchStatus] ?? "bg-slate-100"}>{po.matchStatus}</Badge>
+                      <div className="space-y-4">
+                        {pendingReceivingPos.map((po) => {
+                          const paymentStatus = derivePoPaymentStatus(po, openCreditInvoiceIds);
+                          const paymentDetail = paymentStatusDetail(po, paymentStatus);
+                          return (
+                            <PoReceivingCard
+                              key={po.id}
+                              po={po}
+                              paymentStatus={paymentStatus}
+                              paymentDetail={paymentDetail}
+                              receivingPoId={receivingPoId}
+                              onReceive={receivePo}
+                              onScanInvoice={openInvoiceScan}
+                            />
+                          );
+                        })}
                       </div>
-                    </div>
-                    <div className="mb-3 space-y-1 text-sm">
-                      {po.lines.map((l) => (
-                        <div key={l.id} className="flex justify-between text-slate-600">
-                          <span>{l.description}</span>
-                          <span>
-                            {l.qtyReceived}/{l.qtyOrdered} {l.unit}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {po.status !== "RECEIVED" && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => receivePo(po)}
-                          disabled={receivingPoId === po.id}
-                        >
-                          {receivingPoId === po.id ? (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                          ) : (
-                            <PackageCheck className="mr-1 h-3 w-3" />
-                          )}
-                          Receive delivery
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => openInvoiceScan(po)}>
-                        <Camera className="mr-1 h-3 w-3" />
-                        Scan invoice
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                    </section>
+                  )}
+
+                  {receivedPos.length > 0 && (
+                    <section>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-slate-900">Received</h2>
+                        <p className="text-sm text-slate-500">
+                          {receivedPos.length} PO(s) ·{" "}
+                          {formatCurrency(receivedPos.reduce((s, p) => s + p.totalAmount, 0))}
+                        </p>
+                      </div>
+                      <div className="space-y-4">
+                        {receivedPos.map((po) => {
+                          const paymentStatus = derivePoPaymentStatus(po, openCreditInvoiceIds);
+                          const paymentDetail = paymentStatusDetail(po, paymentStatus);
+                          return (
+                            <PoReceivingCard
+                              key={po.id}
+                              po={po}
+                              paymentStatus={paymentStatus}
+                              paymentDetail={paymentDetail}
+                              receivingPoId={receivingPoId}
+                              onReceive={receivePo}
+                              onScanInvoice={openInvoiceScan}
+                            />
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -973,6 +1020,86 @@ export function LoadingDockClient() {
           onClose={() => setScanOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+function PoReceivingCard({
+  po,
+  paymentStatus,
+  paymentDetail,
+  receivingPoId,
+  onReceive,
+  onScanInvoice,
+}: {
+  po: PurchaseOrder;
+  paymentStatus: PoPaymentStatus;
+  paymentDetail: string | null;
+  receivingPoId: string | null;
+  onReceive: (po: PurchaseOrder) => void;
+  onScanInvoice: (po: PurchaseOrder) => void;
+}) {
+  const linkedInvoice = po.invoices?.[0];
+
+  return (
+    <div className="card">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-semibold text-slate-900">
+            {po.poNumber ?? po.id.slice(-8)} — {po.vendor ?? "Vendor"}
+          </p>
+          <p className="text-sm text-slate-500">
+            {formatCurrency(po.totalAmount)} · {new Date(po.submittedAt).toLocaleDateString()}
+            {po.receipts.length > 0 && ` · ${po.receipts.length} receipt(s)`}
+            {linkedInvoice?.invoiceNumber && ` · ${linkedInvoice.invoiceNumber}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className={STATUS_COLORS[po.status] ?? "bg-slate-100"}>{po.status.replace(/_/g, " ")}</Badge>
+          <Badge className={PO_PAYMENT_COLORS[paymentStatus]}>{PO_PAYMENT_LABELS[paymentStatus]}</Badge>
+          {po.matchStatus && po.matchStatus !== "PENDING" && (
+            <Badge className={MATCH_COLORS[po.matchStatus] ?? "bg-slate-100"}>{po.matchStatus}</Badge>
+          )}
+        </div>
+      </div>
+
+      {paymentDetail && (
+        <p
+          className={`mb-3 text-sm ${
+            paymentStatus === "ON_HOLD" ? "text-red-700" : paymentStatus === "PAID" ? "text-green-700" : "text-slate-600"
+          }`}
+        >
+          {paymentDetail}
+        </p>
+      )}
+
+      <div className="mb-3 space-y-1 text-sm">
+        {po.lines.map((l) => (
+          <div key={l.id} className="flex justify-between text-slate-600">
+            <span>{l.description}</span>
+            <span>
+              {l.qtyReceived}/{l.qtyOrdered} {l.unit}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {po.status !== "RECEIVED" && (
+          <Button size="sm" variant="secondary" onClick={() => onReceive(po)} disabled={receivingPoId === po.id}>
+            {receivingPoId === po.id ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <PackageCheck className="mr-1 h-3 w-3" />
+            )}
+            Receive delivery
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={() => onScanInvoice(po)}>
+          <Camera className="mr-1 h-3 w-3" />
+          {po.invoices?.length ? "Scan / link invoice" : "Scan invoice"}
+        </Button>
+      </div>
     </div>
   );
 }
