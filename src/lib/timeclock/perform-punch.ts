@@ -5,6 +5,19 @@ import { verifyPunchIdentity } from "@/lib/timeclock/verify-punch";
 import { savePunchPhoto } from "@/lib/timeclock/save-punch-photo";
 import { checkEarlyClockIn } from "@/lib/timeclock/early-clock-in";
 import { verifyClockPin } from "@/lib/timeclock/clock-pin";
+import { getStaffJobRoleOptions, resolvePunchWorkRole } from "@/lib/timeclock/staff-job-roles";
+import { getOrCreateComplianceSettings, violationsToError } from "@/lib/compliance/validate-shift";
+import {
+  checkMinorClockIn,
+  checkMinorWhileClockedIn,
+  getMinorApproachingViolation,
+} from "@/lib/compliance/minor-timeclock";
+import { notifyManagerCompliance } from "@/lib/compliance/notify-manager";
+import {
+  BREAK_WAIVER_TEXT,
+  needsBreakWaiver,
+} from "@/lib/compliance/break-enforcement";
+import { isTippedPunch, validateTipDeclaration } from "@/lib/compliance/tip-declaration";
 
 type LocationRow = {
   id: string;
@@ -18,6 +31,8 @@ type LocationRow = {
   blockUnscheduledPunch: boolean;
   mealBreakMinutes: number;
   restBreakMinutes: number;
+  mealBreakRequiredAfterHours: number;
+  mealBreakAlertMinutes: number;
 };
 
 export type PunchInput = {
@@ -30,7 +45,10 @@ export type PunchInput = {
   biometricVerified?: boolean;
   mealBreakTaken?: boolean;
   restBreakTaken?: boolean;
+  breakWaiverAcknowledged?: boolean;
+  declaredCashTips?: number | null;
   notes?: string | null;
+  workRole?: string | null;
 };
 
 export async function performKioskPunch(locationId: string, input: PunchInput) {
@@ -64,11 +82,36 @@ export async function performKioskPunch(locationId: string, input: PunchInput) {
     return { ok: false as const, status: 400, error: geo.error ?? "Location check failed" };
   }
 
+  const compliance = await getOrCreateComplianceSettings(locationId);
+
   if (input.action === "in") {
+    const minorViolations = checkMinorClockIn({
+      dateOfBirth: staff.dateOfBirth,
+      settings: compliance,
+    });
+    const blocked = minorViolations.filter((v) => v.severity === "block");
+    if (blocked.length > 0) {
+      return { ok: false as const, status: 400, error: violationsToError(blocked) };
+    }
+
+    const approaching = getMinorApproachingViolation({
+      dateOfBirth: staff.dateOfBirth,
+      clockInAt: null,
+      settings: compliance,
+    });
+    if (approaching) {
+      void notifyManagerCompliance({
+        locationId,
+        staffName: staff.name,
+        alertCode: approaching.code,
+        message: approaching.message,
+      });
+    }
+
     return clockIn(staff, location, input, geo.verified);
   }
 
-  return clockOut(staff, location, input, geo.verified);
+  return clockOut(staff, location, compliance, input, geo.verified);
 }
 
 async function clockIn(
@@ -112,6 +155,11 @@ async function clockIn(
     return { ok: false as const, status: 400, error: identity.error };
   }
 
+  const roleResult = await resolvePunchWorkRole(staff.id, input.workRole);
+  if (!roleResult.ok) {
+    return { ok: false as const, status: 400, error: roleResult.error };
+  }
+
   let clockInPhotoUrl: string | null = null;
   if (identity.method === "PHOTO" && input.photoDataUrl) {
     try {
@@ -138,6 +186,8 @@ async function clockIn(
       clockInPhotoUrl,
       identityVerifiedIn: identity.verified,
       identityMethodIn: identity.method ?? null,
+      workRole: roleResult.role,
+      hourlyRateAtPunch: roleResult.hourlyRate,
     },
   });
 
@@ -145,6 +195,8 @@ async function clockIn(
     ok: true as const,
     action: "in" as const,
     staffName: staff.name,
+    workRole: roleResult.role,
+    hourlyRate: roleResult.hourlyRate,
     entry: {
       id: entry.id,
       clockInAt: entry.clockInAt.toISOString(),
@@ -153,8 +205,14 @@ async function clockIn(
 }
 
 async function clockOut(
-  staff: { id: string; name: string },
+  staff: {
+    id: string;
+    name: string;
+    isTippedEmployee: boolean;
+    dateOfBirth: Date | null;
+  },
   location: LocationRow,
+  compliance: Awaited<ReturnType<typeof getOrCreateComplianceSettings>>,
   input: PunchInput,
   geoVerified: boolean
 ) {
@@ -166,11 +224,52 @@ async function clockOut(
     return { ok: false as const, status: 400, error: `${staff.name} is not clocked in` };
   }
 
+  const minorViolations = checkMinorWhileClockedIn({
+    dateOfBirth: staff.dateOfBirth,
+    clockInAt: openEntry.clockInAt,
+    settings: compliance,
+  });
+  const blockedMinor = minorViolations.filter((v) => v.severity === "block");
+  if (blockedMinor.length > 0) {
+    return { ok: false as const, status: 400, error: violationsToError(blockedMinor) };
+  }
+
   if (input.mealBreakTaken === undefined || input.restBreakTaken === undefined) {
     return {
       ok: false as const,
       status: 400,
       error: "Break attestation required before clock out.",
+    };
+  }
+
+  const mealTaken = Boolean(input.mealBreakTaken);
+  const waiverRequired = needsBreakWaiver(mealTaken, openEntry.clockInAt, location);
+
+  if (waiverRequired && !input.breakWaiverAcknowledged) {
+    return {
+      ok: false as const,
+      status: 400,
+      error: "Digital waiver required — you skipped your required meal break.",
+      code: "BREAK_WAIVER_REQUIRED",
+    };
+  }
+
+  const jobRoles = await getStaffJobRoleOptions(staff.id);
+  const tipped = isTippedPunch({
+    workRole: openEntry.workRole,
+    isTippedEmployee: staff.isTippedEmployee,
+    jobRoles,
+  });
+  const tipCheck = validateTipDeclaration(
+    input.declaredCashTips,
+    tipped && (compliance.requireTipDeclaration ?? true)
+  );
+  if (!tipCheck.ok) {
+    return {
+      ok: false as const,
+      status: 400,
+      error: tipCheck.error,
+      code: "TIP_DECLARATION_REQUIRED",
     };
   }
 
@@ -207,8 +306,13 @@ async function clockOut(
       clockOutPhotoUrl,
       identityVerifiedOut,
       identityMethodOut,
-      mealBreakTaken: Boolean(input.mealBreakTaken),
+      mealBreakTaken: mealTaken,
       restBreakTaken: Boolean(input.restBreakTaken),
+      mealBreakWaived: waiverRequired && Boolean(input.breakWaiverAcknowledged),
+      breakWaiverSignedAt: waiverRequired && input.breakWaiverAcknowledged ? new Date() : null,
+      breakWaiverText: waiverRequired && input.breakWaiverAcknowledged ? BREAK_WAIVER_TEXT : null,
+      declaredCashTips:
+        input.declaredCashTips != null ? Number(input.declaredCashTips) : null,
       breakAttestedAt: new Date(),
       notes: input.notes?.trim() || null,
       approvalStatus: "PENDING",
@@ -223,6 +327,8 @@ async function clockOut(
       id: entry.id,
       clockInAt: entry.clockInAt.toISOString(),
       clockOutAt: entry.clockOutAt?.toISOString() ?? null,
+      mealBreakWaived: entry.mealBreakWaived,
+      declaredCashTips: entry.declaredCashTips,
     },
   };
 }

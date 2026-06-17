@@ -5,7 +5,7 @@ import { format, differenceInMinutes } from "date-fns";
 import { Check, Clock, Edit2, MapPin, AlertCircle, ShieldCheck, Camera } from "lucide-react";
 import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface PunchEntry {
   id: string;
@@ -22,6 +22,8 @@ interface PunchEntry {
   clockOutPhotoUrl: string | null;
   mealBreakTaken: boolean | null;
   restBreakTaken: boolean | null;
+  workRole: string | null;
+  hourlyRateAtPunch: number | null;
   notes: string | null;
   approvalStatus: string;
   approvedAt: string | null;
@@ -177,10 +179,11 @@ export function TimePunchesPanel() {
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-white">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b bg-slate-50 text-left text-slate-600">
                 <th className="px-4 py-3 font-medium">Employee</th>
+                <th className="px-4 py-3 font-medium">Job / rate</th>
                 <th className="px-4 py-3 font-medium">Verification</th>
                 <th className="px-4 py-3 font-medium">Clock in</th>
                 <th className="px-4 py-3 font-medium">Clock out</th>
@@ -199,6 +202,20 @@ export function TimePunchesPanel() {
                       <p className="mt-0.5 text-xs text-slate-400">
                         Scheduled {e.shift.startTime}–{e.shift.endTime}
                       </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {e.workRole ? (
+                      <>
+                        <p className="font-medium text-slate-800">{e.workRole}</p>
+                        {e.hourlyRateAtPunch != null && (
+                          <p className="text-xs text-slate-500">
+                            {formatCurrency(e.hourlyRateAtPunch)}/hr at punch
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-slate-400">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">

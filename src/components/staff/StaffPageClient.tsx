@@ -31,6 +31,7 @@ import { TrainingClient } from "@/components/staff/TrainingClient";
 import { TimeClockClient } from "@/components/staff/TimeClockClient";
 import { TimePunchesPanel } from "@/components/staff/TimePunchesPanel";
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
+import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
 
 interface StaffMember {
   id: string;
@@ -147,6 +148,7 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
       {tab === "punches" && canSchedule && (
         <>
           <ForgottenClockOutAlert variant="panel" className="mb-6" />
+          <ComplianceAlertsBanner variant="panel" className="mb-6" />
           <TimePunchesPanel />
         </>
       )}

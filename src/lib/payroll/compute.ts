@@ -1,9 +1,10 @@
 import type { TipPoolMode } from "@prisma/client";
-import { parseISO, startOfWeek, endOfWeek } from "date-fns";
+import { parseISO, startOfWeek, endOfWeek, differenceInMinutes } from "date-fns";
 import { shiftDurationHours, parseTimeToMinutes, WEEK_STARTS_ON } from "@/lib/schedule";
 import type {
   PayrollSettingsInput,
   ShiftInput,
+  TimeEntryInput,
   StaffInput,
   RoleRateInput,
   EmployeePayPreview,
@@ -90,6 +91,195 @@ export function detectSplitShiftPremiums(
     }
   }
   return premiums;
+}
+
+function punchDurationHours(clockIn: Date | string, clockOut: Date | string): number {
+  return differenceInMinutes(toDate(clockOut), toDate(clockIn)) / 60;
+}
+
+/** Split-shift premium when an employee punches out and back in same day (actual punches). */
+export function detectSplitShiftPremiumsFromPunches(
+  entries: TimeEntryInput[],
+  settings: PayrollSettingsInput
+): Map<string, number> {
+  const premiums = new Map<string, number>();
+  if (!settings.splitShiftEnabled) return premiums;
+
+  const closed = entries.filter((e) => e.clockOutAt);
+  const byStaffDay = new Map<string, TimeEntryInput[]>();
+  for (const entry of closed) {
+    const key = `${entry.staffMemberId}:${dateKey(entry.clockInAt)}`;
+    const list = byStaffDay.get(key) ?? [];
+    list.push(entry);
+    byStaffDay.set(key, list);
+  }
+
+  for (const dayEntries of byStaffDay.values()) {
+    if (dayEntries.length < 2) continue;
+    const sorted = [...dayEntries].sort(
+      (a, b) => toDate(a.clockInAt).getTime() - toDate(b.clockInAt).getTime()
+    );
+    let hasSplit = false;
+    for (let i = 1; i < sorted.length; i++) {
+      const gap = differenceInMinutes(
+        toDate(sorted[i].clockInAt),
+        toDate(sorted[i - 1].clockOutAt!)
+      );
+      if (gap >= settings.splitShiftMinGapMinutes) {
+        hasSplit = true;
+        break;
+      }
+    }
+    if (hasSplit) {
+      const premium = settings.splitShiftPremiumHours * settings.minimumWage;
+      for (const entry of sorted) {
+        premiums.set(entry.id, premium / sorted.length);
+      }
+    }
+  }
+  return premiums;
+}
+
+function buildWeekHoursFromPunches(
+  staff: StaffInput,
+  punches: TimeEntryInput[],
+  roleRates: RoleRateInput[],
+  splitPremiums: Map<string, number>
+): WeekHours {
+  const segmentMap = new Map<string, RateSegment>();
+  const shiftDetails: ShiftPayDetail[] = [];
+  let splitShiftPay = 0;
+
+  for (const punch of punches) {
+    if (!punch.clockOutAt) continue;
+    const hours = punchDurationHours(punch.clockInAt, punch.clockOutAt);
+    if (hours <= 0) continue;
+
+    const role = punch.workRole || staff.role;
+    const rate =
+      punch.hourlyRateAtPunch ??
+      getEffectiveRate(staff, punch.workRole, roleRates).rate;
+    const premium = splitPremiums.get(punch.id) ?? 0;
+    splitShiftPay += premium;
+
+    const seg = segmentMap.get(`${role}:${rate}`) ?? { role, hours: 0, rate };
+    seg.hours += hours;
+    segmentMap.set(`${role}:${rate}`, seg);
+
+    shiftDetails.push({
+      shiftId: punch.id,
+      punchId: punch.id,
+      role,
+      hours,
+      rate,
+      regularPay: round2(hours * rate),
+      splitShiftPremium: round2(premium),
+    });
+  }
+
+  const segments = [...segmentMap.values()];
+  const totalHours = segments.reduce((s, seg) => s + seg.hours, 0);
+  return { totalHours, segments, shiftDetails, splitShiftPay: round2(splitShiftPay) };
+}
+
+function computeEmployeeWeekPayFromPunches(
+  staff: StaffInput,
+  weekPunches: TimeEntryInput[],
+  roleRates: RoleRateInput[],
+  settings: PayrollSettingsInput,
+  splitPremiums: Map<string, number>
+): Pick<
+  EmployeePayPreview,
+  | "regularHours"
+  | "overtimeHours"
+  | "splitShiftHours"
+  | "regularPay"
+  | "overtimePay"
+  | "splitShiftPay"
+  | "blendedRate"
+  | "rateSegments"
+  | "shiftDetails"
+> {
+  const { totalHours, segments, shiftDetails, splitShiftPay } = buildWeekHoursFromPunches(
+    staff,
+    weekPunches,
+    roleRates,
+    splitPremiums
+  );
+
+  if (totalHours <= 0) {
+    return {
+      regularHours: 0,
+      overtimeHours: 0,
+      splitShiftHours: 0,
+      regularPay: 0,
+      overtimePay: 0,
+      splitShiftPay: 0,
+      blendedRate: 0,
+      rateSegments: [],
+      shiftDetails: [],
+    };
+  }
+
+  let otHours = Math.max(0, totalHours - settings.weeklyOtThresholdHours);
+
+  if (settings.dailyOtThresholdHours != null) {
+    const byDay = new Map<string, number>();
+    for (const punch of weekPunches) {
+      if (!punch.clockOutAt) continue;
+      const h = punchDurationHours(punch.clockInAt, punch.clockOutAt);
+      const key = dateKey(punch.clockInAt);
+      byDay.set(key, (byDay.get(key) ?? 0) + h);
+    }
+    let dailyOt = 0;
+    for (const dayHours of byDay.values()) {
+      dailyOt += Math.max(0, dayHours - settings.dailyOtThresholdHours);
+    }
+    otHours = Math.max(otHours, dailyOt);
+  }
+
+  otHours = Math.min(otHours, totalHours);
+  const regularHours = totalHours - otHours;
+
+  let regularPay = 0;
+  let overtimePay = 0;
+
+  if (settings.useBlendedOtRate) {
+    const blended = computeBlendedRate(segments);
+    regularPay = round2(regularHours * blended);
+    overtimePay = round2(otHours * blended * settings.otMultiplier);
+    return {
+      regularHours: round2(regularHours),
+      overtimeHours: round2(otHours),
+      splitShiftHours: settings.splitShiftEnabled ? settings.splitShiftPremiumHours : 0,
+      regularPay,
+      overtimePay,
+      splitShiftPay,
+      blendedRate: round2(blended),
+      rateSegments: segments.map((s) => ({ ...s, hours: round2(s.hours) })),
+      shiftDetails,
+    };
+  }
+
+  for (const seg of segments) {
+    const segOt = Math.min(seg.hours, otHours * (seg.hours / totalHours));
+    const segRegular = seg.hours - segOt;
+    regularPay += segRegular * seg.rate;
+    overtimePay += segOt * seg.rate * settings.otMultiplier;
+  }
+
+  const blended = computeBlendedRate(segments);
+  return {
+    regularHours: round2(regularHours),
+    overtimeHours: round2(otHours),
+    splitShiftHours: settings.splitShiftEnabled ? settings.splitShiftPremiumHours : 0,
+    regularPay: round2(regularPay),
+    overtimePay: round2(overtimePay),
+    splitShiftPay,
+    blendedRate: round2(blended),
+    rateSegments: segments.map((s) => ({ ...s, hours: round2(s.hours) })),
+    shiftDetails,
+  };
 }
 
 interface WeekHours {
@@ -268,7 +458,8 @@ export function allocateTips(
   orders: TipOrderInput[],
   settings: PayrollSettingsInput,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  timeEntries: TimeEntryInput[] = []
 ): { totalTips: number; allocations: TipAllocationPreview[] } {
   const inPeriod = orders.filter(
     (o) => o.paidAt && o.paidAt >= periodStart && o.paidAt <= periodEnd
@@ -286,6 +477,15 @@ export function allocateTips(
   });
 
   function hoursFor(member: StaffInput): number {
+    const punches = timeEntries.filter(
+      (e) => e.staffMemberId === member.id && e.clockOutAt
+    );
+    if (punches.length > 0) {
+      return punches.reduce(
+        (s, e) => s + punchDurationHours(e.clockInAt, e.clockOutAt!),
+        0
+      );
+    }
     return periodShifts
       .filter((sh) => sh.staffMemberId === member.id)
       .reduce((s, sh) => s + shiftDurationHours(sh.startTime, sh.endTime), 0);
@@ -374,14 +574,22 @@ export function computePayrollPreview(
   orders: TipOrderInput[],
   settings: PayrollSettingsInput,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  timeEntries: TimeEntryInput[] = []
 ): PayrollPreview {
   const periodShifts = shifts.filter((sh) => {
     const d = toDate(sh.date);
     return d >= periodStart && d <= periodEnd;
   });
 
-  const splitPremiums = detectSplitShiftPremiums(periodShifts, settings);
+  const periodPunches = timeEntries.filter((e) => {
+    const d = toDate(e.clockInAt);
+    return d >= periodStart && d <= periodEnd && e.clockOutAt;
+  });
+
+  const splitPremiumsFromShifts = detectSplitShiftPremiums(periodShifts, settings);
+  const splitPremiumsFromPunches = detectSplitShiftPremiumsFromPunches(periodPunches, settings);
+
   const { totalTips, allocations: tipAllocations } = allocateTips(
     staff,
     shifts,
@@ -389,7 +597,8 @@ export function computePayrollPreview(
     orders,
     settings,
     periodStart,
-    periodEnd
+    periodEnd,
+    timeEntries
   );
 
   const tipByStaff = new Map(tipAllocations.map((a) => [a.staffMemberId, a]));
@@ -398,13 +607,25 @@ export function computePayrollPreview(
   const activeStaff = staff.filter((s) => s.active);
 
   for (const member of activeStaff) {
+    const memberPunches = periodPunches.filter((e) => e.staffMemberId === member.id);
     const memberShifts = periodShifts.filter((sh) => sh.staffMemberId === member.id);
-    const weeks = new Map<string, ShiftInput[]>();
-    for (const sh of memberShifts) {
-      const wk = startOfWeek(toDate(sh.date), { weekStartsOn: WEEK_STARTS_ON }).toISOString();
-      const list = weeks.get(wk) ?? [];
-      list.push(sh);
-      weeks.set(wk, list);
+    const usePunches = memberPunches.length > 0;
+
+    const weeks = new Map<string, ShiftInput[] | TimeEntryInput[]>();
+    if (usePunches) {
+      for (const punch of memberPunches) {
+        const wk = startOfWeek(toDate(punch.clockInAt), { weekStartsOn: WEEK_STARTS_ON }).toISOString();
+        const list = (weeks.get(wk) ?? []) as TimeEntryInput[];
+        list.push(punch);
+        weeks.set(wk, list);
+      }
+    } else {
+      for (const sh of memberShifts) {
+        const wk = startOfWeek(toDate(sh.date), { weekStartsOn: WEEK_STARTS_ON }).toISOString();
+        const list = (weeks.get(wk) ?? []) as ShiftInput[];
+        list.push(sh);
+        weeks.set(wk, list);
+      }
     }
 
     let regularHours = 0;
@@ -416,14 +637,22 @@ export function computePayrollPreview(
     const rateSegments: RateSegment[] = [];
     const shiftDetails: ShiftPayDetail[] = [];
 
-    for (const weekShifts of weeks.values()) {
-      const weekPay = computeEmployeeWeekPay(
-        member,
-        weekShifts,
-        roleRates,
-        settings,
-        splitPremiums
-      );
+    for (const weekItems of weeks.values()) {
+      const weekPay = usePunches
+        ? computeEmployeeWeekPayFromPunches(
+            member,
+            weekItems as TimeEntryInput[],
+            roleRates,
+            settings,
+            splitPremiumsFromPunches
+          )
+        : computeEmployeeWeekPay(
+            member,
+            weekItems as ShiftInput[],
+            roleRates,
+            settings,
+            splitPremiumsFromShifts
+          );
       regularHours += weekPay.regularHours;
       overtimeHours += weekPay.overtimeHours;
       regularPay += weekPay.regularPay;

@@ -29,6 +29,15 @@ export interface ShiftInput {
   workRole?: string | null;
 }
 
+export interface TimeEntryInput {
+  id: string;
+  staffMemberId: string;
+  clockInAt: Date | string;
+  clockOutAt: Date | string;
+  workRole?: string | null;
+  hourlyRateAtPunch?: number | null;
+}
+
 export interface StaffInput {
   id: string;
   name: string;
@@ -55,6 +64,7 @@ export interface RateSegment {
 
 export interface ShiftPayDetail {
   shiftId: string;
+  punchId?: string;
   role: string;
   hours: number;
   rate: number;

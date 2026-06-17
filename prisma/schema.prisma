@@ -294,6 +294,10 @@ model Location {
   targetLaborPct Float   @default(30)
   mealBreakMinutes Int   @default(30)
   restBreakMinutes Int   @default(10)
+  /// Hours on clock before a meal break is legally required (e.g. 5 in CA)
+  mealBreakRequiredAfterHours Float @default(5)
+  /// Alert managers this many minutes before meal break is due
+  mealBreakAlertMinutes     Int     @default(15)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -899,6 +903,12 @@ model TimeEntry {
   mealBreakTaken  Boolean?
   restBreakTaken  Boolean?
   breakAttestedAt DateTime?
+  mealBreakWaived Boolean     @default(false)
+  breakWaiverSignedAt DateTime?
+  breakWaiverText String?
+  declaredCashTips Float?
+  workRole        String?
+  hourlyRateAtPunch Float?
   notes           String?
   approvalStatus  String      @default("PENDING")
   approvedByUserId String?
@@ -1617,6 +1627,14 @@ model ComplianceSettings {
   minorMaxWeeklyHoursSchool Float   @default(18)
   minorMaxDailyHoursSchool  Float   @default(6)
   schoolCalendarActive     Boolean  @default(true)
+  /// Block time-clock punches when minor laws would be violated
+  minorBlockTimeClock      Boolean  @default(true)
+  /// SMS manager when minor is within this many minutes of curfew
+  minorAlertMinutesBefore  Int      @default(30)
+  /// Phone for compliance SMS (E.164); falls back to location phone
+  managerAlertPhone        String?
+  /// Require declared cash tips before tipped employees clock out
+  requireTipDeclaration    Boolean  @default(true)
   updatedAt                DateTime @updatedAt
 }
 

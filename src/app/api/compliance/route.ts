@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const weekStart = getWeekStart();
   const weekEnd = getWeekEnd(weekStart);
 
-  const [settings, shifts, openIncidents, oshaCount] = await Promise.all([
+  const [settings, shifts, openIncidents, oshaCount, location] = await Promise.all([
     getOrCreateComplianceSettings(locationId),
     prisma.shift.findMany({
       where: { locationId, date: { gte: weekStart, lte: weekEnd } },
@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
     prisma.incidentReport.count({ where: { locationId, status: { in: ["OPEN", "INVESTIGATING"] } } }),
     prisma.incidentReport.count({
       where: { locationId, oshaRecordable: true, reportedAt: { gte: new Date(Date.now() - 365 * 86400000) } },
+    }),
+    prisma.location.findUnique({
+      where: { id: locationId },
+      select: {
+        mealBreakRequiredAfterHours: true,
+        mealBreakAlertMinutes: true,
+        mealBreakMinutes: true,
+      },
     }),
   ]);
 
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     settings,
+    breakSettings: location,
     summary: {
       minorViolationsThisWeek: minorViolations.length,
       blockedViolations: minorViolations.filter((v) => v.severity === "block").length,
@@ -67,6 +76,23 @@ export async function PATCH(request: NextRequest) {
   const locationId = await getLocationIdFromRequest(request);
   const body = await request.json();
 
+  if (
+    body.mealBreakRequiredAfterHours != null ||
+    body.mealBreakAlertMinutes != null
+  ) {
+    await prisma.location.update({
+      where: { id: locationId },
+      data: {
+        mealBreakRequiredAfterHours:
+          body.mealBreakRequiredAfterHours != null
+            ? Number(body.mealBreakRequiredAfterHours)
+            : undefined,
+        mealBreakAlertMinutes:
+          body.mealBreakAlertMinutes != null ? Number(body.mealBreakAlertMinutes) : undefined,
+      },
+    });
+  }
+
   const settings = await prisma.complianceSettings.upsert({
     where: { locationId },
     create: {
@@ -77,6 +103,10 @@ export async function PATCH(request: NextRequest) {
       minorMaxWeeklyHoursSchool: Number(body.minorMaxWeeklyHoursSchool) || 18,
       minorMaxDailyHoursSchool: Number(body.minorMaxDailyHoursSchool) || 6,
       schoolCalendarActive: body.schoolCalendarActive ?? true,
+      minorBlockTimeClock: body.minorBlockTimeClock ?? true,
+      minorAlertMinutesBefore: Number(body.minorAlertMinutesBefore) || 30,
+      managerAlertPhone: body.managerAlertPhone ?? null,
+      requireTipDeclaration: body.requireTipDeclaration ?? true,
     },
     update: {
       minorBlockScheduling: body.minorBlockScheduling,
@@ -87,6 +117,11 @@ export async function PATCH(request: NextRequest) {
       minorMaxDailyHoursSchool:
         body.minorMaxDailyHoursSchool != null ? Number(body.minorMaxDailyHoursSchool) : undefined,
       schoolCalendarActive: body.schoolCalendarActive,
+      minorBlockTimeClock: body.minorBlockTimeClock,
+      minorAlertMinutesBefore:
+        body.minorAlertMinutesBefore != null ? Number(body.minorAlertMinutesBefore) : undefined,
+      managerAlertPhone: body.managerAlertPhone,
+      requireTipDeclaration: body.requireTipDeclaration,
     },
   });
 

@@ -19,18 +19,32 @@ import { PinPad } from "@/components/staff/PinPad";
 import { PunchPhotoCapture } from "@/components/staff/PunchPhotoCapture";
 import { verifyBiometric } from "@/lib/timeclock/webauthn-client";
 import { punchVerificationLabel } from "@/lib/timeclock/types";
+import { formatCurrency } from "@/lib/utils";
+import { BREAK_WAIVER_TEXT, isMealBreakRequired } from "@/lib/compliance/break-enforcement";
+import { isTippedPunch } from "@/lib/compliance/tip-declaration";
 
 type PunchAction = "in" | "out";
+
+interface JobRoleOption {
+  role: string;
+  hourlyRate: number;
+  isTippedRole: boolean;
+  tipPoints: number;
+}
 
 interface KioskStaff {
   id: string;
   name: string;
   role: string;
+  isTippedEmployee: boolean;
   imageUrl: string | null;
   hasPin: boolean;
   clockedIn: boolean;
   clockInAt: string | null;
-  todayShifts: Array<{ startTime: string; endTime: string }>;
+  clockedInRole: string | null;
+  clockedInRate: number | null;
+  jobRoles: JobRoleOption[];
+  todayShifts: Array<{ startTime: string; endTime: string; workRole?: string | null }>;
 }
 
 interface KioskLocation {
@@ -41,9 +55,14 @@ interface KioskLocation {
   earlyClockInBufferMins: number;
   mealBreakMinutes: number;
   restBreakMinutes: number;
+  mealBreakRequiredAfterHours: number;
 }
 
-type Step = "idle" | "pick" | "pin" | "verify" | "attest" | "success";
+interface KioskCompliance {
+  requireTipDeclaration: boolean;
+}
+
+type Step = "idle" | "pick" | "role" | "pin" | "verify" | "attest" | "waiver" | "tips" | "success";
 
 function getPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -62,6 +81,7 @@ function getPosition(): Promise<GeolocationPosition> {
 export function TimeClockClient() {
   const [now, setNow] = useState(new Date());
   const [location, setLocation] = useState<KioskLocation | null>(null);
+  const [compliance, setCompliance] = useState<KioskCompliance>({ requireTipDeclaration: true });
   const [staff, setStaff] = useState<KioskStaff[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -69,12 +89,15 @@ export function TimeClockClient() {
   const [step, setStep] = useState<Step>("idle");
   const [action, setAction] = useState<PunchAction>("in");
   const [selected, setSelected] = useState<KioskStaff | null>(null);
+  const [selectedWorkRole, setSelectedWorkRole] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealBreakTaken, setMealBreakTaken] = useState(true);
   const [restBreakTaken, setRestBreakTaken] = useState(true);
+  const [breakWaiverAcknowledged, setBreakWaiverAcknowledged] = useState(false);
+  const [declaredCashTips, setDeclaredCashTips] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const load = useCallback(async () => {
@@ -85,6 +108,7 @@ export function TimeClockClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load time clock");
       setLocation(data.location);
+      setCompliance(data.compliance ?? { requireTipDeclaration: true });
       setStaff(data.staff ?? []);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load");
@@ -130,11 +154,14 @@ export function TimeClockClient() {
   const resetFlow = () => {
     setStep("idle");
     setSelected(null);
+    setSelectedWorkRole(null);
     setPin("");
     setSearch("");
     setError(null);
     setMealBreakTaken(true);
     setRestBreakTaken(true);
+    setBreakWaiverAcknowledged(false);
+    setDeclaredCashTips("");
   };
 
   const closeModal = () => {
@@ -156,6 +183,29 @@ export function TimeClockClient() {
     setSelected(member);
     setPin("");
     setError(null);
+
+    if (action === "out") {
+      setStep("pin");
+      return;
+    }
+
+    const scheduledRole = member.todayShifts.find((s) => s.workRole)?.workRole ?? null;
+    const defaultRole =
+      scheduledRole && member.jobRoles.some((r) => r.role === scheduledRole)
+        ? scheduledRole
+        : member.jobRoles[0]?.role ?? member.role;
+
+    setSelectedWorkRole(defaultRole);
+
+    if (member.jobRoles.length > 1) {
+      setStep("role");
+    } else {
+      setStep("pin");
+    }
+  };
+
+  const selectWorkRole = (role: string) => {
+    setSelectedWorkRole(role);
     setStep("pin");
   };
 
@@ -169,6 +219,55 @@ export function TimeClockClient() {
       return;
     }
     void submitPunch({});
+  };
+
+  const needsBreakWaiverStep = () => {
+    if (!selected?.clockInAt || !location) return false;
+    return (
+      !mealBreakTaken &&
+      isMealBreakRequired(new Date(selected.clockInAt), location)
+    );
+  };
+
+  const needsTipDeclarationStep = () => {
+    if (!selected || !compliance.requireTipDeclaration) return false;
+    return isTippedPunch({
+      workRole: selected.clockedInRole,
+      isTippedEmployee: selected.isTippedEmployee,
+      jobRoles: selected.jobRoles,
+    });
+  };
+
+  const proceedAfterComplianceSteps = () => {
+    if (needsIdentityVerification() && process.env.NODE_ENV !== "development") {
+      setStep("verify");
+      return;
+    }
+    void submitPunch({});
+  };
+
+  const afterAttest = () => {
+    if (needsBreakWaiverStep()) {
+      setStep("waiver");
+      return;
+    }
+    if (needsTipDeclarationStep()) {
+      setStep("tips");
+      return;
+    }
+    proceedAfterComplianceSteps();
+  };
+
+  const afterWaiver = () => {
+    if (needsTipDeclarationStep()) {
+      setStep("tips");
+      return;
+    }
+    proceedAfterComplianceSteps();
+  };
+
+  const afterTips = () => {
+    proceedAfterComplianceSteps();
   };
 
   const submitPunch = async (opts: {
@@ -200,12 +299,19 @@ export function TimeClockClient() {
           action,
           staffMemberId: selected.id,
           pin,
+          workRole: action === "in" ? selectedWorkRole : undefined,
           latitude,
           longitude,
           photoDataUrl: opts.photoDataUrl,
           biometricVerified: opts.biometricVerified,
           mealBreakTaken: action === "out" ? mealBreakTaken : undefined,
           restBreakTaken: action === "out" ? restBreakTaken : undefined,
+          breakWaiverAcknowledged:
+            action === "out" && needsBreakWaiverStep() ? breakWaiverAcknowledged : undefined,
+          declaredCashTips:
+            action === "out" && needsTipDeclarationStep()
+              ? parseFloat(declaredCashTips) || 0
+              : undefined,
         }),
       });
       const data = await res.json();
@@ -213,7 +319,7 @@ export function TimeClockClient() {
 
       setSuccessMsg(
         action === "in"
-          ? `${data.staffName} clocked in at ${format(new Date(), "h:mm a")}`
+          ? `${data.staffName} clocked in as ${data.workRole ?? selectedWorkRole} at ${format(new Date(), "h:mm a")}`
           : `${data.staffName} clocked out at ${format(new Date(), "h:mm a")}`
       );
       setStep("success");
@@ -317,9 +423,14 @@ export function TimeClockClient() {
                   .filter((s) => s.clockedIn)
                   .slice(0, 6)
                   .map((s) => (
-                    <li key={s.id} className="flex justify-between">
-                      <span>{s.name}</span>
-                      <span className="text-slate-400">
+                    <li key={s.id} className="flex justify-between gap-2">
+                      <span>
+                        {s.name}
+                        {s.clockedInRole && (
+                          <span className="text-slate-400"> · {s.clockedInRole}</span>
+                        )}
+                      </span>
+                      <span className="text-slate-400 shrink-0">
                         {s.clockInAt ? format(new Date(s.clockInAt), "h:mm a") : "—"}
                       </span>
                     </li>
@@ -338,13 +449,19 @@ export function TimeClockClient() {
             ? action === "in"
               ? "Who is clocking in?"
               : "Who is clocking out?"
-            : step === "pin"
+            : step === "role"
+              ? `Which role today? — ${selected?.name}`
+              : step === "pin"
               ? `Enter PIN — ${selected?.name}`
               : step === "verify"
                 ? "Identity verification"
                 : step === "attest"
                   ? "Break attestation"
-                  : "Done"
+                  : step === "waiver"
+                    ? "Meal break waiver"
+                    : step === "tips"
+                      ? "Declare cash tips"
+                      : "Done"
         }
         size={step === "verify" && canUsePhoto() ? "lg" : "md"}
       >
@@ -412,14 +529,54 @@ export function TimeClockClient() {
           </div>
         )}
 
+        {step === "role" && selected && (
+          <div className="space-y-4">
+            <p className="text-center text-sm text-slate-600">
+              Which role are you working today? Pay rate applies to this punch only.
+            </p>
+            <ul className="space-y-2">
+              {selected.jobRoles.map((job) => (
+                <li key={job.role}>
+                  <button
+                    type="button"
+                    onClick={() => selectWorkRole(job.role)}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors hover:border-orange-300 hover:bg-orange-50 ${
+                      selectedWorkRole === job.role
+                        ? "border-orange-400 bg-orange-50"
+                        : "border-slate-200"
+                    }`}
+                  >
+                    <span className="font-medium text-slate-900">{job.role}</span>
+                    <span className="text-sm text-slate-600">
+                      {formatCurrency(job.hourlyRate)}/hr
+                      {job.isTippedRole ? " · tipped" : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Button variant="secondary" className="w-full" onClick={() => setStep("pick")}>
+              Back
+            </Button>
+          </div>
+        )}
+
         {step === "pin" && selected && (
           <div className="space-y-4">
             <p className="text-center text-sm text-slate-500">
-              Enter your {4}–{6}-digit clock PIN
+              {action === "in" && selectedWorkRole
+                ? `Clocking in as ${selectedWorkRole} · enter your PIN`
+                : "Enter your 4–6 digit clock PIN"}
             </p>
             <PinPad value={pin} onChange={setPin} maxLength={6} disabled={busy} />
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep("pick")}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() =>
+                  setStep(action === "in" && selected.jobRoles.length > 1 ? "role" : "pick")
+                }
+              >
                 Back
               </Button>
               <Button
@@ -445,7 +602,12 @@ export function TimeClockClient() {
                 onChange={(e) => setMealBreakTaken(e.target.checked)}
                 className="mt-1"
               />
-              <span>Meal break ({location.mealBreakMinutes}+ min unpaid)</span>
+              <span>
+                Meal break ({location.mealBreakMinutes}+ min unpaid)
+                {!mealBreakTaken && selected?.clockInAt && isMealBreakRequired(new Date(selected.clockInAt), location) && (
+                  <span className="block text-amber-700">Required — skipping requires a signed waiver next.</span>
+                )}
+              </span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -456,23 +618,64 @@ export function TimeClockClient() {
               />
               <span>Rest break ({location.restBreakMinutes}+ min paid)</span>
             </label>
-            {needsIdentityVerification() && process.env.NODE_ENV !== "development" ? (
-              <Button
-                className="w-full"
-                disabled={!mealBreakTaken || !restBreakTaken}
-                onClick={() => setStep("verify")}
-              >
-                Continue to verification
-              </Button>
-            ) : (
-              <Button
-                className="w-full"
-                disabled={busy || !mealBreakTaken || !restBreakTaken}
-                onClick={() => submitPunch({})}
-              >
-                {busy ? "Clocking out…" : "Confirm & clock out"}
-              </Button>
-            )}
+            <Button className="w-full" disabled={busy} onClick={afterAttest}>
+              Continue
+            </Button>
+          </div>
+        )}
+
+        {step === "waiver" && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              You have worked {location?.mealBreakRequiredAfterHours}+ hours without a meal break.
+              You must sign below to voluntarily waive your break before clocking out.
+            </div>
+            <p className="text-sm text-slate-600">{BREAK_WAIVER_TEXT}</p>
+            <label className="flex items-start gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={breakWaiverAcknowledged}
+                onChange={(e) => setBreakWaiverAcknowledged(e.target.checked)}
+                className="mt-1"
+              />
+              <span>I acknowledge and sign this waiver</span>
+            </label>
+            <Button
+              className="w-full"
+              disabled={busy || !breakWaiverAcknowledged}
+              onClick={afterWaiver}
+            >
+              Continue
+            </Button>
+          </div>
+        )}
+
+        {step === "tips" && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Tipped employees must declare cash tips before clocking out.
+            </p>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">Cash tips tonight ($)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={declaredCashTips}
+                onChange={(e) => setDeclaredCashTips(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-lg tabular-nums focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                placeholder="0.00"
+                autoFocus
+              />
+            </label>
+            <Button
+              className="w-full"
+              disabled={busy || declaredCashTips === "" || Number(declaredCashTips) < 0}
+              onClick={afterTips}
+            >
+              Continue
+            </Button>
           </div>
         )}
 

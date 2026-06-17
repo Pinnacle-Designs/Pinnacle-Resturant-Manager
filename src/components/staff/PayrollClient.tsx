@@ -13,6 +13,7 @@ import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, Select, FormField } from "@/components/ui/form";
 import { apiPost } from "@/lib/api";
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
+import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
 import { formatCurrency, cn } from "@/lib/utils";
 import { JOB_ROLES, TIPPED_JOB_ROLES } from "@/lib/payroll/job-roles";
 import { getDefaultPayPeriod } from "@/lib/payroll/compute";
@@ -247,6 +248,7 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
       {section === "preview" && (
         <div className="space-y-4">
           <ForgottenClockOutAlert variant="banner" />
+          <ComplianceAlertsBanner variant="banner" />
           {loading || !preview ? (
             <p className="text-sm text-slate-500">Calculating payroll…</p>
           ) : (
@@ -355,8 +357,9 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
             </Select>
           </FormField>
           <p className="text-sm text-slate-600">
-            Set different hourly rates per role when an employee works multiple jobs (e.g. Server vs
-            Host). Assign the shift role on the schedule to apply the correct rate.
+            Set hourly rates per job hat (Server, Bartender, Trainer, etc.). Employees pick their role
+            at clock-in; each punch stores its own rate. Split shifts the same day keep separate wage
+            segments — enable split-shift premium under Settings.
           </p>
           <div className="space-y-3">
             {roleRates.map((rate, idx) => (

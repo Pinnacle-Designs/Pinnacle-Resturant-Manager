@@ -27,7 +27,7 @@ export async function loadPayrollPreview(
   periodStart: Date,
   periodEnd: Date
 ): Promise<PayrollPreview> {
-  const [settingsRow, staff, roleRates, shifts, orders] = await Promise.all([
+  const [settingsRow, staff, roleRates, shifts, orders, timeEntries] = await Promise.all([
     getOrCreatePayrollSettings(locationId),
     prisma.staffMember.findMany({ where: { locationId } }),
     prisma.staffRoleRate.findMany({
@@ -46,6 +46,13 @@ export async function loadPayrollPreview(
         status: { in: ["PAID", "SERVED"] },
       },
       include: { payments: true },
+    }),
+    prisma.timeEntry.findMany({
+      where: {
+        locationId,
+        clockInAt: { gte: periodStart, lte: periodEnd },
+        clockOutAt: { not: null },
+      },
     }),
   ]);
 
@@ -93,7 +100,15 @@ export async function loadPayrollPreview(
     tipOrders,
     settings,
     periodStart,
-    periodEnd
+    periodEnd,
+    timeEntries.map((e) => ({
+      id: e.id,
+      staffMemberId: e.staffMemberId,
+      clockInAt: e.clockInAt,
+      clockOutAt: e.clockOutAt!,
+      workRole: e.workRole,
+      hourlyRateAtPunch: e.hourlyRateAtPunch,
+    }))
   );
 }
 

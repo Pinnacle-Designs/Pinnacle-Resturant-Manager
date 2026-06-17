@@ -2,6 +2,10 @@ import OpenAI from "openai";
 import { prisma } from "./prisma";
 import { getLocationId } from "./location";
 import { computeAnalytics, buildAnalyticsSnapshotForAI } from "./analytics/compute";
+import {
+  buildComplianceSnapshotForAI,
+  generateComplianceInsights,
+} from "./compliance/compliance-insights";
 import type { InsightCategory, InsightSeverity } from "@prisma/client";
 
 const openai = process.env.OPENAI_API_KEY
@@ -140,7 +144,7 @@ export async function generateBusinessInsights(locationId?: string): Promise<
 > {
   const locId = locationId || (await getLocationId());
 
-  const [inventory, menuItems, staff, recentOrders, expenses, recentPhotos, analyticsPayload] =
+  const [inventory, menuItems, staff, recentOrders, expenses, recentPhotos, analyticsPayload, complianceSnapshot] =
     await Promise.all([
       prisma.inventoryItem.findMany({ where: { locationId: locId } }),
       prisma.menuItem.findMany({ where: { locationId: locId } }),
@@ -164,6 +168,7 @@ export async function generateBusinessInsights(locationId?: string): Promise<
         orderBy: { createdAt: "desc" },
       }),
       computeAnalytics(locId),
+      buildComplianceSnapshotForAI(locId),
     ]);
 
   const lowStockItems = inventory.filter((item) => item.quantity <= item.minQuantity);
@@ -189,10 +194,12 @@ export async function generateBusinessInsights(locationId?: string): Promise<
     profitMargin: totalRevenue - totalExpenses,
     recentPhotoCount: recentPhotos.length,
     analytics: buildAnalyticsSnapshotForAI(analyticsPayload),
+    compliance: complianceSnapshot,
   };
 
   if (!openai) {
-    return generateRuleBasedInsights(businessSnapshot);
+    const complianceInsights = await generateComplianceInsights(locId);
+    return [...(await generateRuleBasedInsights(businessSnapshot)), ...complianceInsights];
   }
 
   try {
@@ -202,7 +209,7 @@ export async function generateBusinessInsights(locationId?: string): Promise<
         {
           role: "system",
           content:
-            "You are a restaurant business analyst with complete analytics across all 12 sections. Each section has keyQuestions and highlights — answer them with specific numbers. Sections: sales (what sells, busiest times, profitable channels), foodCost (disappearing product, cost drivers, recipes), labor (staffing, inefficient shifts, top performers), menuEngineering (promote, reprice, remove), marketing (generating sales, profitable channels), customerExperience (satisfaction hurts, complaint shifts), operations (bottlenecks, ticket time impact), purchasing (supplier increases, market rates), forecasting (Friday staff, all-item orders, catering demand, seasonal trends), profitability (profit leaks; profit by item, category, employee, shift, daypart, hour, day, location, channel, delivery, campaign), externalFactors (weather, events, holidays, sports, tourism, school, auto-learned patterns, weather forecast), executive (yesterday KPIs, alerts). Return JSON with insights array. Each insight: title, description, category (INVENTORY|STAFFING|FINANCE|OPERATIONS|MENU|CUSTOMER|FACILITY|GENERAL), severity (LOW|MEDIUM|HIGH|CRITICAL), actionable. Include insights for every section that has data.",
+            "You are a restaurant business analyst with complete analytics across all 12 sections. Each section has keyQuestions and highlights — answer them with specific numbers. Sections: sales (what sells, busiest times, profitable channels), foodCost (disappearing product, cost drivers, recipes), labor (staffing, inefficient shifts, top performers), menuEngineering (promote, reprice, remove), marketing (generating sales, profitable channels), customerExperience (satisfaction hurts, complaint shifts), operations (bottlenecks, ticket time impact), purchasing (supplier increases, market rates), forecasting (Friday staff, all-item orders, catering demand, seasonal trends), profitability (profit leaks; profit by item, category, employee, shift, daypart, hour, day, location, channel, delivery, campaign), externalFactors (weather, events, holidays, sports, tourism, school, auto-learned patterns, weather forecast), executive (yesterday KPIs, alerts). The compliance object covers meal break deadlines, minor curfew/hour limits, and break waivers — flag CRITICAL labor law risks. Return JSON with insights array. Each insight: title, description, category (INVENTORY|STAFFING|FINANCE|OPERATIONS|MENU|CUSTOMER|FACILITY|GENERAL), severity (LOW|MEDIUM|HIGH|CRITICAL), actionable. Include insights for every section that has data.",
         },
         {
           role: "user",
@@ -222,7 +229,7 @@ export async function generateBusinessInsights(locationId?: string): Promise<
     console.error("Insight generation error:", error);
   }
 
-  return generateRuleBasedInsights(businessSnapshot);
+  return [...(await generateRuleBasedInsights(businessSnapshot)), ...(await generateComplianceInsights(locId))];
 }
 
 function generateRuleBasedInsights(snapshot: {

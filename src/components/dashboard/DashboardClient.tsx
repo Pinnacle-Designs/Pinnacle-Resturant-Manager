@@ -14,6 +14,7 @@ import {
 import { PageHeader, StatCard, Badge } from "@/components/ui";
 import { InsightPanel } from "@/components/insights/InsightPanel";
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
+import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PLAN_BY_ID, requiredPlanForRoute } from "@/lib/plans";
 import { formatCurrency } from "@/lib/utils";
@@ -86,6 +87,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       </PageHeader>
 
       {canManageSchedule && <ForgottenClockOutAlert variant="banner" />}
+      {canManageSchedule && <ComplianceAlertsBanner variant="banner" />}
 
       {upgradeFeature && (
         <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">

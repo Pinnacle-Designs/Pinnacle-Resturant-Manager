@@ -26,7 +26,9 @@ export async function seedDemoExtras(locationId: string) {
   await seedHiringSms(locationId);
   await seedTrainingCompletions(locationId);
   await seedStaffClockPins(locationId);
+  await seedStaffMultiRoleRates(locationId);
   await seedForgottenClockOutDemo(locationId);
+  await seedComplianceLaborDemo(locationId);
   await seedTimeEntries(locationId);
   await seedShiftSwap(locationId);
   await seedPayrollSamples(locationId);
@@ -795,6 +797,40 @@ async function seedStaffClockPins(locationId: string) {
   });
 }
 
+async function seedStaffMultiRoleRates(locationId: string) {
+  const server = await prisma.staffMember.findFirst({
+    where: { locationId, role: "Server", active: true },
+  });
+  if (!server) return;
+
+  const roles = [
+    { role: "Server", hourlyRate: 2.13, isTippedRole: true, tipPoints: 1 },
+    { role: "Bartender", hourlyRate: 7.25, isTippedRole: true, tipPoints: 1.2 },
+    { role: "Trainer", hourlyRate: 15, isTippedRole: false, tipPoints: 1 },
+  ];
+
+  for (const r of roles) {
+    await prisma.staffRoleRate.upsert({
+      where: {
+        staffMemberId_role: { staffMemberId: server.id, role: r.role },
+      },
+      create: { staffMemberId: server.id, ...r },
+      update: { hourlyRate: r.hourlyRate, isTippedRole: r.isTippedRole, tipPoints: r.tipPoints },
+    });
+  }
+
+  const settings = await prisma.payrollSettings.findUnique({ where: { locationId } });
+  if (settings) {
+    await prisma.payrollSettings.update({
+      where: { locationId },
+      data: {
+        splitShiftEnabled: true,
+        splitShiftMinGapMinutes: 60,
+      },
+    });
+  }
+}
+
 async function seedForgottenClockOutDemo(locationId: string) {
   let dishwasher = await prisma.staffMember.findFirst({
     where: { locationId, role: { contains: "Dish" } },
@@ -852,6 +888,100 @@ async function seedForgottenClockOutDemo(locationId: string) {
         staffMemberId: dishwasher.id,
         shiftId: shift.id,
         clockInAt: shiftStart,
+        geoVerifiedIn: true,
+      },
+    });
+  }
+}
+
+/** Demo: minor approaching curfew + employee due for meal break (manager alerts). */
+async function seedComplianceLaborDemo(locationId: string) {
+  const { getOrCreateComplianceSettings } = await import("./compliance/validate-shift");
+
+  await getOrCreateComplianceSettings(locationId);
+  await prisma.complianceSettings.update({
+    where: { locationId },
+    data: {
+      minorSchoolNightEndHour: 19,
+      minorBlockTimeClock: true,
+      minorAlertMinutesBefore: 30,
+      requireTipDeclaration: true,
+    },
+  });
+
+  await prisma.location.update({
+    where: { id: locationId },
+    data: {
+      mealBreakRequiredAfterHours: 5,
+      mealBreakAlertMinutes: 15,
+    },
+  });
+
+  let minor = await prisma.staffMember.findFirst({
+    where: { locationId, name: "Alex Rivera (Minor)" },
+  });
+  if (!minor) {
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - 16);
+    minor = await prisma.staffMember.create({
+      data: {
+        locationId,
+        name: "Alex Rivera (Minor)",
+        role: "Host",
+        hourlyRate: 14,
+        active: true,
+        dateOfBirth: dob,
+        clockPinHash: hashClockPin("1234"),
+      },
+    });
+  }
+
+  const now = new Date();
+  const minorClockIn = subHours(now, 4.5);
+  const existingMinorOpen = await prisma.timeEntry.findFirst({
+    where: { locationId, staffMemberId: minor.id, clockOutAt: null },
+  });
+  if (!existingMinorOpen) {
+    await prisma.timeEntry.create({
+      data: {
+        locationId,
+        staffMemberId: minor.id,
+        clockInAt: minorClockIn,
+        workRole: "Host",
+        hourlyRateAtPunch: 14,
+        geoVerifiedIn: true,
+      },
+    });
+  }
+
+  let lineCook = await prisma.staffMember.findFirst({
+    where: { locationId, name: "Sam Ortiz (Break demo)" },
+  });
+  if (!lineCook) {
+    lineCook = await prisma.staffMember.create({
+      data: {
+        locationId,
+        name: "Sam Ortiz (Break demo)",
+        role: "Line Cook",
+        hourlyRate: 18,
+        active: true,
+        clockPinHash: hashClockPin("1234"),
+      },
+    });
+  }
+
+  const breakClockIn = subHours(now, 5.2);
+  const existingBreakOpen = await prisma.timeEntry.findFirst({
+    where: { locationId, staffMemberId: lineCook.id, clockOutAt: null },
+  });
+  if (!existingBreakOpen) {
+    await prisma.timeEntry.create({
+      data: {
+        locationId,
+        staffMemberId: lineCook.id,
+        clockInAt: breakClockIn,
+        workRole: "Line Cook",
+        hourlyRateAtPunch: 18,
         geoVerifiedIn: true,
       },
     });

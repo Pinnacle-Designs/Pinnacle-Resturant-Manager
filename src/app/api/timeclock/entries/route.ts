@@ -20,6 +20,8 @@ function serializeEntry(e: {
   clockOutPhotoUrl: string | null;
   mealBreakTaken: boolean | null;
   restBreakTaken: boolean | null;
+  workRole: string | null;
+  hourlyRateAtPunch: number | null;
   notes: string | null;
   approvalStatus: string;
   approvedAt: Date | null;
@@ -42,6 +44,8 @@ function serializeEntry(e: {
     clockOutPhotoUrl: e.clockOutPhotoUrl,
     mealBreakTaken: e.mealBreakTaken,
     restBreakTaken: e.restBreakTaken,
+    workRole: e.workRole,
+    hourlyRateAtPunch: e.hourlyRateAtPunch,
     notes: e.notes,
     approvalStatus: e.approvalStatus,
     approvedAt: e.approvedAt?.toISOString() ?? null,

@@ -53,10 +53,19 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
   const [dashboard, setDashboard] = useState<{
     settings: {
       minorBlockScheduling: boolean;
+      minorBlockTimeClock?: boolean;
       minorSchoolNightEndHour: number;
       minorMaxWeeklyHoursSchool: number;
       minorMaxDailyHoursSchool: number;
       schoolCalendarActive: boolean;
+      minorAlertMinutesBefore?: number;
+      managerAlertPhone?: string | null;
+      requireTipDeclaration?: boolean;
+    };
+    breakSettings?: {
+      mealBreakRequiredAfterHours: number;
+      mealBreakAlertMinutes: number;
+      mealBreakMinutes: number;
     };
     summary: {
       minorViolationsThisWeek: number;
@@ -109,7 +118,12 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
     load();
   }, [load]);
 
-  const saveSettings = async (patch: Partial<NonNullable<typeof dashboard>["settings"]>) => {
+  const saveSettings = async (
+    patch: Partial<NonNullable<typeof dashboard>["settings"]> & {
+      mealBreakRequiredAfterHours?: number;
+      mealBreakAlertMinutes?: number;
+    }
+  ) => {
     if (!dashboard) return;
     await fetch("/api/compliance", {
       method: "PATCH",
@@ -251,9 +265,51 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
                     saveSettings({ minorSchoolNightEndHour: Number(e.target.value) })
                   }
                 >
+                  <option value="19">7:00 PM</option>
                   <option value="21">9:00 PM</option>
                   <option value="22">10:00 PM</option>
                   <option value="23">11:00 PM</option>
+                </Select>
+              </FormField>
+              <FormField label="Block illegal punches (time clock)">
+                <Select
+                  value={dashboard.settings.minorBlockTimeClock !== false ? "block" : "warn"}
+                  onChange={(e) =>
+                    saveSettings({ minorBlockTimeClock: e.target.value === "block" })
+                  }
+                >
+                  <option value="block">Block clock in/out</option>
+                  <option value="warn">Warn only</option>
+                </Select>
+              </FormField>
+              <FormField label="SMS alert minutes before violation">
+                <Input
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={dashboard.settings.minorAlertMinutesBefore ?? 30}
+                  onChange={(e) =>
+                    saveSettings({ minorAlertMinutesBefore: Number(e.target.value) })
+                  }
+                />
+              </FormField>
+              <FormField label="Manager alert phone (SMS)">
+                <Input
+                  type="tel"
+                  placeholder="+15551234567"
+                  value={dashboard.settings.managerAlertPhone ?? ""}
+                  onChange={(e) => saveSettings({ managerAlertPhone: e.target.value || null })}
+                />
+              </FormField>
+              <FormField label="Require tip declaration at clock out">
+                <Select
+                  value={dashboard.settings.requireTipDeclaration !== false ? "yes" : "no"}
+                  onChange={(e) =>
+                    saveSettings({ requireTipDeclaration: e.target.value === "yes" })
+                  }
+                >
+                  <option value="yes">Required for tipped roles</option>
+                  <option value="no">Optional</option>
                 </Select>
               </FormField>
               <FormField label="Max hours / school week">
@@ -262,6 +318,39 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
                   value={dashboard.settings.minorMaxWeeklyHoursSchool}
                   onChange={(e) =>
                     saveSettings({ minorMaxWeeklyHoursSchool: Number(e.target.value) })
+                  }
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-white p-4">
+            <h3 className="text-sm font-semibold text-slate-900">Meal break enforcement</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Managers are alerted before required breaks. Skipping a break at clock-out requires a
+              digital waiver stored on the timecard.
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField label="Break required after (hours)">
+                <Input
+                  type="number"
+                  step="0.5"
+                  min={4}
+                  max={8}
+                  value={dashboard.breakSettings?.mealBreakRequiredAfterHours ?? 5}
+                  onChange={(e) =>
+                    saveSettings({ mealBreakRequiredAfterHours: Number(e.target.value) })
+                  }
+                />
+              </FormField>
+              <FormField label="Manager alert (minutes before)">
+                <Input
+                  type="number"
+                  min={5}
+                  max={60}
+                  value={dashboard.breakSettings?.mealBreakAlertMinutes ?? 15}
+                  onChange={(e) =>
+                    saveSettings({ mealBreakAlertMinutes: Number(e.target.value) })
                   }
                 />
               </FormField>

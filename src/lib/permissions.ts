@@ -208,6 +208,7 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/timeclock": "clock_in",
   "/api/timeclock/settings": "manage_schedule",
   "/api/timeclock/forgotten-clock-outs": "manage_schedule",
+  "/api/compliance/alerts": "manage_schedule",
   "/api/timeclock/entries": "clock_in",
   "/api/shift-swaps": "view_own_schedule",
 };
@@ -217,6 +218,7 @@ function routeBase(pathname: string): string {
   if (pathname.startsWith("/api/training/modules")) return "/api/training/modules";
   if (pathname.startsWith("/api/compliance/audit-records")) return "/api/compliance";
   if (pathname.startsWith("/api/compliance/incidents")) return "/api/compliance";
+  if (pathname.startsWith("/api/compliance/alerts")) return "/api/compliance/alerts";
   if (pathname.startsWith("/api/compliance")) return "/api/compliance";
   if (pathname.startsWith("/api/retention/feedback")) return "/api/retention";
   if (pathname.startsWith("/api/retention")) return "/api/retention";

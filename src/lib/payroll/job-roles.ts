@@ -7,6 +7,7 @@ export const JOB_ROLES = [
   "Manager",
   "Busser",
   "Dishwasher",
+  "Trainer",
 ] as const;
 
 export type JobRole = (typeof JOB_ROLES)[number];
