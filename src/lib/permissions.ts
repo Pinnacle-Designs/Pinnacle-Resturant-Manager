@@ -26,6 +26,8 @@ export type Permission =
   | "manage_inventory"
   | "manage_tables"
   | "manage_social"
+  | "view_log_book"
+  | "manage_log_book"
   | "view_analytics"
   | "place_orders"
   | "add_to_check";
@@ -54,6 +56,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   "manage_inventory",
   "manage_tables",
   "manage_social",
+  "view_log_book",
+  "manage_log_book",
   "view_analytics",
   "place_orders",
   "add_to_check",
@@ -87,6 +91,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_inventory: "Manage inventory",
   manage_tables: "Manage tables",
   manage_social: "Manage social",
+  view_log_book: "View manager log book",
+  manage_log_book: "Write manager log book entries",
   view_analytics: "View analytics",
   place_orders: "Place orders",
   add_to_check: "Add items to checks",
@@ -95,7 +101,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
   {
     label: "Administration",
-    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps", "manage_hiring", "manage_training", "manage_compliance", "manage_retention"],
+    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps", "manage_hiring", "manage_training", "manage_compliance", "manage_retention", "manage_log_book"],
   },
   {
     label: "Financial",
@@ -136,6 +142,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "complete_training",
     "manage_compliance",
     "manage_retention",
+    "manage_log_book",
+    "view_log_book",
     "view_own_schedule",
     "clock_in",
     "manage_orders",
@@ -148,9 +156,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "place_orders",
     "add_to_check",
   ],
-  SERVER: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
-  KITCHEN: ["place_orders", "add_to_check", "manage_boh", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
-  HOST: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
+  SERVER: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training", "view_log_book"],
+  KITCHEN: ["place_orders", "add_to_check", "manage_boh", "request_ewa", "view_own_schedule", "clock_in", "complete_training", "view_log_book"],
+  HOST: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training", "view_log_book"],
 };
 
 const NAV_PERMISSION_MAP: Record<string, Permission> = {
@@ -171,6 +179,7 @@ const NAV_PERMISSION_MAP: Record<string, Permission> = {
   "/purchase-orders": "manage_inventory",
   "/loading-dock": "manage_inventory",
   "/tables": "manage_tables",
+  "/log-book": "view_log_book",
   "/orders": "place_orders",
 };
 
@@ -195,6 +204,7 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/training/modules": "complete_training",
   "/api/compliance": "manage_compliance",
   "/api/retention": "manage_retention",
+  "/api/log-book": "view_log_book",
   "/api/boh": "manage_boh",
   "/api/kitchen": "manage_menu",
   "/api/kitchen/kds": "manage_boh",

@@ -36,6 +36,7 @@ export const NAV_ITEMS = [
   { href: "/inventory", label: "Inventory", icon: "package" },
   { href: "/purchase-orders", label: "Purchase Orders", icon: "truck" },
   { href: "/staff", label: "Staff", icon: "users" },
+  { href: "/log-book", label: "Log Book", icon: "book-open" },
   { href: "/timeclock", label: "Time Clock", icon: "clock" },
   { href: "/orders", label: "Orders", icon: "zap" },
   { href: "/tables", label: "Tables", icon: "layout-grid" },

@@ -19,6 +19,11 @@ import { FloorPlanCanvas, type FloorPlanTable } from "./FloorPlanCanvas";
 import { ReservationsPanel } from "./ReservationsPanel";
 import type { FloorPlanSection } from "@/lib/tables/floor-plan-constants";
 import { DEFAULT_FLOOR_PLAN_SECTIONS } from "@/lib/tables/floor-plan-constants";
+import {
+  fitFloorPlanToTables,
+  layoutNewTable,
+  toTableBounds,
+} from "@/lib/tables/floor-plan-layout";
 
 interface TableOrder {
   id: string;
@@ -120,6 +125,46 @@ export function TablesClient({
     setModalOpen(true);
   };
 
+  const persistLayout = async (
+    nextSections: FloorPlanSection[],
+    nextTables: Table[],
+    width: number,
+    height: number
+  ) => {
+    await fetch("/api/tables/floor-plan", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        width,
+        height,
+        sections: nextSections,
+        tables: nextTables.map((t) => ({
+          id: t.id,
+          posX: t.posX,
+          posY: t.posY,
+          width: t.width,
+          height: t.height,
+          rotation: t.rotation,
+          shape: t.shape,
+          section: t.section,
+          label: t.label,
+        })),
+      }),
+    });
+  };
+
+  const applyFittedLayout = (
+    prevTables: Table[],
+    fitted: ReturnType<typeof fitFloorPlanToTables>
+  ): Table[] =>
+    prevTables.map((t, i) => ({
+      ...t,
+      posX: fitted.tables[i]?.posX ?? t.posX,
+      posY: fitted.tables[i]?.posY ?? t.posY,
+      width: fitted.tables[i]?.width ?? t.width,
+      height: fitted.tables[i]?.height ?? t.height,
+    }));
+
   const handleSave = async () => {
     if (!form.number) {
       setError("Table number is required");
@@ -137,20 +182,48 @@ export function TablesClient({
       };
       if (editing) {
         const updated = await apiPatch<Table>(`/api/tables/${editing.id}`, payload);
-        setTables((prev) =>
-          prev.map((t) =>
+        setTables((prev) => {
+          const merged = prev.map((t) =>
             t.id === editing.id ? { ...t, ...updated, orders: editing.orders } : t
-          )
-        );
+          );
+          const fitted = fitFloorPlanToTables(
+            sections,
+            toTableBounds(merged),
+            planWidth,
+            planHeight
+          );
+          setSections(fitted.sections);
+          setPlanWidth(fitted.width);
+          setPlanHeight(fitted.height);
+          return applyFittedLayout(merged, fitted);
+        });
+        setLayoutDirty(true);
       } else {
-        const maxY = tables.reduce((m, t) => Math.max(m, t.posY), 80);
+        const layout = layoutNewTable(
+          sections,
+          toTableBounds(tables),
+          planWidth,
+          planHeight,
+          form.section,
+          form.shape
+        );
         const created = await apiPost<Table>("/api/tables", {
           ...payload,
-          posX: 120,
-          posY: maxY + 90,
+          posX: layout.posX,
+          posY: layout.posY,
+          width: layout.tableWidth,
+          height: layout.tableHeight,
         });
-        setTables((prev) => [...prev, { ...created, orders: [], reservations: [] }]);
-        setLayoutDirty(true);
+        const merged = applyFittedLayout(
+          [...tables, { ...created, orders: [], reservations: [] }],
+          layout
+        );
+        setTables(merged);
+        setSections(layout.sections);
+        setPlanWidth(layout.width);
+        setPlanHeight(layout.height);
+        await persistLayout(layout.sections, merged, layout.width, layout.height);
+        setLayoutDirty(false);
       }
       setModalOpen(false);
     } catch (err) {
@@ -176,35 +249,35 @@ export function TablesClient({
   };
 
   const onMoveTable = (id: string, posX: number, posY: number) => {
-    setTables((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, posX, posY } : t))
+    const merged = tables.map((t) => (t.id === id ? { ...t, posX, posY } : t));
+    const fitted = fitFloorPlanToTables(
+      sections,
+      toTableBounds(merged),
+      planWidth,
+      planHeight
     );
+    setTables(applyFittedLayout(merged, fitted));
+    setSections(fitted.sections);
+    setPlanWidth(fitted.width);
+    setPlanHeight(fitted.height);
     setLayoutDirty(true);
   };
 
   const saveLayout = async () => {
     setSavingLayout(true);
     try {
-      await fetch("/api/tables/floor-plan", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          width: planWidth,
-          height: planHeight,
-          sections,
-          tables: tables.map((t) => ({
-            id: t.id,
-            posX: t.posX,
-            posY: t.posY,
-            width: t.width,
-            height: t.height,
-            rotation: t.rotation,
-            shape: t.shape,
-            section: t.section,
-            label: t.label,
-          })),
-        }),
-      });
+      const fitted = fitFloorPlanToTables(
+        sections,
+        toTableBounds(tables),
+        planWidth,
+        planHeight
+      );
+      const merged = applyFittedLayout(tables, fitted);
+      setTables(merged);
+      setSections(fitted.sections);
+      setPlanWidth(fitted.width);
+      setPlanHeight(fitted.height);
+      await persistLayout(fitted.sections, merged, fitted.width, fitted.height);
       setLayoutDirty(false);
       setEditMode(false);
     } finally {

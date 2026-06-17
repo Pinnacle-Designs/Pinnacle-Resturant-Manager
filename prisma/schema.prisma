@@ -249,6 +249,18 @@ enum ReservationStatus {
   NO_SHOW
 }
 
+enum LogBookCategory {
+  GENERAL
+  SALES
+  STAFFING
+  MAINTENANCE
+  STAFF
+  GUEST
+  INVENTORY
+  SAFETY
+  OPERATIONS
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -372,6 +384,7 @@ model Location {
   integrationSettings  IntegrationSettings?
   reservationConnections ReservationConnection[]
   tableReservations    TableReservation[]
+  logBookEntries       LogBookEntry[]
   accountingConnections AccountingConnection[]
   accountingJournalEntries AccountingJournalEntry[]
   vendorEdiConnections VendorEdiConnection[]
@@ -871,6 +884,7 @@ model StaffMember {
   trainingCompletions TrainingCompletion[]
   incidentReports IncidentReport[]
   shiftFeedback   ShiftFeedback[]
+  logBookMentions LogBookMention[]
   wasteLogs       InventoryWaste[]
 }
 
@@ -1750,6 +1764,46 @@ model ShiftFeedback {
   @@index([staffMemberId, createdAt])
   @@index([locationId, createdAt])
   @@index([shiftId])
+}
+
+model LogBookEntry {
+  id              String          @id @default(cuid())
+  locationId      String
+  location        Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  logDate         DateTime
+  authorUserId    String?
+  authorName      String
+  category        LogBookCategory @default(GENERAL)
+  title           String?
+  content         String
+  /// Lowercased text for SQLite search — content, title, author, staff names
+  searchText      String
+  salesTotal      Float?
+  guestCount      Int?
+  laborHours      Float?
+  laborCost       Float?
+  staffingNote    String?
+  maintenanceNote String?
+  pinned          Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  mentions        LogBookMention[]
+
+  @@index([locationId, logDate])
+  @@index([locationId, createdAt])
+  @@index([locationId, category])
+}
+
+model LogBookMention {
+  id            String        @id @default(cuid())
+  entryId       String
+  entry         LogBookEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  staffMemberId String?
+  staffMember   StaffMember?  @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  mentionLabel  String
+
+  @@index([staffMemberId])
+  @@index([entryId])
 }
 
 model ModifierGroup {

@@ -26,6 +26,7 @@ import {
   Soup,
   PieChart,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -57,6 +58,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   soup: Soup,
   "pie-chart": PieChart,
   sparkles: Sparkles,
+  "book-open": BookOpen,
 };
 
 export function Sidebar() {

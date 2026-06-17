@@ -39,6 +39,7 @@ export async function seedDemoExtras(locationId: string) {
   await import("./back-office/seed-back-office").then((m) => m.seedBackOfficeSample(locationId));
   await import("./crystal-ball/seed-crystal-ball").then((m) => m.seedCrystalBallSample(locationId));
   await import("./tables/seed-floor-plan").then((m) => m.seedFloorPlanAndReservations(locationId));
+  await import("./log-book/seed-log-book").then((m) => m.seedLogBookSample(locationId));
 }
 
 async function seedLocationProfile(locationId: string) {

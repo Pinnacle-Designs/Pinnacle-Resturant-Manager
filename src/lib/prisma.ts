@@ -31,7 +31,8 @@ function hasCurrentSchema(): boolean {
       locationModel?.fields.some((f) => f.name === "setupComplete") &&
       locationModel?.fields.some((f) => f.name === "floorPlanWidth") &&
       Prisma.dmmf.datamodel.models.some((m) => m.name === "RolePermissionSet") &&
-      Prisma.dmmf.datamodel.models.some((m) => m.name === "TableReservation")
+      Prisma.dmmf.datamodel.models.some((m) => m.name === "TableReservation") &&
+      Prisma.dmmf.datamodel.models.some((m) => m.name === "LogBookEntry")
   );
 }
 

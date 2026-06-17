@@ -7,6 +7,7 @@ import {
   fillMissingPositions,
   parseFloorPlanSections,
 } from "@/lib/tables/floor-plan";
+import { fitFloorPlanToTables, toTableBounds } from "@/lib/tables/floor-plan-layout";
 
 export default async function TablesPage() {
   const locationId = await getLocationId();
@@ -41,12 +42,26 @@ export default async function TablesPage() {
     },
   });
 
-  const tables = fillMissingPositions(
+  const positioned = fillMissingPositions(
     rawTables,
     location.floorPlanWidth,
     location.floorPlanHeight
-  ).map((t) => ({
+  );
+
+  const sections = parseFloorPlanSections(location.floorPlanSections);
+  const fitted = fitFloorPlanToTables(
+    sections,
+    toTableBounds(positioned),
+    location.floorPlanWidth,
+    location.floorPlanHeight
+  );
+
+  const tables = positioned.map((t, i) => ({
     ...t,
+    posX: fitted.tables[i]?.posX ?? t.posX,
+    posY: fitted.tables[i]?.posY ?? t.posY,
+    width: fitted.tables[i]?.width ?? t.width,
+    height: fitted.tables[i]?.height ?? t.height,
     reservations: t.reservations.map((r) => ({
       id: r.id,
       guestName: r.guestName,
@@ -65,9 +80,9 @@ export default async function TablesPage() {
       <TablesClient
         initialTables={tables}
         initialFloorPlan={{
-          width: location.floorPlanWidth,
-          height: location.floorPlanHeight,
-          sections: parseFloorPlanSections(location.floorPlanSections),
+          width: fitted.width,
+          height: fitted.height,
+          sections: fitted.sections,
         }}
       />
     </div>

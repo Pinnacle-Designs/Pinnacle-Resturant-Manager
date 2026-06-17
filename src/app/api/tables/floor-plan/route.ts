@@ -9,6 +9,7 @@ import {
   serializeFloorPlanSections,
   type FloorPlanSection,
 } from "@/lib/tables/floor-plan";
+import { fitFloorPlanToTables, toTableBounds } from "@/lib/tables/floor-plan-layout";
 
 export async function GET(request: NextRequest) {
   const locationId = await getLocationIdFromRequest(request);
@@ -49,11 +50,27 @@ export async function GET(request: NextRequest) {
     location.floorPlanHeight
   );
 
+  const sections = parseFloorPlanSections(location.floorPlanSections);
+  const fitted = fitFloorPlanToTables(
+    sections,
+    toTableBounds(tables),
+    location.floorPlanWidth,
+    location.floorPlanHeight
+  );
+
+  const fittedTables = tables.map((t, i) => ({
+    ...t,
+    posX: fitted.tables[i]?.posX ?? t.posX,
+    posY: fitted.tables[i]?.posY ?? t.posY,
+    width: fitted.tables[i]?.width ?? t.width,
+    height: fitted.tables[i]?.height ?? t.height,
+  }));
+
   return NextResponse.json({
-    width: location.floorPlanWidth,
-    height: location.floorPlanHeight,
-    sections: parseFloorPlanSections(location.floorPlanSections),
-    tables,
+    width: fitted.width,
+    height: fitted.height,
+    sections: fitted.sections,
+    tables: fittedTables,
   });
 }
 
