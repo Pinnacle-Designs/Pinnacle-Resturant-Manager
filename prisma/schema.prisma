@@ -775,6 +775,8 @@ model StorageZone {
   items         InventoryItem[]
   routeSteps    CountRouteStep[]
   countSessions InventoryCountSession[]
+  countLines    InventoryCountLine[]
+  zoneAssignments CountZoneAssignment[]
   lots          InventoryLot[]
 
   @@unique([locationId, slug])
@@ -818,6 +820,8 @@ model InventoryCountSession {
   location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
   zoneId      String?
   zone        StorageZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  sessionType String       @default("ZONE")
+  periodMonth DateTime?
   status      String       @default("IN_PROGRESS")
   startedBy   String?
   startedAt   DateTime     @default(now())
@@ -826,8 +830,25 @@ model InventoryCountSession {
   createdAt   DateTime     @default(now())
 
   lines InventoryCountLine[]
+  zoneAssignments CountZoneAssignment[]
 
   @@index([locationId, status])
+  @@index([locationId, sessionType, periodMonth])
+}
+
+model CountZoneAssignment {
+  id            String                @id @default(cuid())
+  sessionId     String
+  session       InventoryCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  zoneId        String
+  zone          StorageZone           @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  staffMemberId String
+  staffMember   StaffMember           @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime              @default(now())
+
+  @@unique([sessionId, zoneId])
+  @@index([sessionId])
+  @@index([staffMemberId])
 }
 
 model InventoryCountLine {
@@ -836,18 +857,25 @@ model InventoryCountLine {
   session         InventoryCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   inventoryItemId String
   inventoryItem   InventoryItem         @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  zoneId          String?
+  zone            StorageZone?          @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  locationLabel   String?
   bookQty         Float
   countedQty      Float
   unit            String
   countUnit       String?
   weighedGrams    Float?
+  partialFill     Float?
+  unitBreakdown   String?
   variance        Float                 @default(0)
   notes           String?
   countedAt       DateTime              @default(now())
+  countedBy       String?
   clientId        String?
 
   @@index([sessionId])
   @@index([inventoryItemId])
+  @@index([sessionId, inventoryItemId, zoneId, locationLabel])
 }
 
 model StaffMember {
@@ -886,6 +914,7 @@ model StaffMember {
   shiftFeedback   ShiftFeedback[]
   logBookMentions LogBookMention[]
   wasteLogs       InventoryWaste[]
+  countZoneAssignments CountZoneAssignment[]
 }
 
 model Shift {

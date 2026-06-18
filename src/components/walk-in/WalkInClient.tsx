@@ -25,6 +25,7 @@ import {
   parseAlternateUnits,
   scaleReadingToInventoryUnit,
 } from "@/lib/walk-in/unit-convert";
+import { findItemByBarcode } from "@/lib/walk-in/barcode-match";
 
 interface Zone {
   id: string;
@@ -252,12 +253,12 @@ export function WalkInClient() {
 
   const onBarcode = useCallback(
     (code: string) => {
-      const normalized = code.replace(/\D/g, "");
-      const match =
-        catalog.find((i) => i.barcode === normalized) ??
-        routeSteps.find((s) => s.inventoryItem?.barcode === normalized);
-      if (match) {
-        const item = "inventoryItem" in match ? match.inventoryItem! : match;
+      const catalogMatch = findItemByBarcode(catalog, code);
+      const routeMatch = routeSteps.find(
+        (s) => s.inventoryItem && findItemByBarcode([s.inventoryItem], code)
+      );
+      const item = catalogMatch ?? routeMatch?.inventoryItem;
+      if (item) {
         const idx = routeSteps.findIndex((s) => s.inventoryItemId === item.id);
         if (idx >= 0) setRouteIndex(idx);
         setCountUnit(item.unit);

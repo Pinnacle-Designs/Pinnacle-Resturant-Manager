@@ -10,18 +10,20 @@ import { InventoryScanModal } from "@/components/inventory/InventoryScanModal";
 import { StorageZonesPanel, type StorageZoneRow } from "@/components/inventory/StorageZonesPanel";
 import { InventoryItemsByZone } from "@/components/inventory/InventoryItemsByZone";
 import { WalkInClient } from "@/components/walk-in/WalkInClient";
+import { MonthlyCountClient } from "@/components/inventory/MonthlyCountClient";
 import type { InventoryItem } from "@/components/inventory/types";
 
-type Tab = "items" | "count" | "zones";
+type Tab = "items" | "count" | "monthly" | "zones";
 
 const TABS: { id: Tab; label: string; icon: typeof Package }[] = [
   { id: "items", label: "Items", icon: Package },
   { id: "count", label: "Zone count", icon: ClipboardList },
+  { id: "monthly", label: "Monthly count", icon: ClipboardList },
   { id: "zones", label: "Storage zones", icon: MapPin },
 ];
 
 function tabFromParam(value: string | null): Tab {
-  if (value === "count" || value === "zones") return value;
+  if (value === "count" || value === "zones" || value === "monthly") return value;
   return "items";
 }
 
@@ -185,6 +187,8 @@ export function InventoryClient({
       </div>
 
       {tab === "count" && <WalkInClient />}
+
+      {tab === "monthly" && <MonthlyCountClient />}
 
       {tab === "zones" && <StorageZonesPanel onZonesChange={setZones} />}
 

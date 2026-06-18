@@ -81,4 +81,24 @@ export async function ensureInventoryStorageLayout(locationId: string) {
     });
     await syncRouteStepForItem(item.id, zoneId);
   }
+
+  await ensureCountRoutesForLocation(locationId);
+}
+
+/** Ensure every zoned inventory item has a shelf-to-sheet route step. */
+export async function ensureCountRoutesForLocation(locationId: string) {
+  const items = await prisma.inventoryItem.findMany({
+    where: { locationId, storageZoneId: { not: null } },
+    select: { id: true, storageZoneId: true },
+  });
+
+  for (const item of items) {
+    if (!item.storageZoneId) continue;
+    const step = await prisma.countRouteStep.findFirst({
+      where: { inventoryItemId: item.id },
+    });
+    if (!step || step.zoneId !== item.storageZoneId) {
+      await syncRouteStepForItem(item.id, item.storageZoneId);
+    }
+  }
 }

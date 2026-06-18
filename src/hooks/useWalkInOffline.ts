@@ -59,13 +59,12 @@ async function removeQueued(id: string) {
 }
 
 export function useWalkInOffline(sessionId: string | null) {
-  const [online, setOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [catalog, setCatalog] = useState<unknown[]>([]);
 
   useEffect(() => {
+    setOnline(navigator.onLine);
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener("online", on);
@@ -97,7 +96,9 @@ export function useWalkInOffline(sessionId: string | null) {
     try {
       const res = await fetch("/api/walk-in/catalog");
       if (!res.ok) return;
-      const data = await res.json();
+      const text = await res.text();
+      if (!text.trim()) return;
+      const data = JSON.parse(text) as { items?: unknown[] };
       localStorage.setItem(CATALOG_KEY, JSON.stringify(data.items ?? []));
       setCatalog(data.items ?? []);
     } catch {

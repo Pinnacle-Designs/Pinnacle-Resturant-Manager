@@ -24,6 +24,10 @@ function hasCurrentSchema(): boolean {
   const userModel = Prisma.dmmf.datamodel.models.find((m) => m.name === "User");
   const locationModel = Prisma.dmmf.datamodel.models.find((m) => m.name === "Location");
 
+  const countSessionModel = Prisma.dmmf.datamodel.models.find(
+    (m) => m.name === "InventoryCountSession"
+  );
+
   return Boolean(
     userModel?.fields.some((f) => f.name === "avatarUrl") &&
       userModel?.fields.some((f) => f.name === "isPlatformAdmin") &&
@@ -32,14 +36,20 @@ function hasCurrentSchema(): boolean {
       locationModel?.fields.some((f) => f.name === "floorPlanWidth") &&
       Prisma.dmmf.datamodel.models.some((m) => m.name === "RolePermissionSet") &&
       Prisma.dmmf.datamodel.models.some((m) => m.name === "TableReservation") &&
-      Prisma.dmmf.datamodel.models.some((m) => m.name === "LogBookEntry")
+      Prisma.dmmf.datamodel.models.some((m) => m.name === "LogBookEntry") &&
+      Prisma.dmmf.datamodel.models.some((m) => m.name === "CountZoneAssignment") &&
+      countSessionModel?.fields.some((f) => f.name === "sessionType")
   );
+}
+
+function clientMatchesSchema(client: PrismaClient): boolean {
+  return hasCurrentSchema() && "countZoneAssignment" in client;
 }
 
 function getPrismaClient() {
   const cached = globalForPrisma.prisma;
-  // Hot reload can keep an older Prisma client missing newly added fields.
-  if (cached && hasCurrentSchema()) {
+  // Hot reload can keep an older Prisma client missing newly added models.
+  if (cached && clientMatchesSchema(cached)) {
     return cached;
   }
   const client = createPrismaClient();
