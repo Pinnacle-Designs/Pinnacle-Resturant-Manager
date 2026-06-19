@@ -60,8 +60,9 @@ export function DemoPage() {
               Reset demo
             </button>
             <Link
-              href={activeStop.path}
+              href={embedLaunchUrl(activeStop.path, "full")}
               target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-400"
             >
               <Maximize2 className="h-3.5 w-3.5" />
@@ -119,7 +120,7 @@ export function DemoPage() {
           </div>
         </aside>
 
-        {/* Live app iframe — bootstraps demo session via /embed, then lands on ?embed=1 */}
+        {/* Live app iframe — bootstraps demo session via /api/embed/launch */}
         <div className="relative flex flex-1 flex-col">
           {iframeLoading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/90">

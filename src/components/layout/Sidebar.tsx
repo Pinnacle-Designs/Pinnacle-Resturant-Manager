@@ -100,7 +100,7 @@ export function Sidebar() {
       </nav>
       {user && (
         <div className="border-t border-slate-700 p-4">
-          <Link
+          <EmbedNavLink
             href="/account"
             className={cn(
               "flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-slate-800",
@@ -134,7 +134,7 @@ export function Sidebar() {
               </div>
             </div>
             <Settings className="h-4 w-4 shrink-0 text-slate-500" />
-          </Link>
+          </EmbedNavLink>
           <button
             type="button"
             onClick={logout}

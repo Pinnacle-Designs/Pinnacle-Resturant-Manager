@@ -27,7 +27,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isEmbedRoute = pathname === "/embed";
   const embedParam = searchParams.get("embed");
   const isEmbed = isEmbeddableEmbedParam(embedParam);
-  const isEmbedFull = embedParam === "full";
+  const isEmbedFull = embedParam === "full" || (isEmbed && embedParam !== "mobile" && embedParam !== "1");
   const isEmbedMobile = embedParam === "mobile" || embedParam === "1";
 
   if (isLogin || isSignup || isOnboarding || isDownload || isLegal || isMarketing || isEmbedRoute || isTableside) {
@@ -35,7 +35,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   const showSidebar = !isEmbed || isEmbedFull;
-  const showMobileChrome = !isEmbed || isEmbedMobile || isEmbedFull;
+  const showMobileHeader = !isEmbed || isEmbedMobile;
+  const showMobileNav = !isEmbed || isEmbedMobile;
+  const showDesktopTopBar = !isEmbed;
 
   const mainInner = isEmbedMobile ? (
     <main className="page-content min-h-screen min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
@@ -66,13 +68,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <NotificationProvider>
             <div className="flex min-h-screen min-w-0 overflow-x-hidden">
               {showSidebar && <Sidebar />}
-              <div className={`flex min-w-0 flex-1 flex-col ${showMobileChrome ? "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0" : ""}`}>
-                {showMobileChrome && <MobileHeader />}
-                <DesktopTopBar />
+              <div className={`flex min-w-0 flex-1 flex-col ${showMobileNav ? "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0" : ""}`}>
+                {showMobileHeader && <MobileHeader />}
+                {showDesktopTopBar && <DesktopTopBar />}
                 {mainInner}
               </div>
             </div>
-            {showMobileChrome && <MobileNav />}
+            {showMobileNav && <MobileNav />}
           </NotificationProvider>
         </GlobalSearchProvider>
       </LocationLocaleProvider>

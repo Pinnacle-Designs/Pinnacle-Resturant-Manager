@@ -1,4 +1,4 @@
-interface CriticalInsight {
+export interface CriticalInsight {
   title: string;
   description: string;
   severity: string;

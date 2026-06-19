@@ -123,13 +123,25 @@ export const ANALYTICS_TABS = [
 
 export const DEMO_TOUR_STOPS = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard", blurb: "Daily ops overview" },
-  { id: "insights", label: "Command Center", path: "/insights", blurb: "AI cross-domain Q&A" },
+  { id: "photos", label: "Photos", path: "/photos", blurb: "Menu & facility images" },
   { id: "analytics", label: "Analytics", path: "/analytics", blurb: "12-tab intelligence" },
+  { id: "reports", label: "Reports", path: "/reports", blurb: "Exportable reports" },
+  { id: "insights", label: "Command Center", path: "/insights", blurb: "AI cross-domain Q&A" },
   { id: "orders", label: "Orders", path: "/orders", blurb: "Live order flow" },
-  { id: "inventory", label: "Inventory", path: "/inventory", blurb: "Stock & food cost" },
-  { id: "finances", label: "Finances", path: "/finances", blurb: "Expenses & receipts" },
+  { id: "tables", label: "Tables", path: "/tables", blurb: "Floor plan & seating" },
+  { id: "timeclock", label: "Time Clock", path: "/timeclock", blurb: "Punch in / out" },
   { id: "menu", label: "Menu", path: "/menu", blurb: "Items & pricing" },
+  { id: "kitchen", label: "Kitchen", path: "/kitchen", blurb: "Prep & production" },
+  { id: "boh", label: "BOH", path: "/boh", blurb: "Back-of-house ops" },
+  { id: "kds", label: "KDS", path: "/kds", blurb: "Kitchen display" },
+  { id: "inventory", label: "Inventory", path: "/inventory", blurb: "Stock & food cost" },
+  { id: "purchase-orders", label: "Purchase Orders", path: "/purchase-orders", blurb: "Vendor ordering" },
   { id: "staff", label: "Staff", path: "/staff", blurb: "Team & schedules" },
+  { id: "log-book", label: "Log Book", path: "/log-book", blurb: "Shift notes" },
+  { id: "finances", label: "Finances", path: "/finances", blurb: "Expenses & receipts" },
+  { id: "back-office", label: "Back Office", path: "/back-office", blurb: "Admin & compliance" },
+  { id: "crystal-ball", label: "Crystal Ball", path: "/crystal-ball", blurb: "Forecasting" },
+  { id: "social", label: "Social", path: "/social", blurb: "Marketing & posts" },
 ] as const;
 
 export const HOW_IT_WORKS = [

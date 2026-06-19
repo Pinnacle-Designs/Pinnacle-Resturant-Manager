@@ -1,14 +1,22 @@
 import { DEMO_TOUR_STOPS } from "@/lib/marketing-content";
+import { NAV_ITEMS } from "@/lib/constants";
 
 /** Demo tour routes that may be loaded via `/embed?path=…` */
-export const EMBEDDABLE_DEMO_PATHS = DEMO_TOUR_STOPS.map((stop) => stop.path);
+export const EMBEDDABLE_DEMO_PATHS = [
+  ...new Set([
+    ...DEMO_TOUR_STOPS.map((stop) => stop.path),
+    ...NAV_ITEMS.map((item) => item.href),
+    "/account",
+    "/download",
+  ]),
+];
 
 const EMBEDDABLE_DEMO_PATH_SET = new Set<string>(EMBEDDABLE_DEMO_PATHS);
 
 export type EmbedChrome = "mobile" | "full";
 
 export function resolveEmbedChrome(raw: string | null | undefined): EmbedChrome {
-  return raw === "full" ? "full" : "mobile";
+  return raw === "mobile" || raw === "1" ? "mobile" : "full";
 }
 
 export function embedQueryValue(chrome: EmbedChrome): string {
@@ -25,7 +33,7 @@ export function resolveEmbedPath(raw: string | null | undefined): string {
 }
 
 /** Server-side launch — seeds demo, sets session cookie, redirects to app route. */
-export function embedLaunchUrl(targetPath?: string, chrome: EmbedChrome = "mobile"): string {
+export function embedLaunchUrl(targetPath?: string, chrome: EmbedChrome = "full"): string {
   const path = resolveEmbedPath(targetPath ?? DEMO_TOUR_STOPS[0].path);
   return `/api/embed/launch?path=${encodeURIComponent(path)}&chrome=${chrome}`;
 }

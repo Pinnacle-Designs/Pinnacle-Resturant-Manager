@@ -32,7 +32,6 @@ export function HeroAppEmbed({
   const readyRef = useRef(false);
   const loadCountRef = useRef(0);
 
-  const mobileSrc = embedLaunchUrl(undefined, "mobile");
   const fullSrc = embedLaunchUrl(undefined, "full");
 
   const retryEmbed = useCallback(() => {
@@ -67,7 +66,7 @@ export function HeroAppEmbed({
       }
     }, 20000);
     return () => window.clearTimeout(timer);
-  }, [loading, mobileSrc, fullSrc, expanded]);
+  }, [loading, fullSrc, expanded]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
     if (readyRef.current) return;
@@ -101,7 +100,7 @@ export function HeroAppEmbed({
   const frame = (expandedView: boolean) => (
     <iframe
       key={expandedView ? `modal-${iframeKey}` : `hero-${iframeKey}`}
-      src={`${expandedView ? fullSrc : mobileSrc}${(expandedView ? fullSrc : mobileSrc).includes("?") ? "&" : "?"}_=${iframeKey}`}
+      src={`${expandedView ? fullSrc : fullSrc}${fullSrc.includes("?") ? "&" : "?"}_=${iframeKey}`}
       title={title}
       className={cn(
         "w-full border-0 bg-white",
@@ -126,7 +125,7 @@ export function HeroAppEmbed({
             <span className="h-3 w-3 shrink-0 rounded-full bg-red-400" />
             <span className="h-3 w-3 shrink-0 rounded-full bg-amber-400" />
             <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-400" />
-            <span className="ml-1 truncate text-xs text-slate-400">Live demo — mobile app view</span>
+            <span className="ml-1 truncate text-xs text-slate-400">Live demo — full app</span>
           </div>
           <button
             type="button"
