@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { cn } from "@/lib/utils";
 
 interface DashboardCommand {
@@ -141,7 +142,6 @@ export function ManagerAIAssistant() {
   const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [categoryPrompts, setCategoryPrompts] = useState<Record<string, string[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [showLibrary, setShowLibrary] = useState(false);
   const [search, setSearch] = useState("");
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -336,29 +336,28 @@ export function ManagerAIAssistant() {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-          Quick commands
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {commands.map((cmd) => (
-            <button
-              key={cmd.id}
-              type="button"
-              onClick={() => ask(cmd.question)}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-              {cmd.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Quick actions & response */}
+      <div className="px-6 pb-6">
+      <PageSectionShell pageId="command-center">
+        <PageSection id="cc-quick" title="Quick commands" defaultOpen>
+          <div className="flex flex-wrap gap-2">
+            {commands.map((cmd) => (
+              <button
+                key={cmd.id}
+                type="button"
+                onClick={() => ask(cmd.question)}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                {cmd.label}
+              </button>
+            ))}
+          </div>
+        </PageSection>
 
-      {/* Scanning / response */}
-      <div className="px-6 py-5">
+        <PageSection id="cc-response" title="Analysis results">
+          <div className="px-6 py-5">
         {loading && (
           <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-5">
             <div className="flex items-center gap-2 text-indigo-700">
@@ -499,96 +498,82 @@ export function ManagerAIAssistant() {
             </p>
           </div>
         )}
-      </div>
+          </div>
+        </PageSection>
 
-      {/* Collapsible question library */}
-      <div className="border-t border-slate-100">
-        <button
-          type="button"
-          onClick={() => setShowLibrary(!showLibrary)}
-          className="flex w-full items-center justify-between px-6 py-4 text-left text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          <span>Browse 350+ manager questions</span>
-          {showLibrary ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </button>
-        {showLibrary && (
-          <div className="border-t border-slate-100 px-6 pb-6">
-            <div className="relative mt-4">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search prompts..."
-                className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm"
-              />
-            </div>
-            {searchResults.length > 0 && (
-              <div className="mt-3 max-h-40 space-y-1 overflow-y-auto">
-                {searchResults.map((r) => (
-                  <button
-                    key={r.question}
-                    type="button"
-                    onClick={() => ask(r.question)}
-                    className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
-                  >
-                    <span className="text-xs text-slate-400">{r.categoryLabel} · </span>
-                    {r.question}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mt-4 divide-y divide-slate-100">
-              {categories.map((cat) => (
-                <div key={cat.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExpanded((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(cat.id)) next.delete(cat.id);
-                        else {
-                          next.add(cat.id);
-                          void loadCategory(cat.id);
-                        }
-                        return next;
-                      });
-                    }}
-                    className="flex w-full items-center justify-between py-2.5 text-left text-sm text-slate-700"
-                  >
-                    <span>
-                      {cat.label}
-                      <span className="ml-2 text-xs text-slate-400">({cat.promptCount})</span>
-                    </span>
-                    {expanded.has(cat.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </button>
-                  {expanded.has(cat.id) && categoryPrompts[cat.id] && (
-                    <div className="pb-2 pl-2">
-                      {categoryPrompts[cat.id].map((prompt) => (
-                        <button
-                          key={prompt}
-                          type="button"
-                          onClick={() => ask(prompt)}
-                          className="block w-full rounded px-2 py-1 text-left text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-800"
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+        <PageSection id="cc-library" title="Browse 350+ manager questions">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search prompts..."
+              className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm"
+            />
+          </div>
+          {searchResults.length > 0 && (
+            <div className="mt-3 max-h-40 space-y-1 overflow-y-auto">
+              {searchResults.map((r) => (
+                <button
+                  key={r.question}
+                  type="button"
+                  onClick={() => ask(r.question)}
+                  className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                >
+                  <span className="text-xs text-slate-400">{r.categoryLabel} · </span>
+                  {r.question}
+                </button>
               ))}
             </div>
+          )}
+          <div className="mt-4 divide-y divide-slate-100">
+            {categories.map((cat) => (
+              <div key={cat.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpanded((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(cat.id)) next.delete(cat.id);
+                      else {
+                        next.add(cat.id);
+                        void loadCategory(cat.id);
+                      }
+                      return next;
+                    });
+                  }}
+                  className="flex w-full items-center justify-between py-2.5 text-left text-sm text-slate-700"
+                >
+                  <span>
+                    {cat.label}
+                    <span className="ml-2 text-xs text-slate-400">({cat.promptCount})</span>
+                  </span>
+                  {expanded.has(cat.id) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+                {expanded.has(cat.id) && categoryPrompts[cat.id] && (
+                  <div className="pb-2 pl-2">
+                    {categoryPrompts[cat.id].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => ask(prompt)}
+                        className="block w-full rounded px-2 py-1 text-left text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-800"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+        </PageSection>
+      </PageSectionShell>
       </div>
     </div>
   );

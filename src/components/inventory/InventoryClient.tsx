@@ -11,6 +11,7 @@ import { StorageZonesPanel, type StorageZoneRow } from "@/components/inventory/S
 import { InventoryItemsByZone } from "@/components/inventory/InventoryItemsByZone";
 import { WalkInClient } from "@/components/walk-in/WalkInClient";
 import { MonthlyCountClient } from "@/components/inventory/MonthlyCountClient";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import type { InventoryItem } from "@/components/inventory/types";
 
 type Tab = "items" | "count" | "monthly" | "zones";
@@ -190,47 +191,69 @@ export function InventoryClient({
 
       {tab === "monthly" && <MonthlyCountClient />}
 
-      {tab === "zones" && <StorageZonesPanel onZonesChange={setZones} />}
+      {tab === "zones" && (
+        <PageSectionShell pageId="inventory-zones">
+          <PageSection
+            id="storage-zones"
+            title="Storage zones"
+            description="Organize inventory by walk-in and cooler locations"
+            defaultOpen
+          >
+            <StorageZonesPanel onZonesChange={setZones} />
+          </PageSection>
+        </PageSectionShell>
+      )}
 
       {tab === "items" && (
-        <>
-          <div className="mb-6 flex flex-wrap justify-end gap-2">
-            <Button variant="secondary" onClick={() => setScanOpen(true)}>
-              <ScanLine className="h-4 w-4" />
-              Scan &amp; receive
-            </Button>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              Add Item
-            </Button>
-          </div>
+        <PageSectionShell pageId="inventory-items">
+          <PageSection
+            id="inv-actions"
+            title="Actions"
+            description="Receive stock via barcode or add items manually"
+            headerActions={
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setScanOpen(true)}>
+                  <ScanLine className="h-4 w-4" />
+                  Scan &amp; receive
+                </Button>
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
+            }
+          >
+            <span className="sr-only">Inventory actions</span>
+          </PageSection>
 
-          {items.length === 0 ? (
-            <EmptyState
-              icon={<Package className="h-12 w-12" />}
-              title="No inventory items"
-              description="Scan a barcode to receive stock, or add items manually."
-              action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Button onClick={() => setScanOpen(true)}>
-                    <ScanLine className="h-4 w-4" />
-                    Scan &amp; receive
-                  </Button>
-                  <Button variant="secondary" onClick={openCreate}>
-                    Add manually
-                  </Button>
-                </div>
-              }
-            />
-          ) : (
-            <InventoryItemsByZone
-              items={items}
-              zones={zones}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-            />
-          )}
-        </>
+          <PageSection id="inv-items" title="Inventory by zone" defaultOpen>
+            {items.length === 0 ? (
+              <EmptyState
+                icon={<Package className="h-12 w-12" />}
+                title="No inventory items"
+                description="Scan a barcode to receive stock, or add items manually."
+                action={
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button onClick={() => setScanOpen(true)}>
+                      <ScanLine className="h-4 w-4" />
+                      Scan &amp; receive
+                    </Button>
+                    <Button variant="secondary" onClick={openCreate}>
+                      Add manually
+                    </Button>
+                  </div>
+                }
+              />
+            ) : (
+              <InventoryItemsByZone
+                items={items}
+                zones={zones}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+              />
+            )}
+          </PageSection>
+        </PageSectionShell>
       )}
 
       <InventoryScanModal

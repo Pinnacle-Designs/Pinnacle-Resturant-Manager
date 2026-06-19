@@ -15,10 +15,10 @@ import {
   FileText,
   Calendar,
   Globe,
-  MousePointerClick,
   BarChart3,
 } from "lucide-react";
 import { Button, Badge, EmptyState, StatCard } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { Input, Textarea, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import {
@@ -280,36 +280,40 @@ export function SocialClient({
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Connected Platforms"
-          value={connectedAccounts.length}
-          subtext={`of ${SOCIAL_PLATFORMS.length} available`}
-        />
-        <StatCard
-          label="Total Followers"
-          value={totalFollowers.toLocaleString()}
-          subtext="Across all accounts"
-        />
-        <StatCard
-          label="Published Posts"
-          value={publishedCount}
-          subtext={`${scheduledCount} scheduled`}
-        />
-        {websiteConnected && website ? (
-          <StatCard
-            label="Website Visitors"
-            value={website.visitors30d.toLocaleString()}
-            subtext="Last 30 days"
-          />
-        ) : (
-          <StatCard
-            label="Website"
-            value="Not connected"
-            subtext="Connect to track traffic"
-          />
-        )}
-      </div>
+      <PageSectionShell pageId="social-overview">
+        <PageSection id="social-stats" title="Overview" defaultOpen>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Connected Platforms"
+              value={connectedAccounts.length}
+              subtext={`of ${SOCIAL_PLATFORMS.length} available`}
+            />
+            <StatCard
+              label="Total Followers"
+              value={totalFollowers.toLocaleString()}
+              subtext="Across all accounts"
+            />
+            <StatCard
+              label="Published Posts"
+              value={publishedCount}
+              subtext={`${scheduledCount} scheduled`}
+            />
+            {websiteConnected && website ? (
+              <StatCard
+                label="Website Visitors"
+                value={website.visitors30d.toLocaleString()}
+                subtext="Last 30 days"
+              />
+            ) : (
+              <StatCard
+                label="Website"
+                value="Not connected"
+                subtext="Connect to track traffic"
+              />
+            )}
+          </div>
+        </PageSection>
+      </PageSectionShell>
 
       <div className="mt-6 flex gap-1 rounded-lg border bg-white p-1">
         {tabs.map(({ id, label, icon: Icon }) => (
@@ -329,7 +333,13 @@ export function SocialClient({
       </div>
 
       {tab === "accounts" && (
-        <div className="mt-6 space-y-6">
+        <PageSectionShell pageId="social-accounts">
+          <PageSection
+            id="social-website"
+            title="Restaurant website"
+            description="Connect your website to track visitors alongside social performance."
+            defaultOpen
+          >
           <div className="card border-2 border-indigo-200 bg-indigo-50">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -403,7 +413,13 @@ export function SocialClient({
               </div>
             )}
           </div>
+          </PageSection>
 
+          <PageSection
+            id="social-platforms"
+            title="Social accounts"
+            description="Connect platforms to publish posts."
+          >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SOCIAL_PLATFORMS.map((platform) => {
             const account = accountForPlatform(platform.value);
@@ -486,12 +502,14 @@ export function SocialClient({
             );
           })}
           </div>
-        </div>
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {tab === "traffic" && (
-        <div className="mt-6">
+        <PageSectionShell pageId="social-traffic">
           {!websiteConnected || !website ? (
+            <PageSection id="social-traffic-empty" title="Website traffic" defaultOpen>
             <EmptyState
               icon={<Globe className="h-12 w-12" />}
               title="Connect your website"
@@ -503,103 +521,89 @@ export function SocialClient({
                 </Button>
               }
             />
+            </PageSection>
           ) : (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-slate-900">Website traffic</h3>
-                  <a
-                    href={website.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-orange-600 hover:underline"
-                  >
-                    {website.url}
-                  </a>
-                  {website.lastSyncedAt && (
-                    <p className="text-xs text-slate-400">
-                      Last synced {formatDate(website.lastSyncedAt)}
-                    </p>
-                  )}
+            <>
+              <PageSection
+                id="social-traffic-summary"
+                title="Website traffic"
+                description={website.url}
+                defaultOpen
+                headerActions={
+                  <Button size="sm" variant="secondary" onClick={handleSyncWebsite} disabled={connecting}>
+                    <RefreshCw className="h-3 w-3" />
+                    {connecting ? "Syncing..." : "Sync traffic"}
+                  </Button>
+                }
+              >
+                {website.lastSyncedAt && (
+                  <p className="mb-4 text-xs text-slate-400">
+                    Last synced {formatDate(website.lastSyncedAt)}
+                  </p>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <StatCard
+                    label="Visitors"
+                    value={website.visitors30d.toLocaleString()}
+                    subtext="Last 30 days"
+                  />
+                  <StatCard
+                    label="Page views"
+                    value={website.pageViews30d.toLocaleString()}
+                    subtext={`${website.sessions30d.toLocaleString()} sessions`}
+                  />
+                  <StatCard
+                    label="Bounce rate"
+                    value={`${website.bounceRate.toFixed(1)}%`}
+                    subtext="Single-page sessions"
+                  />
+                  <StatCard
+                    label="Avg. session"
+                    value={`${Math.floor(website.avgSessionSec / 60)}m ${website.avgSessionSec % 60}s`}
+                    subtext="Time on site"
+                  />
                 </div>
-                <Button size="sm" variant="secondary" onClick={handleSyncWebsite} disabled={connecting}>
-                  <RefreshCw className="h-3 w-3" />
-                  {connecting ? "Syncing..." : "Sync traffic"}
-                </Button>
-              </div>
+              </PageSection>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                  label="Visitors"
-                  value={website.visitors30d.toLocaleString()}
-                  subtext="Last 30 days"
-                />
-                <StatCard
-                  label="Page views"
-                  value={website.pageViews30d.toLocaleString()}
-                  subtext={`${website.sessions30d.toLocaleString()} sessions`}
-                />
-                <StatCard
-                  label="Bounce rate"
-                  value={`${website.bounceRate.toFixed(1)}%`}
-                  subtext="Single-page sessions"
-                />
-                <StatCard
-                  label="Avg. session"
-                  value={`${Math.floor(website.avgSessionSec / 60)}m ${website.avgSessionSec % 60}s`}
-                  subtext="Time on site"
-                />
-              </div>
+              <PageSection id="social-traffic-pages" title="Top pages">
+                <ul className="space-y-3">
+                  {parseTopPages(website.topPages).map((page) => (
+                    <li key={page.path} className="flex items-center justify-between text-sm">
+                      <span className="font-mono text-slate-700">{page.path}</span>
+                      <span className="text-slate-500">{page.views.toLocaleString()} views</span>
+                    </li>
+                  ))}
+                </ul>
+              </PageSection>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="card">
-                  <div className="flex items-center gap-2">
-                    <MousePointerClick className="h-4 w-4 text-slate-500" />
-                    <h4 className="font-medium text-slate-900">Top pages</h4>
-                  </div>
-                  <ul className="mt-4 space-y-3">
-                    {parseTopPages(website.topPages).map((page) => (
-                      <li key={page.path} className="flex items-center justify-between text-sm">
-                        <span className="font-mono text-slate-700">{page.path}</span>
-                        <span className="text-slate-500">{page.views.toLocaleString()} views</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="card">
-                  <div className="flex items-center gap-2">
-                    <Share2 className="h-4 w-4 text-slate-500" />
-                    <h4 className="font-medium text-slate-900">Traffic sources</h4>
-                  </div>
-                  <ul className="mt-4 space-y-3">
-                    {parseReferrers(website.referrers).map((ref) => (
-                      <li key={ref.source}>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-700">{ref.source}</span>
-                          <span className="text-slate-500">{ref.pct}%</span>
-                        </div>
-                        <div className="mt-1 h-2 rounded-full bg-slate-100">
-                          <div
-                            className="h-2 rounded-full bg-indigo-500"
-                            style={{ width: `${ref.pct}%` }}
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+              <PageSection id="social-traffic-sources" title="Traffic sources">
+                <ul className="space-y-3">
+                  {parseReferrers(website.referrers).map((ref) => (
+                    <li key={ref.source}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-700">{ref.source}</span>
+                        <span className="text-slate-500">{ref.pct}%</span>
+                      </div>
+                      <div className="mt-1 h-2 rounded-full bg-slate-100">
+                        <div
+                          className="h-2 rounded-full bg-indigo-500"
+                          style={{ width: `${ref.pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </PageSection>
+            </>
           )}
-        </div>
+        </PageSectionShell>
       )}
 
       {tab === "compose" && (
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="card lg:col-span-2 space-y-4">
-            <h2 className="font-semibold text-slate-900">Create Post</h2>
-
+        <PageSectionShell pageId="social-compose">
+          <div className="grid gap-6 lg:grid-cols-3">
+          <PageSection id="social-compose-form" title="Create post" defaultOpen className="lg:col-span-2">
+          <div className="space-y-4">
             <FormField label={`Content${charLimit < 63206 ? ` (max ${charLimit} chars)` : ""}`}>
               <Textarea
                 value={content}
@@ -666,10 +670,11 @@ export function SocialClient({
               </Button>
             </div>
           </div>
+          </PageSection>
 
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-slate-900">Platforms</h2>
+          <PageSection id="social-compose-platforms" title="Platforms">
+          <div className="space-y-4">
+            <div className="flex items-center justify-end">
               {connectedAccounts.length > 0 && (
                 <button
                   type="button"
@@ -682,7 +687,6 @@ export function SocialClient({
                 </button>
               )}
             </div>
-
             {connectedAccounts.length === 0 ? (
               <EmptyState
                 icon={<Link2 className="h-12 w-12" />}
@@ -736,11 +740,15 @@ export function SocialClient({
               </div>
             )}
           </div>
-        </div>
+          </PageSection>
+          </div>
+        </PageSectionShell>
       )}
 
       {tab === "posts" && (
-        <div className="mt-6 space-y-4">
+        <PageSectionShell pageId="social-posts">
+          <PageSection id="social-posts-list" title="Posts" defaultOpen>
+          <div className="space-y-4">
           {posts.length === 0 ? (
             <EmptyState
               icon={<FileText className="h-12 w-12" />}
@@ -846,7 +854,9 @@ export function SocialClient({
               </div>
             ))
           )}
-        </div>
+          </div>
+          </PageSection>
+        </PageSectionShell>
       )}
 
       <Modal

@@ -8,10 +8,9 @@ import {
   Package,
   Users,
   DollarSign,
-  AlertTriangle,
   ArrowRight,
 } from "lucide-react";
-import { PageHeader, StatCard, Badge } from "@/components/ui";
+import { PageHeader, StatCard, Badge, CollapsibleSection, CollapsibleGroup } from "@/components/ui";
 import { InsightPanel } from "@/components/insights/InsightPanel";
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
 import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
@@ -139,72 +138,77 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {canViewFinances && (
-          <>
+      <CollapsibleGroup defaultExpanded="all">
+        <CollapsibleSection id="stats" title="Overview" defaultOpen>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {canViewFinances && (
+              <>
+                <StatCard
+                  label="Weekly Revenue"
+                  value={formatCurrency(data.weeklyRevenue)}
+                  subtext={`${data.weeklyOrders} orders this week`}
+                />
+                <StatCard
+                  label="Monthly Expenses"
+                  value={formatCurrency(data.monthlyExpenses)}
+                  subtext="Last 30 days"
+                />
+              </>
+            )}
             <StatCard
-              label="Weekly Revenue"
-              value={formatCurrency(data.weeklyRevenue)}
-              subtext={`${data.weeklyOrders} orders this week`}
+              label="Active Staff"
+              value={data.staffCount}
+              subtext={`${data.menuCount} menu items`}
             />
             <StatCard
-              label="Monthly Expenses"
-              value={formatCurrency(data.monthlyExpenses)}
-              subtext="Last 30 days"
+              label="Photos Uploaded"
+              value={data.photoCount}
+              subtext={`${data.lowStockCount} low stock alerts`}
             />
-          </>
-        )}
-        <StatCard
-          label="Active Staff"
-          value={data.staffCount}
-          subtext={`${data.menuCount} menu items`}
-        />
-        <StatCard
-          label="Photos Uploaded"
-          value={data.photoCount}
-          subtext={`${data.lowStockCount} low stock alerts`}
-        />
-        {!canViewFinances && (
-          <StatCard
-            label="Orders This Week"
-            value={data.weeklyOrders}
-            subtext="Open orders from your team"
-          />
-        )}
-      </div>
-
-      {data.lowStock.length > 0 && (
-        <div className="mt-6 card border-amber-200 bg-amber-50">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <h2 className="font-semibold text-amber-900">Low Stock Alerts</h2>
+            {!canViewFinances && (
+              <StatCard
+                label="Orders This Week"
+                value={data.weeklyOrders}
+                subtext="Open orders from your team"
+              />
+            )}
           </div>
-          <ul className="mt-3 space-y-1">
-            {data.lowStock.map((item) => (
-              <li key={item.id} className="text-sm text-amber-800">
-                {item.name}: {item.quantity} {item.unit} (min: {item.minQuantity})
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/inventory"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-900"
+        </CollapsibleSection>
+
+        {data.lowStock.length > 0 && (
+          <CollapsibleSection
+            id="low-stock"
+            title="Low Stock Alerts"
+            badge={
+              <Badge className="bg-amber-100 text-amber-900">{data.lowStock.length}</Badge>
+            }
+            className="mt-4 border-amber-200"
+            defaultOpen
           >
-            View inventory <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      )}
+            <ul className="space-y-1">
+              {data.lowStock.map((item) => (
+                <li key={item.id} className="text-sm text-amber-800">
+                  {item.name}: {item.quantity} {item.unit} (min: {item.minQuantity})
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/inventory"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-900"
+            >
+              View inventory <ArrowRight className="h-4 w-4" />
+            </Link>
+          </CollapsibleSection>
+        )}
 
-      {canViewInsights && (
-        <div className="mt-8">
-          <InsightPanel insights={data.insights} />
-        </div>
-      )}
+        {canViewInsights && (
+          <CollapsibleSection id="insights" title="AI Business Insights" className="mt-4" defaultOpen>
+            <InsightPanel insights={data.insights} />
+          </CollapsibleSection>
+        )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="card">
-          <h2 className="font-semibold text-slate-900">Quick Actions</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <CollapsibleSection id="quick-actions" title="Quick Actions" className="mt-4" defaultOpen>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Link href="/photos" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
               <Camera className="h-5 w-5 text-orange-500" />
               <span className="text-sm font-medium">Upload Photo</span>
@@ -234,14 +238,13 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               </Link>
             )}
           </div>
-        </div>
+        </CollapsibleSection>
 
-        <div className="card">
-          <h2 className="font-semibold text-slate-900">Recent Activity</h2>
+        <CollapsibleSection id="activity" title="Recent Activity" className="mt-4" defaultOpen>
           {data.activity.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No activity yet.</p>
+            <p className="text-sm text-slate-500">No activity yet.</p>
           ) : (
-            <ul className="mt-4 space-y-3">
+            <ul className="space-y-3">
               {data.activity.map((log) => (
                 <li key={log.id} className="flex items-start gap-3 text-sm">
                   <Badge className="bg-slate-100 text-slate-600 shrink-0">{log.action}</Badge>
@@ -250,8 +253,8 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               ))}
             </ul>
           )}
-        </div>
-      </div>
+        </CollapsibleSection>
+      </CollapsibleGroup>
     </div>
   );
 }

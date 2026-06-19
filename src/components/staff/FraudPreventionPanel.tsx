@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MapPin, Shield, Fingerprint, Camera, Loader2 } from "lucide-react";
+import { MapPin, Camera, Loader2 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Input, Select, FormField } from "@/components/ui/form";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { punchVerificationLabel, PUNCH_VERIFICATION_MODES } from "@/lib/timeclock/types";
 
 interface FraudSettings {
@@ -79,19 +80,13 @@ export function FraudPreventionPanel() {
   const geoConfigured = location.latitude != null && location.longitude != null;
 
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <div className="mb-4 flex items-start gap-3">
-          <Shield className="mt-0.5 h-5 w-5 text-orange-600" />
-          <div>
-            <h2 className="font-semibold text-slate-900">Ironclad fraud prevention</h2>
-            <p className="text-sm text-slate-500">
-              Block buddy punching and early clock-ins. Photo or device biometrics prove who punched.
-              GPS geofencing blocks mobile punches off property.
-            </p>
-          </div>
-        </div>
-
+    <PageSectionShell pageId="fraud-prevention">
+      <PageSection
+        id="fraud-identity-geo"
+        title="Ironclad fraud prevention"
+        description="Block buddy punching and early clock-ins. Photo or device biometrics prove who punched. GPS geofencing blocks mobile punches off property."
+        defaultOpen
+      >
         {message && (
           <p className="mb-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</p>
         )}
@@ -185,14 +180,9 @@ export function FraudPreventionPanel() {
             </div>
           </div>
         </div>
-      </div>
+      </PageSection>
 
-      <div className="card">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Fingerprint className="h-4 w-4" />
-          Riding the clock prevention
-        </h3>
-
+      <PageSection id="fraud-clock-prevention" title="Riding the clock prevention">
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Early clock-in buffer (minutes before shift)">
             <Input
@@ -249,7 +239,7 @@ export function FraudPreventionPanel() {
             </label>
           </div>
         </div>
-      </div>
-    </div>
+      </PageSection>
+    </PageSectionShell>
   );
 }

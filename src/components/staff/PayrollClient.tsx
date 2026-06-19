@@ -18,6 +18,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { JOB_ROLES, TIPPED_JOB_ROLES } from "@/lib/payroll/job-roles";
 import { getDefaultPayPeriod } from "@/lib/payroll/compute";
 import type { PayrollPreview } from "@/lib/payroll/types";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface StaffMember {
   id: string;
@@ -246,196 +247,222 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
       )}
 
       {section === "preview" && (
-        <div className="space-y-4">
-          <ForgottenClockOutAlert variant="banner" />
-          <ComplianceAlertsBanner variant="banner" />
+        <PageSectionShell pageId="payroll-preview">
+          <PageSection id="payroll-alerts" title="Alerts" defaultOpen>
+            <ForgottenClockOutAlert variant="banner" />
+            <ComplianceAlertsBanner variant="banner" />
+          </PageSection>
           {loading || !preview ? (
-            <p className="text-sm text-slate-500">Calculating payroll…</p>
+            <PageSection id="payroll-loading" title="Pay preview">
+              <p className="text-sm text-slate-500">Calculating payroll…</p>
+            </PageSection>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Stat label="Gross payroll" value={formatCurrency(preview.totals.grossPay)} />
-                <Stat label="Tips in period" value={formatCurrency(preview.totals.tips)} />
-                <Stat label="Overtime pay" value={formatCurrency(preview.totals.overtimePay)} />
-                <Stat label="Tip credit makeup" value={formatCurrency(preview.totals.tipCreditMakeup)} />
-              </div>
-              <div className="overflow-x-auto rounded-xl border bg-white">
-                <table className="min-w-full text-sm">
-                  <thead className="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3">Employee</th>
-                      <th className="px-4 py-3">Reg hrs</th>
-                      <th className="px-4 py-3">OT hrs</th>
-                      <th className="px-4 py-3">Base pay</th>
-                      <th className="px-4 py-3">OT pay</th>
-                      <th className="px-4 py-3">Split-shift</th>
-                      <th className="px-4 py-3">Tips</th>
-                      <th className="px-4 py-3">Makeup</th>
-                      <th className="px-4 py-3">Gross</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.employees.map((row) => (
-                      <tr key={row.staffMemberId} className="border-b last:border-0">
-                        <td className="px-4 py-3 font-medium">{row.name}</td>
-                        <td className="px-4 py-3">{row.regularHours.toFixed(1)}</td>
-                        <td className="px-4 py-3">{row.overtimeHours.toFixed(1)}</td>
-                        <td className="px-4 py-3">{formatCurrency(row.regularPay)}</td>
-                        <td className="px-4 py-3">{formatCurrency(row.overtimePay)}</td>
-                        <td className="px-4 py-3">{formatCurrency(row.splitShiftPay)}</td>
-                        <td className="px-4 py-3">{formatCurrency(row.tipsAllocated)}</td>
-                        <td className="px-4 py-3">{formatCurrency(row.tipCreditMakeup)}</td>
-                        <td className="px-4 py-3 font-semibold">{formatCurrency(row.grossPay)}</td>
+              <PageSection id="payroll-totals" title="Period totals" defaultOpen>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Stat label="Gross payroll" value={formatCurrency(preview.totals.grossPay)} />
+                  <Stat label="Tips in period" value={formatCurrency(preview.totals.tips)} />
+                  <Stat label="Overtime pay" value={formatCurrency(preview.totals.overtimePay)} />
+                  <Stat label="Tip credit makeup" value={formatCurrency(preview.totals.tipCreditMakeup)} />
+                </div>
+              </PageSection>
+              <PageSection id="payroll-table" title="Employee breakdown">
+                <div className="overflow-x-auto rounded-xl border bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3">Reg hrs</th>
+                        <th className="px-4 py-3">OT hrs</th>
+                        <th className="px-4 py-3">Base pay</th>
+                        <th className="px-4 py-3">OT pay</th>
+                        <th className="px-4 py-3">Split-shift</th>
+                        <th className="px-4 py-3">Tips</th>
+                        <th className="px-4 py-3">Makeup</th>
+                        <th className="px-4 py-3">Gross</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex gap-2">
+                    </thead>
+                    <tbody>
+                      {preview.employees.map((row) => (
+                        <tr key={row.staffMemberId} className="border-b last:border-0">
+                          <td className="px-4 py-3 font-medium">{row.name}</td>
+                          <td className="px-4 py-3">{row.regularHours.toFixed(1)}</td>
+                          <td className="px-4 py-3">{row.overtimeHours.toFixed(1)}</td>
+                          <td className="px-4 py-3">{formatCurrency(row.regularPay)}</td>
+                          <td className="px-4 py-3">{formatCurrency(row.overtimePay)}</td>
+                          <td className="px-4 py-3">{formatCurrency(row.splitShiftPay)}</td>
+                          <td className="px-4 py-3">{formatCurrency(row.tipsAllocated)}</td>
+                          <td className="px-4 py-3">{formatCurrency(row.tipCreditMakeup)}</td>
+                          <td className="px-4 py-3 font-semibold">{formatCurrency(row.grossPay)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </PageSection>
+              <PageSection id="payroll-actions" title="Actions">
                 <Button onClick={createPayrollRun} disabled={saving}>
                   <Banknote className="h-4 w-4" />
                   Create pay run draft
                 </Button>
-              </div>
+              </PageSection>
             </>
           )}
-        </div>
+        </PageSectionShell>
       )}
 
       {section === "tips" && preview && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Mode: <Badge>{preview.tipPoolMode.replace("_", " ")}</Badge> · Total tips{" "}
-            {formatCurrency(preview.totalTips)}
-          </p>
-          <div className="overflow-x-auto rounded-xl border bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Hours</th>
-                  <th className="px-4 py-3">Points</th>
-                  <th className="px-4 py-3">Share</th>
-                  <th className="px-4 py-3">Tips</th>
-                  <th className="px-4 py-3">Min-wage makeup</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.tipAllocations
-                  .filter((a) => a.tipsAmount > 0 || a.tipCreditMakeup > 0)
-                  .map((row) => (
-                    <tr key={row.staffMemberId} className="border-b last:border-0">
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
-                      <td className="px-4 py-3">{row.hoursWorked.toFixed(1)}</td>
-                      <td className="px-4 py-3">{row.tipPoints}</td>
-                      <td className="px-4 py-3">{row.sharePercent.toFixed(1)}%</td>
-                      <td className="px-4 py-3">{formatCurrency(row.tipsAmount)}</td>
-                      <td className="px-4 py-3">{formatCurrency(row.tipCreditMakeup)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          <Button onClick={runTipPool} disabled={saving}>
-            Finalize tip pool for period
-          </Button>
-        </div>
+        <PageSectionShell pageId="payroll-tips">
+          <PageSection id="tip-pool-info" title="Tip pooling" defaultOpen>
+            <p className="text-sm text-slate-600">
+              Mode: <Badge>{preview.tipPoolMode.replace("_", " ")}</Badge> · Total tips{" "}
+              {formatCurrency(preview.totalTips)}
+            </p>
+          </PageSection>
+          <PageSection id="tip-allocations" title="Allocations">
+            <div className="overflow-x-auto rounded-xl border bg-white">
+              <table className="min-w-full text-sm">
+                <thead className="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Employee</th>
+                    <th className="px-4 py-3">Hours</th>
+                    <th className="px-4 py-3">Points</th>
+                    <th className="px-4 py-3">Share</th>
+                    <th className="px-4 py-3">Tips</th>
+                    <th className="px-4 py-3">Min-wage makeup</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.tipAllocations
+                    .filter((a) => a.tipsAmount > 0 || a.tipCreditMakeup > 0)
+                    .map((row) => (
+                      <tr key={row.staffMemberId} className="border-b last:border-0">
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.hoursWorked.toFixed(1)}</td>
+                        <td className="px-4 py-3">{row.tipPoints}</td>
+                        <td className="px-4 py-3">{row.sharePercent.toFixed(1)}%</td>
+                        <td className="px-4 py-3">{formatCurrency(row.tipsAmount)}</td>
+                        <td className="px-4 py-3">{formatCurrency(row.tipCreditMakeup)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </PageSection>
+          <PageSection id="tip-pool-actions" title="Finalize">
+            <Button onClick={runTipPool} disabled={saving}>
+              Finalize tip pool for period
+            </Button>
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {section === "rates" && (
-        <div className="space-y-4">
-          <FormField label="Employee">
-            <Select
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-            >
-              {activeStaff.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.role})
-                </option>
+        <PageSectionShell pageId="payroll-rates">
+          <PageSection id="rates-employee" title="Employee" defaultOpen>
+            <FormField label="Employee">
+              <Select
+                value={selectedStaffId}
+                onChange={(e) => setSelectedStaffId(e.target.value)}
+              >
+                {activeStaff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.role})
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <p className="mt-3 text-sm text-slate-600">
+              Set hourly rates per job hat (Server, Bartender, Trainer, etc.). Employees pick their role
+              at clock-in; each punch stores its own rate. Split shifts the same day keep separate wage
+              segments — enable split-shift premium under Settings.
+            </p>
+          </PageSection>
+          <PageSection id="rates-list" title="Role rates">
+            <div className="space-y-3">
+              {roleRates.map((rate, idx) => (
+                <div key={idx} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-4">
+                  <FormField label="Role">
+                    <Select
+                      value={rate.role}
+                      onChange={(e) => {
+                        const next = [...roleRates];
+                        next[idx] = { ...rate, role: e.target.value };
+                        setRoleRates(next);
+                      }}
+                    >
+                      {JOB_ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="Hourly rate">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={rate.hourlyRate}
+                      onChange={(e) => {
+                        const next = [...roleRates];
+                        next[idx] = { ...rate, hourlyRate: parseFloat(e.target.value) || 0 };
+                        setRoleRates(next);
+                      }}
+                    />
+                  </FormField>
+                  <FormField label="Tip points">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={rate.tipPoints}
+                      onChange={(e) => {
+                        const next = [...roleRates];
+                        next[idx] = { ...rate, tipPoints: parseFloat(e.target.value) || 1 };
+                        setRoleRates(next);
+                      }}
+                    />
+                  </FormField>
+                  <FormField label="Tipped role">
+                    <Select
+                      value={rate.isTippedRole ? "yes" : "no"}
+                      onChange={(e) => {
+                        const next = [...roleRates];
+                        next[idx] = { ...rate, isTippedRole: e.target.value === "yes" };
+                        setRoleRates(next);
+                      }}
+                    >
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </Select>
+                  </FormField>
+                </div>
               ))}
-            </Select>
-          </FormField>
-          <p className="text-sm text-slate-600">
-            Set hourly rates per job hat (Server, Bartender, Trainer, etc.). Employees pick their role
-            at clock-in; each punch stores its own rate. Split shifts the same day keep separate wage
-            segments — enable split-shift premium under Settings.
-          </p>
-          <div className="space-y-3">
-            {roleRates.map((rate, idx) => (
-              <div key={idx} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-4">
-                <FormField label="Role">
-                  <Select
-                    value={rate.role}
-                    onChange={(e) => {
-                      const next = [...roleRates];
-                      next[idx] = { ...rate, role: e.target.value };
-                      setRoleRates(next);
-                    }}
-                  >
-                    {JOB_ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField label="Hourly rate">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={rate.hourlyRate}
-                    onChange={(e) => {
-                      const next = [...roleRates];
-                      next[idx] = { ...rate, hourlyRate: parseFloat(e.target.value) || 0 };
-                      setRoleRates(next);
-                    }}
-                  />
-                </FormField>
-                <FormField label="Tip points">
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={rate.tipPoints}
-                    onChange={(e) => {
-                      const next = [...roleRates];
-                      next[idx] = { ...rate, tipPoints: parseFloat(e.target.value) || 1 };
-                      setRoleRates(next);
-                    }}
-                  />
-                </FormField>
-                <FormField label="Tipped role">
-                  <Select
-                    value={rate.isTippedRole ? "yes" : "no"}
-                    onChange={(e) => {
-                      const next = [...roleRates];
-                      next[idx] = { ...rate, isTippedRole: e.target.value === "yes" };
-                      setRoleRates(next);
-                    }}
-                  >
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </Select>
-                </FormField>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={addRoleRate}>
-              Add role rate
-            </Button>
-            <Button onClick={saveRoleRates} disabled={saving}>
-              Save rates
-            </Button>
-          </div>
-        </div>
+            </div>
+          </PageSection>
+          <PageSection id="rates-actions" title="Save">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={addRoleRate}>
+                Add role rate
+              </Button>
+              <Button onClick={saveRoleRates} disabled={saving}>
+                Save rates
+              </Button>
+            </div>
+          </PageSection>
+        </PageSectionShell>
       )}
 
-      {section === "ewa" && settings && <EwaPanel enabled={settings.ewaEnabled} />}
+      {section === "ewa" && settings && (
+        <PageSectionShell pageId="payroll-ewa">
+          <PageSection id="ewa-panel" title="On-demand pay" defaultOpen>
+            <EwaPanel enabled={settings.ewaEnabled} />
+          </PageSection>
+        </PageSectionShell>
+      )}
 
       {section === "settings" && settings && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SettingsCard title="Wage compliance">
+        <PageSectionShell pageId="payroll-settings">
+          <PageSection id="settings-wage" title="Wage compliance" defaultOpen>
             <NumberField
               label="Minimum wage"
               value={settings.minimumWage}
@@ -451,8 +478,8 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
               value={settings.tipCredit}
               onChange={(v) => setSettings({ ...settings, tipCredit: v })}
             />
-          </SettingsCard>
-          <SettingsCard title="Overtime">
+          </PageSection>
+          <PageSection id="settings-ot" title="Overtime">
             <NumberField
               label="Weekly OT threshold (hrs)"
               value={settings.weeklyOtThresholdHours}
@@ -487,8 +514,8 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
               />
               Use blended OT rate (FLSA weighted average)
             </label>
-          </SettingsCard>
-          <SettingsCard title="Split-shift premium">
+          </PageSection>
+          <PageSection id="settings-split" title="Split-shift premium">
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -509,8 +536,8 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
               value={settings.splitShiftMinGapMinutes}
               onChange={(v) => setSettings({ ...settings, splitShiftMinGapMinutes: v })}
             />
-          </SettingsCard>
-          <SettingsCard title="Tip pooling">
+          </PageSection>
+          <PageSection id="settings-tips" title="Tip pooling">
             <FormField label="Pool mode">
               <Select
                 value={settings.tipPoolMode}
@@ -522,8 +549,8 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
                 <option value="ROLE_WEIGHTED">Role-weighted pool</option>
               </Select>
             </FormField>
-          </SettingsCard>
-          <SettingsCard title="Earned wage access (EWA)">
+          </PageSection>
+          <PageSection id="settings-ewa" title="Earned wage access (EWA)">
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -542,13 +569,13 @@ export function PayrollClient({ staff }: { staff: StaffMember[] }) {
               value={settings.ewaMaxPerAdvance}
               onChange={(v) => setSettings({ ...settings, ewaMaxPerAdvance: v })}
             />
-          </SettingsCard>
-          <div className="lg:col-span-2">
+          </PageSection>
+          <PageSection id="settings-save" title="Save rules">
             <Button onClick={saveSettings} disabled={saving}>
               Save payroll rules
             </Button>
-          </div>
-        </div>
+          </PageSection>
+        </PageSectionShell>
       )}
     </div>
   );
@@ -559,21 +586,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border bg-white p-4">
       <p className="text-xs font-medium uppercase text-slate-500">{label}</p>
       <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function SettingsCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-3 rounded-xl border bg-white p-4">
-      <h3 className="font-semibold text-slate-900">{title}</h3>
-      {children}
     </div>
   );
 }

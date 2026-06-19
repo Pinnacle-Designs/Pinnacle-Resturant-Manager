@@ -14,7 +14,6 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
-  BarChart3,
   Barcode,
   UserCheck,
 } from "lucide-react";
@@ -29,6 +28,7 @@ import {
 } from "@/lib/walk-in/unit-convert";
 import { findItemByBarcode } from "@/lib/walk-in/barcode-match";
 import { parseJsonResponse } from "@/lib/fetch-json";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 const COUNTER_STORAGE_KEY = "pinnacle-monthly-count-counter";
 
@@ -666,9 +666,9 @@ export function MonthlyCountClient() {
       )}
 
       {view === "count" && (
+        <PageSectionShell pageId="monthly-count">
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="card">
-            <h2 className="mb-4 text-lg font-semibold">Monthly count — {periodLabel}</h2>
+          <PageSection id="count-session" title={`Monthly count — ${periodLabel}`} defaultOpen>
             {!session ? (
               <>
                 <p className="mb-4 text-base text-slate-600">
@@ -690,10 +690,10 @@ export function MonthlyCountClient() {
                 </Button>
               </div>
             )}
-          </div>
+          </PageSection>
 
           {session && (
-            <div className="card">
+            <PageSection id="count-entry" title="Count entry">
               <div className="mb-4 grid gap-3 sm:grid-cols-2">
                 <FormField label="Counting as">
                   <select
@@ -952,20 +952,20 @@ export function MonthlyCountClient() {
                   No items in this zone yet — assign inventory to this storage zone under Items, or scan a barcode to count any item.
                 </p>
               )}
-            </div>
+            </PageSection>
           )}
         </div>
+        </PageSectionShell>
       )}
 
       {view === "assign" && (
-        <div className="card">
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-semibold">
-            <UserCheck className="h-5 w-5" />
-            Assign zones to counters
-          </h2>
-          <p className="mb-4 text-base text-slate-600">
-            Split the count across your team — e.g. one person on food zones, another on liquor. Each employee sees only their zones when filtering.
-          </p>
+        <PageSectionShell pageId="monthly-assign">
+          <PageSection
+            id="zone-assignments"
+            title="Assign zones to counters"
+            description="Split the count across your team — e.g. one person on food zones, another on liquor. Each employee sees only their zones when filtering."
+            defaultOpen
+          >
           {!session ? (
             <p className="text-slate-500">Start a monthly count to assign zones.</p>
           ) : (
@@ -1008,27 +1008,27 @@ export function MonthlyCountClient() {
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserCheck className="mr-2 h-4 w-4" />}
                 Save assignments
               </Button>
-              {zoneAssignments.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="mb-2 text-sm font-medium text-slate-700">Current assignments</h3>
-                  <ul className="space-y-2">
-                    {zoneAssignments.map((a) => (
-                      <li key={a.id} className="flex justify-between rounded-lg bg-slate-50 px-4 py-2 text-sm">
-                        <span>{a.zone.name}</span>
-                        <span className="font-medium">{a.staffMember.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </>
           )}
-        </div>
+          </PageSection>
+          {session && zoneAssignments.length > 0 && (
+            <PageSection id="current-assignments" title="Current assignments">
+              <ul className="space-y-2">
+                {zoneAssignments.map((a) => (
+                  <li key={a.id} className="flex justify-between rounded-lg bg-slate-50 px-4 py-2 text-sm">
+                    <span>{a.zone.name}</span>
+                    <span className="font-medium">{a.staffMember.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </PageSection>
+          )}
+        </PageSectionShell>
       )}
 
       {view === "summary" && (
-        <div className="card">
-          <h2 className="mb-4 text-lg font-semibold">Count summary</h2>
+        <PageSectionShell pageId="monthly-summary">
+          <PageSection id="count-summary" title="Count summary" defaultOpen>
           {finalizeReport ? (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
@@ -1065,9 +1065,9 @@ export function MonthlyCountClient() {
           ) : (
             <p className="text-slate-500">No active or recent count. Start a monthly count to begin.</p>
           )}
+          </PageSection>
           {history.length > 0 && (
-            <div className="mt-6">
-              <h3 className="mb-2 font-medium">Past monthly counts</h3>
+            <PageSection id="past-counts" title="Past monthly counts">
               <ul className="space-y-2">
                 {history.map((h) => (
                   <li key={h.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2 text-sm">
@@ -1078,20 +1078,19 @@ export function MonthlyCountClient() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </PageSection>
           )}
-        </div>
+        </PageSectionShell>
       )}
 
       {view === "variance" && (
-        <div className="card">
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-semibold">
-            <BarChart3 className="h-5 w-5" />
-            Theoretical vs. actual variance
-          </h2>
-          <p className="mb-4 text-base text-slate-500">
-            Opening + purchases − POS sales compared to your physical count. Uses latest invoice prices.
-          </p>
+        <PageSectionShell pageId="monthly-variance">
+          <PageSection
+            id="variance-analysis"
+            title="Theoretical vs. actual variance"
+            description="Opening + purchases − POS sales compared to your physical count. Uses latest invoice prices."
+            defaultOpen
+          >
           {finalizeReport?.varianceLines && finalizeReport.varianceLines.length > 0 ? (
             <div className="space-y-2">
               {finalizeReport.varianceLines.slice(0, 20).map((line) => (
@@ -1122,7 +1121,8 @@ export function MonthlyCountClient() {
           ) : (
             <p className="text-slate-500">Finalize a monthly count to see variance analysis and COGS.</p>
           )}
-        </div>
+          </PageSection>
+        </PageSectionShell>
       )}
     </div>
   );

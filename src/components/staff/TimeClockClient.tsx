@@ -13,7 +13,9 @@ import {
   Camera,
   MapPin,
 } from "lucide-react";
+import { usePageSearch } from "@/hooks/usePageSearch";
 import { Button, Badge } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { Modal } from "@/components/ui/form";
 import { PinPad } from "@/components/staff/PinPad";
 import { PunchPhotoCapture } from "@/components/staff/PunchPhotoCapture";
@@ -91,7 +93,7 @@ export function TimeClockClient() {
   const [selected, setSelected] = useState<KioskStaff | null>(null);
   const [selectedWorkRole, setSelectedWorkRole] = useState<string | null>(null);
   const [pin, setPin] = useState("");
-  const [search, setSearch] = useState("");
+  const { query: search, setQuery: setSearch } = usePageSearch();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealBreakTaken, setMealBreakTaken] = useState(true);
@@ -362,84 +364,95 @@ export function TimeClockClient() {
 
   const modalOpen = step !== "idle";
 
+  const clockedInStaff = staff.filter((s) => s.clockedIn);
+
   return (
     <>
-      <div className="mx-auto max-w-lg">
-        <div className="rounded-2xl border bg-white p-8 text-center shadow-sm">
-          <p className="text-sm font-medium text-slate-500">{location.name}</p>
+      <PageSectionShell pageId="timeclock-kiosk">
+        <PageSection
+          id="tc-punch"
+          title="Clock in / out"
+          description={location.name}
+          defaultOpen
+        >
+          <div className="mx-auto max-w-lg">
+            <div className="rounded-2xl border bg-white p-8 text-center shadow-sm">
+              <div className="my-8">
+                <p className="text-6xl font-bold tabular-nums tracking-tight text-slate-900">
+                  {format(now, "h:mm:ss a")}
+                </p>
+                <p className="mt-2 text-lg text-slate-500">{format(now, "EEEE, MMMM d, yyyy")}</p>
+              </div>
 
-          <div className="my-8">
-            <p className="text-6xl font-bold tabular-nums tracking-tight text-slate-900">
-              {format(now, "h:mm:ss a")}
-            </p>
-            <p className="mt-2 text-lg text-slate-500">{format(now, "EEEE, MMMM d, yyyy")}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  size="lg"
+                  className="h-20 flex-col gap-2 text-base"
+                  onClick={() => startAction("in")}
+                >
+                  <LogIn className="h-7 w-7" />
+                  Clock in
+                </Button>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="h-20 flex-col gap-2 text-base"
+                  onClick={() => startAction("out")}
+                >
+                  <LogOut className="h-7 w-7" />
+                  Clock out
+                </Button>
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-slate-400">
+                {location.geoClockInRequired && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> GPS geofence
+                  </span>
+                )}
+                {location.punchPhotoRequired && (
+                  <span className="flex items-center gap-1">
+                    <Camera className="h-3 w-3" />
+                    {punchVerificationLabel(location.punchVerificationMode)}
+                  </span>
+                )}
+                {location.earlyClockInBufferMins > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {location.earlyClockInBufferMins}m early buffer
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+        </PageSection>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              size="lg"
-              className="h-20 flex-col gap-2 text-base"
-              onClick={() => startAction("in")}
-            >
-              <LogIn className="h-7 w-7" />
-              Clock in
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="h-20 flex-col gap-2 text-base"
-              onClick={() => startAction("out")}
-            >
-              <LogOut className="h-7 w-7" />
-              Clock out
-            </Button>
-          </div>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-slate-400">
-            {location.geoClockInRequired && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> GPS geofence
-              </span>
-            )}
-            {location.punchPhotoRequired && (
-              <span className="flex items-center gap-1">
-                <Camera className="h-3 w-3" />
-                {punchVerificationLabel(location.punchVerificationMode)}
-              </span>
-            )}
-            {location.earlyClockInBufferMins > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {location.earlyClockInBufferMins}m early buffer
-              </span>
-            )}
-          </div>
-
-          {staff.filter((s) => s.clockedIn).length > 0 && (
-            <div className="mt-6 rounded-xl bg-slate-50 p-4 text-left">
-              <p className="mb-2 text-sm font-semibold text-slate-700">On the clock now</p>
+        {clockedInStaff.length > 0 && (
+          <PageSection
+            id="tc-on-clock"
+            title="On the clock now"
+            description={`${clockedInStaff.length} team member${clockedInStaff.length === 1 ? "" : "s"} punched in`}
+          >
+            <div className="mx-auto max-w-lg rounded-xl bg-slate-50 p-4">
               <ul className="space-y-1 text-sm text-slate-600">
-                {staff
-                  .filter((s) => s.clockedIn)
-                  .slice(0, 6)
-                  .map((s) => (
-                    <li key={s.id} className="flex justify-between gap-2">
-                      <span>
-                        {s.name}
-                        {s.clockedInRole && (
-                          <span className="text-slate-400"> · {s.clockedInRole}</span>
-                        )}
-                      </span>
-                      <span className="text-slate-400 shrink-0">
-                        {s.clockInAt ? format(new Date(s.clockInAt), "h:mm a") : "—"}
-                      </span>
-                    </li>
-                  ))}
+                {clockedInStaff.slice(0, 6).map((s) => (
+                  <li key={s.id} className="flex justify-between gap-2">
+                    <span>
+                      {s.name}
+                      {s.clockedInRole && (
+                        <span className="text-slate-400"> · {s.clockedInRole}</span>
+                      )}
+                    </span>
+                    <span className="text-slate-400 shrink-0">
+                      {s.clockInAt ? format(new Date(s.clockInAt), "h:mm a") : "—"}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </div>
-          )}
-        </div>
-      </div>
+          </PageSection>
+        )}
+      </PageSectionShell>
 
       <Modal
         open={modalOpen}

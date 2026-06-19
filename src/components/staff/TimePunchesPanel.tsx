@@ -5,6 +5,7 @@ import { format, differenceInMinutes } from "date-fns";
 import { Check, Clock, Edit2, MapPin, AlertCircle, ShieldCheck, Camera } from "lucide-react";
 import { Button, Badge, EmptyState } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { cn, formatCurrency } from "@/lib/utils";
 
 interface PunchEntry {
@@ -133,184 +134,188 @@ export function TimePunchesPanel() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Time punches</h2>
-          <p className="text-sm text-slate-500">
-            Review, approve, and correct clock in/out for payroll.
-          </p>
-        </div>
-        {pendingCount > 0 && (
-          <Badge className="bg-amber-100 text-amber-800">
-            {pendingCount} awaiting approval
-          </Badge>
-        )}
-      </div>
+    <>
+      <PageSectionShell pageId="time-punches">
+        <PageSection
+          id="punch-summary"
+          title="Time punches"
+          description="Review, approve, and correct clock in/out for payroll."
+          defaultOpen
+          headerActions={
+            pendingCount > 0 ? (
+              <Badge className="bg-amber-100 text-amber-800">
+                {pendingCount} awaiting approval
+              </Badge>
+            ) : undefined
+          }
+        >
+          <div className="flex gap-1 rounded-lg border bg-white p-1 w-fit">
+            {(["all", "PENDING", "APPROVED"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  filter === f ? "bg-orange-500 text-white" : "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {f === "all" ? "All" : f === "PENDING" ? "Pending" : "Approved"}
+              </button>
+            ))}
+          </div>
 
-      <div className="flex gap-1 rounded-lg border bg-white p-1 w-fit">
-        {(["all", "PENDING", "APPROVED"] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              filter === f ? "bg-orange-500 text-white" : "text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            {f === "all" ? "All" : f === "PENDING" ? "Pending" : "Approved"}
-          </button>
-        ))}
-      </div>
+          {error && (
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+        </PageSection>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {entries.length === 0 ? (
-        <EmptyState
-          icon={<Clock className="h-10 w-10" />}
-          title="No punches yet"
-          description="Employees clock in from the Time clock tab. Completed punches appear here for approval."
-        />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border bg-white">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b bg-slate-50 text-left text-slate-600">
-                <th className="px-4 py-3 font-medium">Employee</th>
-                <th className="px-4 py-3 font-medium">Job / rate</th>
-                <th className="px-4 py-3 font-medium">Verification</th>
-                <th className="px-4 py-3 font-medium">Clock in</th>
-                <th className="px-4 py-3 font-medium">Clock out</th>
-                <th className="px-4 py-3 font-medium">Hours</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr key={e.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">{e.staffMember.name}</p>
-                    <p className="text-xs text-slate-500">{e.staffMember.role}</p>
-                    {e.shift && (
-                      <p className="mt-0.5 text-xs text-slate-400">
-                        Scheduled {e.shift.startTime}–{e.shift.endTime}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {e.workRole ? (
-                      <>
-                        <p className="font-medium text-slate-800">{e.workRole}</p>
-                        {e.hourlyRateAtPunch != null && (
-                          <p className="text-xs text-slate-500">
-                            {formatCurrency(e.hourlyRateAtPunch)}/hr at punch
+        <PageSection id="punch-entries" title="Punch entries" defaultOpen>
+          {entries.length === 0 ? (
+            <EmptyState
+              icon={<Clock className="h-10 w-10" />}
+              title="No punches yet"
+              description="Employees clock in from the Time clock tab. Completed punches appear here for approval."
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-xl border bg-white">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-50 text-left text-slate-600">
+                    <th className="px-4 py-3 font-medium">Employee</th>
+                    <th className="px-4 py-3 font-medium">Job / rate</th>
+                    <th className="px-4 py-3 font-medium">Verification</th>
+                    <th className="px-4 py-3 font-medium">Clock in</th>
+                    <th className="px-4 py-3 font-medium">Clock out</th>
+                    <th className="px-4 py-3 font-medium">Hours</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((e) => (
+                    <tr key={e.id} className="border-b last:border-0">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-slate-900">{e.staffMember.name}</p>
+                        <p className="text-xs text-slate-500">{e.staffMember.role}</p>
+                        {e.shift && (
+                          <p className="mt-0.5 text-xs text-slate-400">
+                            Scheduled {e.shift.startTime}–{e.shift.endTime}
                           </p>
                         )}
-                      </>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1">
-                      {e.clockInPhotoUrl ? (
-                        <a href={e.clockInPhotoUrl} target="_blank" rel="noreferrer">
-                          <img
-                            src={e.clockInPhotoUrl}
-                            alt="Punch in"
-                            className="h-10 w-10 rounded border object-cover"
-                          />
-                        </a>
-                      ) : null}
-                      <div className="flex flex-wrap gap-1 text-xs">
-                        {e.identityVerifiedIn ? (
-                          <span className="flex items-center gap-0.5 text-green-600">
-                            <ShieldCheck className="h-3 w-3" />
-                            {e.identityMethodIn === "BIOMETRIC" ? "Biometric" : "Photo"}
-                          </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {e.workRole ? (
+                          <>
+                            <p className="font-medium text-slate-800">{e.workRole}</p>
+                            {e.hourlyRateAtPunch != null && (
+                              <p className="text-xs text-slate-500">
+                                {formatCurrency(e.hourlyRateAtPunch)}/hr at punch
+                              </p>
+                            )}
+                          </>
                         ) : (
-                          <span className="text-amber-600">No ID proof</span>
+                          <span className="text-slate-400">—</span>
                         )}
-                        {e.geoVerifiedIn && (
-                          <span className="flex items-center gap-0.5 text-green-600">
-                            <MapPin className="h-3 w-3" /> GPS
-                          </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {e.clockInPhotoUrl ? (
+                            <a href={e.clockInPhotoUrl} target="_blank" rel="noreferrer">
+                              <img
+                                src={e.clockInPhotoUrl}
+                                alt="Punch in"
+                                className="h-10 w-10 rounded border object-cover"
+                              />
+                            </a>
+                          ) : null}
+                          <div className="flex flex-wrap gap-1 text-xs">
+                            {e.identityVerifiedIn ? (
+                              <span className="flex items-center gap-0.5 text-green-600">
+                                <ShieldCheck className="h-3 w-3" />
+                                {e.identityMethodIn === "BIOMETRIC" ? "Biometric" : "Photo"}
+                              </span>
+                            ) : (
+                              <span className="text-amber-600">No ID proof</span>
+                            )}
+                            {e.geoVerifiedIn && (
+                              <span className="flex items-center gap-0.5 text-green-600">
+                                <MapPin className="h-3 w-3" /> GPS
+                              </span>
+                            )}
+                            {!e.identityVerifiedIn && !e.geoVerifiedIn && (
+                              <Camera className="h-3 w-3 text-slate-300" />
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        <p>{format(new Date(e.clockInAt), "MMM d, h:mm a")}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {e.clockOutAt ? (
+                          <>
+                            <p>{format(new Date(e.clockOutAt), "MMM d, h:mm a")}</p>
+                            {e.geoVerifiedOut && (
+                              <span className="flex items-center gap-0.5 text-xs text-green-600">
+                                <MapPin className="h-3 w-3" /> Verified
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <Badge className="bg-green-100 text-green-800">On clock</Badge>
                         )}
-                        {!e.identityVerifiedIn && !e.geoVerifiedIn && (
-                          <Camera className="h-3 w-3 text-slate-300" />
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-slate-700">
+                        {formatHours(e.clockInAt, e.clockOutAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!e.clockOutAt ? (
+                          <Badge className="bg-blue-100 text-blue-800">Open</Badge>
+                        ) : e.approvalStatus === "APPROVED" ? (
+                          <Badge className="bg-green-100 text-green-800">Approved</Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
                         )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    <p>{format(new Date(e.clockInAt), "MMM d, h:mm a")}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {e.clockOutAt ? (
-                      <>
-                        <p>{format(new Date(e.clockOutAt), "MMM d, h:mm a")}</p>
-                        {e.geoVerifiedOut && (
-                          <span className="flex items-center gap-0.5 text-xs text-green-600">
-                            <MapPin className="h-3 w-3" /> Verified
-                          </span>
+                        {e.editedAt && (
+                          <p className="mt-0.5 text-xs text-slate-400">Edited</p>
                         )}
-                      </>
-                    ) : (
-                      <Badge className="bg-green-100 text-green-800">On clock</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-slate-700">
-                    {formatHours(e.clockInAt, e.clockOutAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {!e.clockOutAt ? (
-                      <Badge className="bg-blue-100 text-blue-800">Open</Badge>
-                    ) : e.approvalStatus === "APPROVED" ? (
-                      <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
-                    )}
-                    {e.editedAt && (
-                      <p className="mt-0.5 text-xs text-slate-400">Edited</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      {e.clockOutAt && e.approvalStatus !== "APPROVED" && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => approve(e.id)}
-                          disabled={acting === e.id}
-                        >
-                          <Check className="mr-1 h-3 w-3" />
-                          Approve
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(e)}
-                        disabled={acting === e.id}
-                      >
-                        <Edit2 className="mr-1 h-3 w-3" />
-                        Edit
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          {e.clockOutAt && e.approvalStatus !== "APPROVED" && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => approve(e.id)}
+                              disabled={acting === e.id}
+                            >
+                              <Check className="mr-1 h-3 w-3" />
+                              Approve
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEdit(e)}
+                            disabled={acting === e.id}
+                          >
+                            <Edit2 className="mr-1 h-3 w-3" />
+                            Edit
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PageSection>
+      </PageSectionShell>
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -350,6 +355,6 @@ export function TimePunchesPanel() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

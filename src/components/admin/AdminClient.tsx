@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Shield, Building2, Users, Mail } from "lucide-react";
 import { PageHeader, Button, Badge } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { cn } from "@/lib/utils";
 import type { PlanId } from "@/lib/plans";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 type Tab = "locations" | "users" | "partnerships";
 
@@ -45,11 +48,43 @@ interface UserRow {
 
 export function AdminClient() {
   const [tab, setTab] = useState<Tab>("locations");
+  const { query } = usePageSearch();
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [inquiries, setInquiries] = useState<PitchInquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+
+  const filteredLocations = useMemo(
+    () =>
+      filterBySearchQuery(locations, query, (row) => [
+        row.name,
+        row.plan,
+        row.billingEmail,
+      ]),
+    [locations, query]
+  );
+  const filteredUsers = useMemo(
+    () =>
+      filterBySearchQuery(users, query, (row) => [
+        row.name,
+        row.email,
+        row.role,
+        row.locationName,
+      ]),
+    [users, query]
+  );
+  const filteredInquiries = useMemo(
+    () =>
+      filterBySearchQuery(inquiries, query, (row) => [
+        row.name,
+        row.email,
+        row.company,
+        row.interest,
+        row.message,
+      ]),
+    [inquiries, query]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,6 +178,8 @@ export function AdminClient() {
       {loading ? (
         <p className="text-sm text-slate-500">Loading…</p>
       ) : tab === "locations" ? (
+        <PageSectionShell pageId="admin-locations">
+          <PageSection id="admin-locations-table" title="Locations" defaultOpen>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
@@ -155,7 +192,7 @@ export function AdminClient() {
               </tr>
             </thead>
             <tbody>
-              {locations.map((loc) => (
+              {filteredLocations.map((loc) => (
                 <tr key={loc.id} className="border-b border-slate-100">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{loc.name}</p>
@@ -203,7 +240,11 @@ export function AdminClient() {
             </tbody>
           </table>
         </div>
+          </PageSection>
+        </PageSectionShell>
       ) : tab === "users" ? (
+        <PageSectionShell pageId="admin-users">
+          <PageSection id="admin-users-table" title="Users" defaultOpen>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
@@ -216,7 +257,7 @@ export function AdminClient() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <tr key={u.id} className="border-b border-slate-100">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{u.name}</p>
@@ -262,7 +303,11 @@ export function AdminClient() {
             </tbody>
           </table>
         </div>
+          </PageSection>
+        </PageSectionShell>
       ) : (
+        <PageSectionShell pageId="admin-partnerships">
+          <PageSection id="admin-partnerships-table" title="Pitch requests" defaultOpen>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <p className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             Private deck requests from the public investors page. Send <code className="rounded bg-slate-200 px-1">private/pitch-deck.html</code> manually after review.
@@ -280,7 +325,7 @@ export function AdminClient() {
                 </tr>
               </thead>
               <tbody>
-                {inquiries.map((row) => (
+                {filteredInquiries.map((row) => (
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{row.name}</p>
@@ -302,6 +347,8 @@ export function AdminClient() {
             </table>
           )}
         </div>
+          </PageSection>
+        </PageSectionShell>
       )}
     </div>
   );

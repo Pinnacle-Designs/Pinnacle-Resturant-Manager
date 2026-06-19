@@ -1,8 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Layers, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
+import {
+  CollapsibleGroup,
+  CollapsibleGroupControls,
+  CollapsibleSection,
+} from "@/components/ui/Collapsible";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { Input, Select, Textarea, FormField, Modal } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiDelete, apiPost } from "@/lib/api";
@@ -42,9 +48,10 @@ const MENU_CATEGORIES = [
 
 interface ModifierSetsClientProps {
   menuItems?: { id: string; name: string; category: string }[];
+  embedded?: boolean;
 }
 
-export function ModifierSetsClient({ menuItems = [] }: ModifierSetsClientProps) {
+export function ModifierSetsClient({ menuItems = [], embedded = false }: ModifierSetsClientProps) {
   const { can } = useAuth();
   const canManage = can("manage_menu");
 
@@ -124,65 +131,86 @@ export function ModifierSetsClient({ menuItems = [] }: ModifierSetsClientProps) 
     setGroups((prev) => prev.filter((g) => g.id !== id));
   };
 
-  return (
-    <section className="mt-10 rounded-xl border bg-white p-4 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-            <Layers className="h-5 w-5 text-orange-500" />
-            Smart modifier sets
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Category-wide groups apply to every item in that category (e.g. burger extras).
-            Item-specific groups force conversational prompts on POS — cook temp, two sides, etc.
-          </p>
-        </div>
-        <Button onClick={() => { setError(null); setModalOpen(true); }}>
-          <Plus className="h-4 w-4" />
-          New modifier set
-        </Button>
-      </div>
-
-      {loading ? (
-        <p className="mt-6 text-sm text-slate-500">Loading modifier sets…</p>
-      ) : groups.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-500">
-          No modifier sets yet. Seed demo data or create a category group like &quot;Burger extras&quot;.
-        </p>
-      ) : (
-        <ul className="mt-6 space-y-3">
-          {groups.map((group) => {
-            const cats = parseCategories(group.categories);
-            const scopeLabel = group.menuItem
-              ? `Item: ${group.menuItem.name}`
-              : cats.length > 0
-                ? `Category: ${cats.join(", ")}`
-                : "All items";
-            return (
-              <li
-                key={group.id}
-                className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-semibold text-slate-900">{group.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {scopeLabel}
-                    {group.required || group.minSelect > 0
-                      ? " · Forced on POS"
-                      : " · Optional extras"}
-                    {group.minSelect > 0 && ` · pick ${group.minSelect}${group.maxSelect !== group.minSelect ? `–${group.maxSelect}` : ""}`}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {group.options.map((o) => o.name).join(" · ")}
-                  </p>
-                </div>
+  const listContent = loading ? (
+    <p className="text-sm text-slate-500">Loading modifier sets…</p>
+  ) : groups.length === 0 ? (
+    <p className="text-sm text-slate-500">
+      No modifier sets yet. Seed demo data or create a category group like &quot;Burger extras&quot;.
+    </p>
+  ) : (
+    <CollapsibleGroup defaultExpanded="first" expandKey="modifier-sets-list">
+      <CollapsibleGroupControls className="mb-3" />
+      <div className="space-y-2">
+        {groups.map((group, index) => {
+          const cats = parseCategories(group.categories);
+          const scopeLabel = group.menuItem
+            ? `Item: ${group.menuItem.name}`
+            : cats.length > 0
+              ? `Category: ${cats.join(", ")}`
+              : "All items";
+          return (
+            <CollapsibleSection
+              key={group.id}
+              id={`modifier-${group.id}`}
+              title={group.name}
+              description={scopeLabel}
+              defaultOpen={index === 0}
+              variant="plain"
+              bodyClassName="!pt-2"
+              headerActions={
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(group.id)}>
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
-              </li>
-            );
-          })}
-        </ul>
+              }
+            >
+              <p className="text-xs text-slate-500">
+                {group.required || group.minSelect > 0
+                  ? "Forced on POS"
+                  : "Optional extras"}
+                {group.minSelect > 0 &&
+                  ` · pick ${group.minSelect}${group.maxSelect !== group.minSelect ? `–${group.maxSelect}` : ""}`}
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                {group.options.map((o) => o.name).join(" · ")}
+              </p>
+            </CollapsibleSection>
+          );
+        })}
+      </div>
+    </CollapsibleGroup>
+  );
+
+  const newSetButton = (
+    <Button
+      onClick={() => {
+        setError(null);
+        setModalOpen(true);
+      }}
+    >
+      <Plus className="h-4 w-4" />
+      New modifier set
+    </Button>
+  );
+
+  return (
+    <div className={embedded ? undefined : "mt-10"}>
+      {embedded ? (
+        <>
+          <div className="mb-4 flex justify-end">{newSetButton}</div>
+          {listContent}
+        </>
+      ) : (
+        <PageSectionShell pageId="modifier-sets">
+          <PageSection
+            id="modifier-sets-list"
+            title="Smart modifier sets"
+            description="Category-wide groups apply to every item in that category (e.g. burger extras). Item-specific groups force conversational prompts on POS — cook temp, two sides, etc."
+            defaultOpen
+            headerActions={newSetButton}
+          >
+            {listContent}
+          </PageSection>
+        </PageSectionShell>
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New modifier set" size="lg">
@@ -282,6 +310,6 @@ export function ModifierSetsClient({ menuItems = [] }: ModifierSetsClientProps) 
           </div>
         </div>
       </Modal>
-    </section>
+    </div>
   );
 }

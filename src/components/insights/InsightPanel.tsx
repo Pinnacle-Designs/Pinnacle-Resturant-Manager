@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Brain, Loader2 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { INSIGHT_SEVERITY_COLORS } from "@/lib/constants";
 import { showCriticalNotifications } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
@@ -45,74 +46,69 @@ export function InsightPanel({ insights, onRefresh }: InsightPanelProps) {
   const critical = unresolved.filter((i) => i.severity === "CRITICAL" || i.severity === "HIGH");
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">AI Business Insights</h2>
+    <PageSectionShell pageId="insight-panel">
+      <PageSection id="insight-summary" title="Insight summary" defaultOpen>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-500">
             {unresolved.length} active insights · {critical.length} need attention
           </p>
+          <Button onClick={runAnalysis} disabled={analyzing} size="sm">
+            {analyzing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Brain className="h-4 w-4" />
+            )}
+            {analyzing ? "Analyzing..." : "Run Analysis"}
+          </Button>
         </div>
-        <Button onClick={runAnalysis} disabled={analyzing} size="sm">
-          {analyzing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Brain className="h-4 w-4" />
-          )}
-          {analyzing ? "Analyzing..." : "Run Analysis"}
-        </Button>
-      </div>
+      </PageSection>
 
       {unresolved.length === 0 ? (
-        <div className="card text-center">
-          <Brain className="mx-auto h-12 w-12 text-slate-300" />
-          <p className="mt-4 text-sm text-slate-500">
-            No insights yet. Add data and run analysis to discover pain points.
-          </p>
-        </div>
+        <PageSection id="insight-empty" title="Active insights">
+          <div className="card text-center">
+            <Brain className="mx-auto h-12 w-12 text-slate-300" />
+            <p className="mt-4 text-sm text-slate-500">
+              No insights yet. Add data and run analysis to discover pain points.
+            </p>
+          </div>
+        </PageSection>
       ) : (
-        <div className="space-y-3">
-          {unresolved.map((insight) => (
-            <div
-              key={insight.id}
-              className={cn(
-                "card border-l-4",
-                insight.severity === "CRITICAL" && "border-l-red-500",
-                insight.severity === "HIGH" && "border-l-orange-500",
-                insight.severity === "MEDIUM" && "border-l-amber-500",
-                insight.severity === "LOW" && "border-l-slate-300"
-              )}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">{insight.title}</h3>
-                    <Badge
-                      className={
-                        INSIGHT_SEVERITY_COLORS[
-                          insight.severity as keyof typeof INSIGHT_SEVERITY_COLORS
-                        ]
-                      }
-                    >
-                      {insight.severity}
-                    </Badge>
-                    <Badge className="bg-slate-100 text-slate-600">
-                      {insight.category}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{insight.description}</p>
-                  {insight.actionable && (
-                    <p className="mt-2 text-sm font-medium text-orange-700">
-                      → {insight.actionable}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        unresolved.map((insight) => (
+          <PageSection
+            key={insight.id}
+            id={insight.id}
+            title={insight.title}
+            description={insight.category}
+            headerActions={
+              <Badge
+                className={
+                  INSIGHT_SEVERITY_COLORS[
+                    insight.severity as keyof typeof INSIGHT_SEVERITY_COLORS
+                  ]
+                }
+              >
+                {insight.severity}
+              </Badge>
+            }
+            className={cn(
+              "border-l-4",
+              insight.severity === "CRITICAL" && "border-l-red-500",
+              insight.severity === "HIGH" && "border-l-orange-500",
+              insight.severity === "MEDIUM" && "border-l-amber-500",
+              insight.severity === "LOW" && "border-l-slate-300"
+            )}
+            variant="card"
+          >
+            <p className="text-sm text-slate-600">{insight.description}</p>
+            {insight.actionable && (
+              <p className="mt-2 text-sm font-medium text-orange-700">
+                → {insight.actionable}
+              </p>
+            )}
+          </PageSection>
+        ))
       )}
-    </div>
+    </PageSectionShell>
   );
 }
 

@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch, apiPatch, apiPost } from "@/lib/api";
@@ -359,9 +360,21 @@ export function ServerPosClient(props: ServerPosClientProps = {}) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:flex-row">
-      {/* Ticket column */}
-      <aside className="w-full shrink-0 rounded-xl border bg-white lg:w-72">
+    <PageSectionShell pageId="pos-serve">
+      <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:flex-row">
+        <PageSection
+          id="pos-check"
+          title="Active check"
+          description={
+            activeOrder?.table
+              ? `Table ${activeOrder.table.number} · ${formatCurrency(activeOrder.totalAmount)}`
+              : "Walk-in / bar"
+          }
+          defaultOpen
+          className="w-full shrink-0 lg:w-72"
+          variant="plain"
+        >
+          <aside className="rounded-xl border bg-white">
         <div className="border-b px-3 py-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active check</p>
           <p className="font-bold text-slate-900">
@@ -529,10 +542,17 @@ export function ServerPosClient(props: ServerPosClientProps = {}) {
             Checks &amp; history →
           </Link>
         </div>
-      </aside>
+          </aside>
+        </PageSection>
 
-      {/* Menu grid */}
-      <div className="flex-1">
+        <PageSection
+          id="pos-menu"
+          title="Menu"
+          description={daypartLabel ?? "Tap items to add to the check"}
+          className="min-w-0 flex-1"
+          variant="plain"
+        >
+          <div className="flex-1">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             {daypartLabel && (
@@ -593,6 +613,8 @@ export function ServerPosClient(props: ServerPosClientProps = {}) {
           Forced modifiers open step-by-step (cook temp → sides). Category extras apply to all burgers.
           {tapCount > 0 && ` · Last send: ${tapCount} tap${tapCount > 1 ? "s" : ""}`}
         </p>
+          </div>
+        </PageSection>
       </div>
 
       {fractionalOpen ? (
@@ -638,6 +660,6 @@ export function ServerPosClient(props: ServerPosClientProps = {}) {
           }
         }}
       />
-    </div>
+    </PageSectionShell>
   );
 }

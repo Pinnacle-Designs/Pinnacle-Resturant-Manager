@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LaborForecastPanel } from "@/components/staff/LaborForecastPanel";
 import { ShiftFeedbackModal, formatShiftLabel } from "@/components/staff/ShiftFeedbackModal";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface StaffMember {
   id: string;
@@ -230,8 +231,12 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
 
   return (
     <>
-      <LaborForecastPanel weekStart={weekStart} staff={activeStaff} onShiftAdded={fetchShifts} />
+      <PageSectionShell pageId="schedule">
+        <PageSection id="labor-forecast" title="Labor forecast" defaultOpen>
+          <LaborForecastPanel weekStart={weekStart} staff={activeStaff} onShiftAdded={fetchShifts} />
+        </PageSection>
 
+        <PageSection id="weekly-schedule" title="Weekly schedule" defaultOpen>
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Button
@@ -396,6 +401,8 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
           </tbody>
         </table>
       </div>
+        </PageSection>
+      </PageSectionShell>
 
       <Modal
         open={modalOpen}

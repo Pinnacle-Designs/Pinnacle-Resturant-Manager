@@ -13,7 +13,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { Button, Badge, EmptyState } from "@/components/ui";
+import { Button, Badge, EmptyState, CollapsibleSection, CollapsibleGroup, CollapsibleGroupControls } from "@/components/ui";
 import { Input, Select, FormField, Textarea, Modal } from "@/components/ui/form";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
@@ -401,99 +401,93 @@ export function LogBookClient({ staff }: { staff: StaffOption[] }) {
               action={canManage && !searchMode ? <Button onClick={openCreate}>Write first entry</Button> : undefined}
             />
           ) : (
-            <div className="space-y-4">
-              {entries.map((entry) => (
-                <article
-                  key={entry.id}
-                  className={cn(
-                    "rounded-xl border bg-white p-5 shadow-sm",
-                    entry.pinned && "border-orange-200 ring-1 ring-orange-100"
-                  )}
-                >
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge className={categoryColor(entry.category as never)}>
-                        {categoryLabel(entry.category as never)}
-                      </Badge>
-                      {entry.pinned && (
-                        <Badge className="bg-orange-100 text-orange-800">
-                          <Pin className="mr-1 h-3 w-3" />
-                          Pinned
+            <CollapsibleGroup defaultExpanded="first">
+              <CollapsibleGroupControls className="mb-4" />
+              <div className="space-y-4">
+                {entries.map((entry) => (
+                  <CollapsibleSection
+                    key={entry.id}
+                    id={entry.id}
+                    title={entry.title || categoryLabel(entry.category as never)}
+                    description={`${entry.authorName} · ${new Date(entry.createdAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`}
+                    defaultOpen={entry.pinned}
+                    className={cn(entry.pinned && "border-orange-200 ring-1 ring-orange-100")}
+                    badge={
+                      <>
+                        <Badge className={categoryColor(entry.category as never)}>
+                          {categoryLabel(entry.category as never)}
                         </Badge>
-                      )}
-                      {entry.title && (
-                        <span className="font-semibold text-slate-900">{entry.title}</span>
-                      )}
-                    </div>
-                    <div className="text-right text-xs text-slate-500">
-                      <p>{entry.authorName}</p>
-                      <p>
-                        {new Date(entry.createdAt).toLocaleString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
+                        {entry.pinned && (
+                          <Badge className="bg-orange-100 text-orange-800">
+                            <Pin className="mr-1 h-3 w-3" />
+                            Pinned
+                          </Badge>
+                        )}
+                      </>
+                    }
+                  >
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                      {entry.content}
+                    </p>
 
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                    {entry.content}
-                  </p>
+                    {(entry.salesTotal != null ||
+                      entry.guestCount != null ||
+                      entry.laborHours != null ||
+                      entry.staffingNote ||
+                      entry.maintenanceNote) && (
+                      <div className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600 sm:grid-cols-2">
+                        {entry.salesTotal != null && (
+                          <p>Sales: {formatCurrency(entry.salesTotal)}</p>
+                        )}
+                        {entry.guestCount != null && <p>Covers: {entry.guestCount}</p>}
+                        {entry.laborHours != null && <p>Labor: {entry.laborHours}h</p>}
+                        {entry.laborCost != null && (
+                          <p>Labor cost: {formatCurrency(entry.laborCost)}</p>
+                        )}
+                        {entry.staffingNote && <p>Staffing: {entry.staffingNote}</p>}
+                        {entry.maintenanceNote && <p>Maintenance: {entry.maintenanceNote}</p>}
+                      </div>
+                    )}
 
-                  {(entry.salesTotal != null ||
-                    entry.guestCount != null ||
-                    entry.laborHours != null ||
-                    entry.staffingNote ||
-                    entry.maintenanceNote) && (
-                    <div className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600 sm:grid-cols-2">
-                      {entry.salesTotal != null && (
-                        <p>Sales: {formatCurrency(entry.salesTotal)}</p>
-                      )}
-                      {entry.guestCount != null && <p>Covers: {entry.guestCount}</p>}
-                      {entry.laborHours != null && <p>Labor: {entry.laborHours}h</p>}
-                      {entry.laborCost != null && (
-                        <p>Labor cost: {formatCurrency(entry.laborCost)}</p>
-                      )}
-                      {entry.staffingNote && <p>Staffing: {entry.staffingNote}</p>}
-                      {entry.maintenanceNote && <p>Maintenance: {entry.maintenanceNote}</p>}
-                    </div>
-                  )}
+                    {entry.mentions.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {entry.mentions.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-800 hover:bg-violet-100"
+                            onClick={() => {
+                              setStaffFilter(m.staffMemberId ?? "");
+                              setSearchQuery(m.mentionLabel);
+                              setActiveSearch(m.mentionLabel);
+                            }}
+                          >
+                            <User className="h-3 w-3" />
+                            {m.mentionLabel}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                  {entry.mentions.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {entry.mentions.map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-800 hover:bg-violet-100"
-                          onClick={() => {
-                            setStaffFilter(m.staffMemberId ?? "");
-                            setSearchQuery(m.mentionLabel);
-                            setActiveSearch(m.mentionLabel);
-                          }}
-                        >
-                          <User className="h-3 w-3" />
-                          {m.mentionLabel}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {canManage && (
-                    <div className="mt-4 flex gap-2 no-print">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(entry)}>
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(entry.id)}>
-                        <Trash2 className="h-3 w-3 text-red-500" />
-                      </Button>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
+                    {canManage && (
+                      <div className="mt-4 flex gap-2 no-print">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(entry)}>
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete(entry.id)}>
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      </div>
+                    )}
+                  </CollapsibleSection>
+                ))}
+              </div>
+            </CollapsibleGroup>
           )}
         </div>
       </div>

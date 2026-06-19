@@ -1,7 +1,7 @@
 "use client";
 
 import { MapPin, Pencil, Trash2 } from "lucide-react";
-import { Button, Badge } from "@/components/ui";
+import { Button, Badge, CollapsibleSection, CollapsibleGroup, CollapsibleGroupControls } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
 import {
   groupInventoryByZone,
@@ -11,6 +11,8 @@ import {
 import type { InventoryItem } from "@/components/inventory/types";
 import type { StorageZoneRow } from "@/components/inventory/StorageZonesPanel";
 import { useMemo } from "react";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 function InventoryItemRow({
   item,
@@ -72,21 +74,31 @@ function ZoneSection({
   onDelete: (id: string) => void;
 }) {
   const accent = zoneSectionAccent(section.slug);
+  const sectionId = section.zoneId ?? "unassigned";
 
   return (
-    <section className={`overflow-hidden rounded-xl border-2 ${accent}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit bg-white/60 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-2">
+    <CollapsibleSection
+      id={sectionId}
+      title={
+        <span className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-slate-500" />
-          <h3 className="font-semibold text-slate-900">{section.zoneName}</h3>
+          {section.zoneName}
+        </span>
+      }
+      badge={
+        <>
           <Badge className="bg-white text-slate-700">{section.items.length} items</Badge>
           {section.lowStockCount > 0 && (
             <Badge className="bg-amber-100 text-amber-900">
               {section.lowStockCount} low stock
             </Badge>
           )}
-        </div>
-      </div>
+        </>
+      }
+      className={`overflow-hidden border-2 shadow-none ${accent}`}
+      headerClassName="border-b border-inherit bg-white/60 !py-3"
+      bodyClassName="!p-0 !border-0"
+    >
       <div className="overflow-x-auto bg-white">
         <table className="w-full text-sm">
           <thead className="border-b bg-slate-50/80 text-left text-xs uppercase text-slate-500">
@@ -114,7 +126,7 @@ function ZoneSection({
           </tbody>
         </table>
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -129,12 +141,23 @@ export function InventoryItemsByZone({
   onEdit: (item: InventoryItem) => void;
   onDelete: (id: string) => void;
 }) {
+  const { query } = usePageSearch();
+  const filteredItems = useMemo(
+    () =>
+      filterBySearchQuery(items, query, (item) => [
+        item.name,
+        item.barcode,
+        item.supplier,
+        item.unit,
+      ]),
+    [items, query]
+  );
   const sections = useMemo(
-    () => groupInventoryByZone(items, zones),
-    [items, zones]
+    () => groupInventoryByZone(filteredItems, zones),
+    [filteredItems, zones]
   );
 
-  if (sections.length === 0 && items.length > 0) {
+  if (sections.length === 0 && filteredItems.length > 0) {
     return (
       <p className="text-sm text-slate-600">
         Loading storage zones… refresh if items do not appear grouped.
@@ -145,15 +168,21 @@ export function InventoryItemsByZone({
   if (sections.length === 0) return null;
 
   return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <ZoneSection
-          key={section.zoneId ?? "unassigned"}
-          section={section}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
+    <CollapsibleGroup
+      defaultExpanded={query.trim() ? "all" : "first"}
+      expandKey={query.trim() ? "search" : "browse"}
+    >
+      <CollapsibleGroupControls className="mb-4" />
+      <div className="space-y-4">
+        {sections.map((section) => (
+          <ZoneSection
+            key={section.zoneId ?? "unassigned"}
+            section={section}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+    </CollapsibleGroup>
   );
 }

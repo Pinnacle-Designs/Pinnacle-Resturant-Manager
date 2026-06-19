@@ -12,6 +12,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { Button, EmptyState } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { Input, Select, FormField, Modal, Textarea } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
@@ -203,19 +204,23 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "Minor issues (week)", value: dashboard.summary.minorViolationsThisWeek, tone: "text-amber-600" },
-          { label: "Open incidents", value: dashboard.summary.openIncidents, tone: "text-red-600" },
-          { label: "OSHA recordable (12 mo)", value: dashboard.summary.oshaRecordable12Mo, tone: "text-slate-800" },
-          { label: "Archived timecards", value: dashboard.summary.archivedTimecards, tone: "text-slate-600" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-xl border bg-white p-4 text-center">
-            <p className={cn("text-2xl font-bold", s.tone)}>{s.value}</p>
-            <p className="text-xs text-slate-500">{s.label}</p>
+      <PageSectionShell pageId="compliance-overview">
+        <PageSection id="compliance-stats" title="Compliance overview" defaultOpen>
+          <div className="grid gap-3 sm:grid-cols-4">
+            {[
+              { label: "Minor issues (week)", value: dashboard.summary.minorViolationsThisWeek, tone: "text-amber-600" },
+              { label: "Open incidents", value: dashboard.summary.openIncidents, tone: "text-red-600" },
+              { label: "OSHA recordable (12 mo)", value: dashboard.summary.oshaRecordable12Mo, tone: "text-slate-800" },
+              { label: "Archived timecards", value: dashboard.summary.archivedTimecards, tone: "text-slate-600" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border bg-white p-4 text-center">
+                <p className={cn("text-2xl font-bold", s.tone)}>{s.value}</p>
+                <p className="text-xs text-slate-500">{s.label}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </PageSection>
+      </PageSectionShell>
 
       <div className="no-print flex flex-wrap gap-2">
         {(
@@ -241,13 +246,14 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
       </div>
 
       {section === "guardrails" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-white p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Minor labor rules</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Set date of birth on team members under 18. Violations block scheduling when enabled.
-            </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <PageSectionShell pageId="compliance-guardrails">
+          <PageSection
+            id="minor-rules"
+            title="Minor labor rules"
+            description="Set date of birth on team members under 18. Violations block scheduling when enabled."
+            defaultOpen
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <FormField label="Block illegal minor shifts">
                 <Select
                   value={dashboard.settings.minorBlockScheduling ? "block" : "warn"}
@@ -323,15 +329,14 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
                 />
               </FormField>
             </div>
-          </div>
+          </PageSection>
 
-          <div className="rounded-xl border bg-white p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Meal break enforcement</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Managers are alerted before required breaks. Skipping a break at clock-out requires a
-              digital waiver stored on the timecard.
-            </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <PageSection
+            id="meal-break"
+            title="Meal break enforcement"
+            description="Managers are alerted before required breaks. Skipping a break at clock-out requires a digital waiver stored on the timecard."
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <FormField label="Break required after (hours)">
                 <Input
                   type="number"
@@ -356,123 +361,138 @@ export function ComplianceClient({ staff }: { staff: StaffOption[] }) {
                 />
               </FormField>
             </div>
-          </div>
+          </PageSection>
 
-          {dashboard.minorViolations.length === 0 ? (
-            <EmptyState
-              icon={<Shield className="h-12 w-12" />}
-              title="No minor violations this week"
-              description="Schedules for employees under 18 comply with current guardrails."
-            />
-          ) : (
-            <ul className="divide-y rounded-xl border bg-white">
-              {dashboard.minorViolations.map((v, i) => (
-                <li key={`${v.shiftId}-${i}`} className="flex flex-wrap items-center gap-3 p-4 text-sm">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="font-medium">{v.staffName}</span>
-                  <span className="text-slate-500">
-                    {v.shiftDate ? format(new Date(v.shiftDate), "EEE MMM d") : ""}
-                  </span>
-                  <span className="text-slate-700">{v.message}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          <PageSection
+            id="minor-violations"
+            title="Minor violations this week"
+            description={`${dashboard.minorViolations.length} violation${dashboard.minorViolations.length === 1 ? "" : "s"}`}
+          >
+            {dashboard.minorViolations.length === 0 ? (
+              <EmptyState
+                icon={<Shield className="h-12 w-12" />}
+                title="No minor violations this week"
+                description="Schedules for employees under 18 comply with current guardrails."
+              />
+            ) : (
+              <ul className="divide-y rounded-xl border bg-white">
+                {dashboard.minorViolations.map((v, i) => (
+                  <li key={`${v.shiftId}-${i}`} className="flex flex-wrap items-center gap-3 p-4 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span className="font-medium">{v.staffName}</span>
+                    <span className="text-slate-500">
+                      {v.shiftDate ? format(new Date(v.shiftDate), "EEE MMM d") : ""}
+                    </span>
+                    <span className="text-slate-700">{v.message}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {section === "incidents" && (
-        <div>
-          <div className="mb-3 flex justify-end">
-            <Button onClick={() => setIncidentOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Log incident
-            </Button>
-          </div>
-          {incidents.length === 0 ? (
-            <EmptyState
-              icon={<ClipboardList className="h-12 w-12" />}
-              title="No incidents logged"
-              description="Record burns, cuts, slips, and guest incidents for OSHA and liability records."
-            />
-          ) : (
-            <ul className="divide-y rounded-xl border bg-white">
-              {incidents.map((inc) => (
-                <li key={inc.id} className="p-4 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-900">
-                      {inc.incidentType.replace("_", " ")}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
-                      {inc.category.replace("_", " ")}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {format(new Date(inc.reportedAt), "MMM d, yyyy h:mm a")}
-                    </span>
-                    {inc.oshaRecordable && (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                        OSHA recordable
+        <PageSectionShell pageId="compliance-incidents">
+          <PageSection
+            id="incident-log"
+            title="Incident logbook"
+            description="Record burns, cuts, slips, and guest incidents for OSHA and liability records."
+            defaultOpen
+            headerActions={
+              <Button onClick={() => setIncidentOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Log incident
+              </Button>
+            }
+          >
+            {incidents.length === 0 ? (
+              <EmptyState
+                icon={<ClipboardList className="h-12 w-12" />}
+                title="No incidents logged"
+                description="Record burns, cuts, slips, and guest incidents for OSHA and liability records."
+              />
+            ) : (
+              <ul className="divide-y rounded-xl border bg-white">
+                {incidents.map((inc) => (
+                  <li key={inc.id} className="p-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {inc.incidentType.replace("_", " ")}
                       </span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+                        {inc.category.replace("_", " ")}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {format(new Date(inc.reportedAt), "MMM d, yyyy h:mm a")}
+                      </span>
+                      {inc.oshaRecordable && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                          OSHA recordable
+                        </span>
+                      )}
+                      <span className="ml-auto text-xs uppercase text-slate-500">{inc.status}</span>
+                    </div>
+                    <p className="mt-2 text-slate-700">{inc.description}</p>
+                    {(inc.staffMember?.name || inc.guestName) && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {inc.staffMember?.name ? `Staff: ${inc.staffMember.name}` : `Guest: ${inc.guestName}`}
+                      </p>
                     )}
-                    <span className="ml-auto text-xs uppercase text-slate-500">{inc.status}</span>
-                  </div>
-                  <p className="mt-2 text-slate-700">{inc.description}</p>
-                  {(inc.staffMember?.name || inc.guestName) && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      {inc.staffMember?.name ? `Staff: ${inc.staffMember.name}` : `Guest: ${inc.guestName}`}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {section === "audit" && (
-        <div className="space-y-4 rounded-xl border bg-white p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Audit-ready records</h3>
-          <p className="text-sm text-slate-600">
-            Pull schedules, timecards, and payroll runs for any date range. Export JSON for labor
-            department or counsel.
-          </p>
-          <div className="no-print flex flex-wrap items-end gap-3">
-            <FormField label="From">
-              <Input type="date" value={auditFrom} onChange={(e) => setAuditFrom(e.target.value)} />
-            </FormField>
-            <FormField label="To">
-              <Input type="date" value={auditTo} onChange={(e) => setAuditTo(e.target.value)} />
-            </FormField>
-            <Button onClick={loadAudit} disabled={saving}>
-              Load records
-            </Button>
-            {auditData && (
-              <>
-                <PrintButton reportTitle="Compliance audit records" label="Print" />
-                <Button variant="secondary" onClick={exportAudit}>
-                  <Download className="h-4 w-4" />
-                  Export JSON
-                </Button>
-              </>
-            )}
-          </div>
-          {auditData && (
-            <div className="grid gap-3 sm:grid-cols-3 text-center text-sm">
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-bold">{(auditData.summary as { shifts: number }).shifts}</p>
-                <p className="text-slate-500">Shifts</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-bold">{(auditData.summary as { timecards: number }).timecards}</p>
-                <p className="text-slate-500">Timecards</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-bold">{(auditData.summary as { payrollRuns: number }).payrollRuns}</p>
-                <p className="text-slate-500">Payroll runs</p>
-              </div>
+        <PageSectionShell pageId="compliance-audit">
+          <PageSection
+            id="audit-records"
+            title="Audit-ready records"
+            description="Pull schedules, timecards, and payroll runs for any date range. Export JSON for labor department or counsel."
+            defaultOpen
+          >
+            <div className="no-print flex flex-wrap items-end gap-3">
+              <FormField label="From">
+                <Input type="date" value={auditFrom} onChange={(e) => setAuditFrom(e.target.value)} />
+              </FormField>
+              <FormField label="To">
+                <Input type="date" value={auditTo} onChange={(e) => setAuditTo(e.target.value)} />
+              </FormField>
+              <Button onClick={loadAudit} disabled={saving}>
+                Load records
+              </Button>
+              {auditData && (
+                <>
+                  <PrintButton reportTitle="Compliance audit records" label="Print" />
+                  <Button variant="secondary" onClick={exportAudit}>
+                    <Download className="h-4 w-4" />
+                    Export JSON
+                  </Button>
+                </>
+              )}
             </div>
-          )}
-        </div>
+            {auditData && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3 text-center text-sm">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-lg font-bold">{(auditData.summary as { shifts: number }).shifts}</p>
+                  <p className="text-slate-500">Shifts</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-lg font-bold">{(auditData.summary as { timecards: number }).timecards}</p>
+                  <p className="text-slate-500">Timecards</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-lg font-bold">{(auditData.summary as { payrollRuns: number }).payrollRuns}</p>
+                  <p className="text-slate-500">Payroll runs</p>
+                </div>
+              </div>
+            )}
+          </PageSection>
+        </PageSectionShell>
       )}
 
       <Modal open={incidentOpen} onClose={() => setIncidentOpen(false)} title="Log incident">

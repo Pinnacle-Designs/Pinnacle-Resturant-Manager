@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { PhotoUploader } from "@/components/photos/PhotoUploader";
 import { PhotoGallery } from "@/components/insights/InsightPanel";
 import { PHOTO_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 interface Photo {
   id: string;
@@ -27,6 +30,18 @@ export default function PhotosPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const { query } = usePageSearch();
+
+  const visiblePhotos = useMemo(() => {
+    const byCategory = categoryFilter
+      ? photos.filter((p) => p.category === categoryFilter)
+      : photos;
+    return filterBySearchQuery(byCategory, query, (photo) => [
+      photo.title,
+      photo.category,
+      photo.aiAnalysis,
+    ]);
+  }, [photos, categoryFilter, query]);
 
   const fetchPhotos = useCallback(async () => {
     const res = await fetch("/api/photos");
@@ -51,51 +66,75 @@ export default function PhotosPage() {
         description="Capture and organize photos by category — menu, inventory, receipts, and more"
       />
 
-      <PhotoUploader
-        onUploadComplete={fetchPhotos}
-        excludeCategories={canViewReceipts ? [] : ["RECEIPT"]}
-      />
+      <PageSectionShell pageId="photos">
+        <PageSection id="photos-overview" title="Library overview" defaultOpen>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border bg-white p-4 text-center">
+              <p className="text-2xl font-bold text-slate-900">{photos.length}</p>
+              <p className="text-xs text-slate-500">Total photos</p>
+            </div>
+            {categoryCounts.slice(0, 3).map((cat) => (
+              <div key={cat.value} className="rounded-xl border bg-white p-4 text-center">
+                <p className="text-2xl font-bold text-orange-600">{cat.count}</p>
+                <p className="text-xs text-slate-500">{cat.label}</p>
+              </div>
+            ))}
+          </div>
+        </PageSection>
 
-      <div className="mt-8">
-        <h2 className="mb-4 text-lg font-semibold">Browse by Category</h2>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter(undefined)}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-              !categoryFilter
-                ? "bg-orange-500 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            )}
-          >
-            All ({photos.length})
-          </button>
-          {categoryCounts.map((cat) => (
+        <PageSection id="photos-upload" title="Upload photos">
+          <PhotoUploader
+            onUploadComplete={fetchPhotos}
+            excludeCategories={canViewReceipts ? [] : ["RECEIPT"]}
+          />
+        </PageSection>
+
+        <PageSection
+          id="photos-gallery"
+          title="Photo gallery"
+          description={
+            categoryFilter
+              ? `${visiblePhotos.length} photo${visiblePhotos.length === 1 ? "" : "s"} in selected category`
+              : `${visiblePhotos.length} photo${visiblePhotos.length === 1 ? "" : "s"}`
+          }
+        >
+          <div className="mb-4 flex flex-wrap gap-2">
             <button
-              key={cat.value}
               type="button"
-              onClick={() => setCategoryFilter(cat.value)}
+              onClick={() => setCategoryFilter(undefined)}
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                categoryFilter === cat.value
+                !categoryFilter
                   ? "bg-orange-500 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               )}
             >
-              {cat.label} ({cat.count})
+              All ({photos.length})
             </button>
-          ))}
-        </div>
-      </div>
+            {categoryCounts.map((cat) => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => setCategoryFilter(cat.value)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                  categoryFilter === cat.value
+                    ? "bg-orange-500 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                {cat.label} ({cat.count})
+              </button>
+            ))}
+          </div>
 
-      <div className="mt-6">
-        {loading ? (
-          <p className="text-sm text-slate-500">Loading photos...</p>
-        ) : (
-          <PhotoGallery photos={photos} categoryFilter={categoryFilter} />
-        )}
-      </div>
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading photos...</p>
+          ) : (
+            <PhotoGallery photos={visiblePhotos} categoryFilter={undefined} />
+          )}
+        </PageSection>
+      </PageSectionShell>
     </div>
   );
 }

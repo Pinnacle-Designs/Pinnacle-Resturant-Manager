@@ -2,6 +2,13 @@ import { cn } from "@/lib/utils";
 
 export { PageHeader } from "@/components/ui/PageHeader";
 export { PrintButton } from "@/components/ui/PrintButton";
+export {
+  CollapsibleSection,
+  CollapsibleGroup,
+  CollapsibleGroupControls,
+} from "@/components/ui/Collapsible";
+export type { CollapsibleDefaultExpanded } from "@/components/ui/Collapsible";
+export { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface StatCardProps {
   label: string;

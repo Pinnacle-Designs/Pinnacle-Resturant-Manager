@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader, Button, Badge } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { Input, FormField } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PermissionsTab } from "@/components/account/PermissionsTab";
@@ -333,13 +334,14 @@ export function AccountClient() {
 
         <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           {tab === "profile" && (
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Profile</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Your photo and name appear across the app and on schedules.
-              </p>
-
-              <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <PageSectionShell pageId="account-profile">
+              <PageSection
+                id="account-profile-photo"
+                title="Profile"
+                description="Your photo and name appear across the app and on schedules."
+                defaultOpen
+              >
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="relative">
                   {avatarUrl ? (
                     <Image
@@ -382,8 +384,10 @@ export function AccountClient() {
                   </div>
                 </div>
               </div>
+              </PageSection>
 
-              <form className="mt-8 max-w-md space-y-4" onSubmit={saveProfile}>
+              <PageSection id="account-profile-details" title="Profile details">
+              <form className="max-w-md space-y-4" onSubmit={saveProfile}>
                 <FormField label="Display name">
                   <Input
                     value={name}
@@ -411,17 +415,19 @@ export function AccountClient() {
                   {profileSaving ? "Saving…" : "Save profile"}
                 </Button>
               </form>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "security" && (
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Security</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Update your password to keep your account secure.
-              </p>
-
-              <form className="mt-6 max-w-md space-y-4" onSubmit={savePassword}>
+            <PageSectionShell pageId="account-security">
+              <PageSection
+                id="account-security-password"
+                title="Security"
+                description="Update your password to keep your account secure."
+                defaultOpen
+              >
+              <form className="max-w-md space-y-4" onSubmit={savePassword}>
                 <FormField label="Current password">
                   <Input
                     type="password"
@@ -466,17 +472,18 @@ export function AccountClient() {
                   {passwordSaving ? "Updating…" : "Update password"}
                 </Button>
               </form>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "billing" && (
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Billing & autopay</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Your {data.billing.planName} plan is {formatCurrency(data.billing.monthlyAmount)}/mo
-                for {data.location.name}.
-              </p>
-
+            <PageSectionShell pageId="account-billing">
+              <PageSection
+                id="account-billing-status"
+                title="Billing & autopay"
+                description={`Your ${data.billing.planName} plan is ${formatCurrency(data.billing.monthlyAmount)}/mo for ${data.location.name}.`}
+                defaultOpen
+              >
               {data.billing.autopayEnabled ? (
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
@@ -504,8 +511,10 @@ export function AccountClient() {
                   Only the location owner can change billing settings.
                 </p>
               )}
+              </PageSection>
 
-              <div className="mt-6 rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <PageSection id="account-billing-plan" title="Current plan">
+              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
                 <p className="text-sm font-medium text-slate-800">Current plan</p>
                 <p className="mt-1 text-2xl font-bold text-slate-900">
                   {data.billing.planName}
@@ -521,7 +530,9 @@ export function AccountClient() {
                   Compare plans →
                 </Link>
               </div>
+              </PageSection>
 
+              <PageSection id="account-billing-integrations" title="Payment integrations">
               <BillingIntegrations
                 planName={data.billing.planName}
                 monthlyAmount={data.billing.monthlyAmount}
@@ -530,9 +541,11 @@ export function AccountClient() {
                 posProvider={data.billing.posProvider}
                 onRefresh={loadAccount}
               />
+              </PageSection>
 
               {data.billing.canManage && data.billing.subscriptionProvider === "manual" ? (
-                <form className="mt-6 max-w-lg space-y-4" onSubmit={saveBilling}>
+                <PageSection id="account-billing-payment" title="Payment method">
+                <form className="max-w-lg space-y-4" onSubmit={saveBilling}>
                   <FormField label="Billing email">
                     <Input
                       type="email"
@@ -648,10 +661,12 @@ export function AccountClient() {
                     {billingSaving ? "Saving…" : "Save billing settings"}
                   </Button>
                 </form>
+                </PageSection>
               ) : null}
 
               {!data.billing.canManage && (
-                <div className="mt-6 text-sm text-slate-600">
+                <PageSection id="account-billing-readonly" title="Billing summary">
+                <div className="text-sm text-slate-600">
                   <p>
                     Plan: <strong>{data.billing.planName}</strong> (
                     {formatCurrency(data.billing.monthlyAmount)}/mo)
@@ -660,15 +675,34 @@ export function AccountClient() {
                     Autopay: {data.billing.autopayEnabled ? "Enabled" : "Disabled"}
                   </p>
                 </div>
+                </PageSection>
               )}
-            </div>
+            </PageSectionShell>
           )}
 
-          {tab === "integrations" && <IntegrationsPanel />}
+          {tab === "integrations" && (
+            <PageSectionShell pageId="account-integrations">
+              <PageSection id="account-integrations-panel" title="Integrations" defaultOpen>
+                <IntegrationsPanel />
+              </PageSection>
+            </PageSectionShell>
+          )}
 
-          {tab === "support" && <PaymentSupportPanel />}
+          {tab === "support" && (
+            <PageSectionShell pageId="account-support">
+              <PageSection id="account-support-panel" title="Payments & support" defaultOpen>
+                <PaymentSupportPanel />
+              </PageSection>
+            </PageSectionShell>
+          )}
 
-          {tab === "permissions" && can("manage_permissions") && <PermissionsTab />}
+          {tab === "permissions" && can("manage_permissions") && (
+            <PageSectionShell pageId="account-permissions">
+              <PageSection id="account-permissions-panel" title="Team access" defaultOpen>
+                <PermissionsTab />
+              </PageSection>
+            </PageSectionShell>
+          )}
         </div>
       </div>
     </div>

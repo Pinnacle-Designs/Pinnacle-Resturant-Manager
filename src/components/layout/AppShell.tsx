@@ -8,6 +8,8 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { PrintReportStamp } from "@/components/layout/PrintReportStamp";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { GlobalSearchProvider } from "@/components/search/GlobalSearch";
+import { PageSearchStrip } from "@/components/search/PageSearchStrip";
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
@@ -35,6 +37,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     <main className="min-h-screen flex-1 overflow-auto">
       <div className="px-2 py-3 sm:px-4 sm:py-4">
         <PrintReportStamp />
+        <Suspense fallback={null}>
+          <PageSearchStrip />
+        </Suspense>
         {children}
       </div>
     </main>
@@ -42,6 +47,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     <main className="flex-1">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <PrintReportStamp />
+        <Suspense fallback={null}>
+          <PageSearchStrip />
+        </Suspense>
         {children}
       </div>
     </main>
@@ -49,16 +57,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <div className="flex min-h-screen">
-          {showSidebar && <Sidebar />}
-          <div className={`flex flex-1 flex-col ${showMobileChrome ? "pb-20 md:pb-0" : ""}`}>
-            {showMobileChrome && <MobileHeader />}
-            {mainInner}
+      <GlobalSearchProvider>
+        <NotificationProvider>
+          <div className="flex min-h-screen">
+            {showSidebar && <Sidebar />}
+            <div className={`flex flex-1 flex-col ${showMobileChrome ? "pb-20 md:pb-0" : ""}`}>
+              {showMobileChrome && <MobileHeader />}
+              {mainInner}
+            </div>
           </div>
-        </div>
-        {showMobileChrome && <MobileNav />}
-      </NotificationProvider>
+          {showMobileChrome && <MobileNav />}
+        </NotificationProvider>
+      </GlobalSearchProvider>
     </AuthProvider>
   );
 }

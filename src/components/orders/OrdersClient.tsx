@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState, useMemo, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { Plus, Trash2, ClipboardList, ListPlus, Wallet, Zap } from "lucide-react";
 import type { CheckStatus, PaymentMethod } from "@prisma/client";
-import { Button, Badge, EmptyState } from "@/components/ui";
+import { Button, Badge, EmptyState, CollapsibleSection, CollapsibleGroup, CollapsibleGroupControls } from "@/components/ui";
 import { Select } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
@@ -23,6 +23,8 @@ import {
 import { PayCheckScreen, type PayableOrder } from "@/components/orders/PayCheckScreen";
 import { OrderMenuSheet, type OrderMenuItem, type OrderMenuSubmitPayload } from "@/components/orders/OrderMenuSheet";
 import { useMenuSync } from "@/hooks/useMenuSync";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 interface Table {
   id: string;
@@ -74,6 +76,19 @@ export function OrdersClient({
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { query } = usePageSearch();
+
+  const visibleOrders = useMemo(
+    () =>
+      filterBySearchQuery(orders, query, (order) => [
+        order.status,
+        order.partyName,
+        order.notes,
+        order.table ? `Table ${order.table.number}` : null,
+        String(order.totalAmount),
+      ]),
+    [orders, query]
+  );
 
   const refreshMenu = async () => {
     try {
@@ -190,20 +205,29 @@ export function OrdersClient({
         </div>
       )}
 
-      {orders.length === 0 ? (
+      {visibleOrders.length === 0 ? (
         <EmptyState
           icon={<ClipboardList className="h-12 w-12" />}
-          title="No orders yet"
-          description="Tap New Order to pick items from the color-coded menu grid."
+          title={query.trim() ? "No matching orders" : "No orders yet"}
+          description={
+            query.trim()
+              ? "Try a different search term."
+              : "Tap New Order to pick items from the color-coded menu grid."
+          }
           action={
-            canPlace ? (
+            canPlace && !query.trim() ? (
               <Button onClick={() => setCreateModalOpen(true)}>New Order</Button>
             ) : undefined
           }
         />
       ) : (
-        <div className="space-y-4">
-          {orders.map((order) => {
+        <CollapsibleGroup
+          defaultExpanded={query.trim() ? "all" : "first"}
+          expandKey={query.trim() ? "search" : "browse"}
+        >
+          <CollapsibleGroupControls className="mb-4" />
+          <div className="space-y-4">
+            {visibleOrders.map((order) => {
             const balanceDue = getOrderBalanceDue(order, order.payments ?? []);
             const paidTotal = getPaymentsTotal(order.payments ?? []);
             const tipTotal = getTipsTotal(order.payments ?? []);
@@ -215,31 +239,27 @@ export function OrdersClient({
             const canModifyCheck = isOpen && !hasPaymentsAttached(order.payments);
 
             return (
-              <div key={order.id} className="card">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">Order #{order.id.slice(-6)}</h3>
-                      <Badge className={ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS]}>
-                        {order.status}
-                      </Badge>
-                      <Badge className={CHECK_STATUS_COLORS[checkStatus]}>
-                        {CHECK_STATUS_LABELS[checkStatus]}
-                      </Badge>
-                    </div>
-                    {order.table && (
-                      <p className="mt-1 text-sm text-slate-500">Table {order.table.number}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-slate-900">{formatCurrency(order.totalAmount)}</p>
-                    {isOpen && paidTotal > 0 && (
-                      <p className="text-xs text-slate-500">
-                        {formatCurrency(balanceDue)} remaining
-                      </p>
-                    )}
-                  </div>
-                </div>
+              <CollapsibleSection
+                key={order.id}
+                id={order.id}
+                title={`Order #${order.id.slice(-6)}`}
+                description={
+                  order.table
+                    ? `Table ${order.table.number} · ${formatCurrency(order.totalAmount)}`
+                    : formatCurrency(order.totalAmount)
+                }
+                badge={
+                  <>
+                    <Badge className={ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS]}>
+                      {order.status}
+                    </Badge>
+                    <Badge className={CHECK_STATUS_COLORS[checkStatus]}>
+                      {CHECK_STATUS_LABELS[checkStatus]}
+                    </Badge>
+                  </>
+                }
+                variant="card"
+              >
                 {order.items.length > 0 && (
                   <ul className="mt-4 space-y-1 text-sm text-slate-600">
                     {order.items.map((item) => (
@@ -315,10 +335,11 @@ export function OrdersClient({
                     </Button>
                   )}
                 </div>
-              </div>
+              </CollapsibleSection>
             );
           })}
-        </div>
+          </div>
+        </CollapsibleGroup>
       )}
 
       <OrderMenuSheet

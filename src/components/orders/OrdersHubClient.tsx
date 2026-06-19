@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClipboardList, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
+import { cn, formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { OrdersClient } from "@/components/orders/OrdersClient";
 import { ServerPosClient } from "@/components/pos/ServerPosClient";
@@ -84,8 +85,33 @@ export function OrdersHubClient({
     [router, searchParams]
   );
 
+  const openOrders = orders.filter(
+    (o) =>
+      o.checkStatus !== "CLOSED" && o.status !== "PAID" && o.status !== "CANCELLED"
+  );
+  const openTotal = openOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+
   return (
     <div className="space-y-4">
+      <PageSectionShell pageId="orders-hub">
+        <PageSection id="orders-overview" title="Service overview" defaultOpen>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border bg-white p-4 text-center">
+              <p className="text-2xl font-bold text-slate-900">{openOrders.length}</p>
+              <p className="text-xs text-slate-500">Open checks</p>
+            </div>
+            <div className="rounded-xl border bg-white p-4 text-center">
+              <p className="text-2xl font-bold text-orange-600">{formatCurrency(openTotal)}</p>
+              <p className="text-xs text-slate-500">Open check total</p>
+            </div>
+            <div className="rounded-xl border bg-white p-4 text-center">
+              <p className="text-2xl font-bold text-slate-700">{orders.length}</p>
+              <p className="text-xs text-slate-500">All orders</p>
+            </div>
+          </div>
+        </PageSection>
+      </PageSectionShell>
+
       <div className="flex rounded-xl border bg-white p-1 shadow-sm">
         <button
           type="button"

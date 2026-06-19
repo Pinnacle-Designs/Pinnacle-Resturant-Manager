@@ -48,6 +48,40 @@ export const NAV_ITEMS = [
   { href: "/insights", label: "Command Center", icon: "brain" },
 ] as const;
 
+/** Sidebar navigation groups — collapsible sections in the nav. */
+export const NAV_GROUPS = [
+  {
+    id: "overview",
+    label: "Overview",
+    hrefs: ["/dashboard", "/photos", "/analytics", "/insights"],
+  },
+  {
+    id: "service",
+    label: "Front of house",
+    hrefs: ["/orders", "/tables", "/timeclock"],
+  },
+  {
+    id: "menu-kitchen",
+    label: "Menu & kitchen",
+    hrefs: ["/menu", "/kitchen", "/boh", "/kds"],
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    hrefs: ["/inventory", "/purchase-orders"],
+  },
+  {
+    id: "team",
+    label: "Team",
+    hrefs: ["/staff", "/log-book"],
+  },
+  {
+    id: "business",
+    label: "Business",
+    hrefs: ["/finances", "/back-office", "/crystal-ball", "/social"],
+  },
+] as const;
+
 /** Bottom bar tabs on mobile — remaining items go in the More sheet */
 export const MOBILE_PRIMARY_NAV_HREFS = [
   "/dashboard",

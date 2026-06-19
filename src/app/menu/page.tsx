@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
 import { PageHeader } from "@/components/ui";
-import { MenuClient } from "@/components/menu/MenuClient";
-import { MenuChannelsPanel } from "@/components/menu/MenuChannelsPanel";
-import { MenuEngineeringPanel } from "@/components/menu/MenuEngineeringPanel";
-import { KitchenStationsPanel } from "@/components/kitchen/KitchenStationsPanel";
-import { ModifierSetsClient } from "@/components/pos/ModifierSetsClient";
+import { MenuPageClient } from "@/components/menu/MenuPageClient";
 import { getMenuChannelConfigs } from "@/lib/menu/publish";
 import { ensureKitchenStations } from "@/lib/kitchen/stations";
 import { computeMenuEngineering } from "@/lib/menu/engineering";
@@ -40,21 +36,17 @@ export default async function MenuPage() {
         title="Menu"
         description="Revenue asset — engineering, sales categories, recipe costing, and omnichannel sync"
       />
-      <MenuEngineeringPanel data={engineering} />
-      <MenuChannelsPanel
-        initialChannels={channels}
-        initialRevision={location?.menuRevision ?? 0}
+      <MenuPageClient
+        engineering={engineering}
+        engineeringByItemId={engineeringByItemId}
+        channels={channels}
+        menuRevision={location?.menuRevision ?? 0}
         sampleBasePrice={sampleBasePrice}
         locationId={locationId}
-      />
-      <KitchenStationsPanel />
-      <MenuClient
-        initialItems={items}
+        items={items}
         stations={stations}
-        engineeringByItemId={engineeringByItemId}
         inventory={inventory}
       />
-      <ModifierSetsClient menuItems={items} />
     </div>
   );
 }

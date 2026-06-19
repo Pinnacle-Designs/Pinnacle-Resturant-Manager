@@ -14,6 +14,7 @@ import {
 import { Button, EmptyState } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { OnboardingLinkPanel } from "@/components/hiring/OnboardingLinkPanel";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { cn } from "@/lib/utils";
 
 const PIPELINE: { status: string; label: string; color: string }[] = [
@@ -201,92 +202,101 @@ export function HiringClient() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-white p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Smartphone className="h-4 w-4 text-green-600" />
-          Paperless mobile onboarding
-        </p>
-        <p className="mt-1 text-sm text-slate-600">
-          When you click <strong>Hire &amp; send onboarding</strong>, new hires get a phone-friendly link to
-          complete <strong>I-9</strong>, <strong>W-4</strong>, <strong>direct deposit</strong>, and handbook
-          acknowledgments before their first shift. Open any hired applicant to copy the link or preview the flow.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Smartphone className="h-4 w-4 text-orange-500" />
-            Text-to-apply
-          </p>
-          <p className="mt-1 text-sm text-slate-600">
-            {settings?.applyPhone ? (
-              <>
-                Text <strong>{settings.applyKeyword}</strong> to{" "}
-                <strong>{settings.applyPhone}</strong>
-                {postings[0] && (
-                  <>
-                    {" "}
-                    or <strong>{settings.applyKeyword} {postings[0].applyCode}</strong> for a role
-                  </>
-                )}
-              </>
-            ) : (
-              <>Configure apply phone in settings — SMS works in dev (simulated in console)</>
-            )}
-          </p>
-          {postings.length > 0 && (
-            <p className="mt-1 text-xs text-slate-500">
-              Web apply: /apply?code={postings[0].applyCode}
+    <>
+      <PageSectionShell pageId="hiring">
+        <PageSection id="hiring-onboarding" title="Mobile onboarding" defaultOpen>
+          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-white p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Smartphone className="h-4 w-4 text-green-600" />
+              Paperless mobile onboarding
             </p>
-          )}
-        </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <UserPlus className="h-4 w-4" />
-          Add walk-in
-        </Button>
-      </div>
+            <p className="mt-1 text-sm text-slate-600">
+              When you click <strong>Hire &amp; send onboarding</strong>, new hires get a phone-friendly link to
+              complete <strong>I-9</strong>, <strong>W-4</strong>, <strong>direct deposit</strong>, and handbook
+              acknowledgments before their first shift. Open any hired applicant to copy the link or preview the flow.
+            </p>
+          </div>
+        </PageSection>
 
-      {applications.length === 0 ? (
-        <EmptyState
-          icon={<UserPlus className="h-12 w-12" />}
-          title="No applicants yet"
-          description="Share your text-to-apply number or post a job code to start hiring."
-        />
-      ) : (
-        <div className="grid gap-3 overflow-x-auto lg:grid-cols-5">
-          {PIPELINE.map((col) => (
-            <div key={col.status} className="min-w-[200px] rounded-xl border bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {col.label} ({byStatus(col.status).length})
+        <PageSection
+          id="hiring-text-to-apply"
+          title="Text-to-apply"
+          headerActions={
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <UserPlus className="h-4 w-4" />
+              Add walk-in
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="mt-1 text-sm text-slate-600">
+                {settings?.applyPhone ? (
+                  <>
+                    Text <strong>{settings.applyKeyword}</strong> to{" "}
+                    <strong>{settings.applyPhone}</strong>
+                    {postings[0] && (
+                      <>
+                        {" "}
+                        or <strong>{settings.applyKeyword} {postings[0].applyCode}</strong> for a role
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>Configure apply phone in settings — SMS works in dev (simulated in console)</>
+                )}
               </p>
-              <ul className="space-y-2">
-                {byStatus(col.status).map((app) => (
-                  <li key={app.id}>
-                    <button
-                      type="button"
-                      onClick={() => openApplicant(app)}
-                      className="w-full rounded-lg border bg-white p-3 text-left text-sm hover:border-orange-300"
-                    >
-                      <p className="font-medium text-slate-900">{app.applicant.name}</p>
-                      <p className="text-xs text-slate-500">{app.role}</p>
-                      <p className="mt-1 text-[10px] text-slate-400">
-                        {app.source.replace("_", " ")} · {format(new Date(app.appliedAt), "MMM d")}
-                      </p>
-                      {app.status === "HIRED" && app.onboardingPacket && (
-                        <p className="mt-1 text-[10px] font-medium text-green-700">
-                          Onboarding · {app.onboardingPacket.status === "COMPLETE" ? "done" : "in progress"}
-                        </p>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {postings.length > 0 && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Web apply: /apply?code={postings[0].applyCode}
+                </p>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        </PageSection>
+
+        <PageSection id="hiring-pipeline" title="Applicant pipeline" defaultOpen>
+          {applications.length === 0 ? (
+            <EmptyState
+              icon={<UserPlus className="h-12 w-12" />}
+              title="No applicants yet"
+              description="Share your text-to-apply number or post a job code to start hiring."
+            />
+          ) : (
+            <div className="grid gap-3 overflow-x-auto lg:grid-cols-5">
+              {PIPELINE.map((col) => (
+                <div key={col.status} className="min-w-[200px] rounded-xl border bg-slate-50 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {col.label} ({byStatus(col.status).length})
+                  </p>
+                  <ul className="space-y-2">
+                    {byStatus(col.status).map((app) => (
+                      <li key={app.id}>
+                        <button
+                          type="button"
+                          onClick={() => openApplicant(app)}
+                          className="w-full rounded-lg border bg-white p-3 text-left text-sm hover:border-orange-300"
+                        >
+                          <p className="font-medium text-slate-900">{app.applicant.name}</p>
+                          <p className="text-xs text-slate-500">{app.role}</p>
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            {app.source.replace("_", " ")} · {format(new Date(app.appliedAt), "MMM d")}
+                          </p>
+                          {app.status === "HIRED" && app.onboardingPacket && (
+                            <p className="mt-1 text-[10px] font-medium text-green-700">
+                              Onboarding · {app.onboardingPacket.status === "COMPLETE" ? "done" : "in progress"}
+                            </p>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </PageSection>
+      </PageSectionShell>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.applicant.name || "Applicant"}>
         {selected && (
@@ -416,6 +426,6 @@ export function HiringClient() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

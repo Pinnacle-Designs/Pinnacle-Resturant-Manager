@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeftRight, HandCoins, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Button, EmptyState } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { formatShiftTime } from "@/lib/schedule";
 
 interface SwapRequest {
@@ -99,13 +100,9 @@ export function ShiftSwapClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageSectionShell pageId="shift-swaps">
       {openShifts.length > 0 && (
-        <section>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <HandCoins className="h-4 w-4 text-orange-500" />
-            Open shifts — claim a slot
-          </h3>
+        <PageSection id="shift-swaps-open" title="Open shifts" defaultOpen>
           <div className="grid gap-2 sm:grid-cols-2">
             {openShifts.map((s) => (
               <div key={s.id} className="rounded-xl border bg-white p-4">
@@ -127,14 +124,10 @@ export function ShiftSwapClient() {
               </div>
             ))}
           </div>
-        </section>
+        </PageSection>
       )}
 
-      <section>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <ArrowLeftRight className="h-4 w-4" />
-          Pending requests
-        </h3>
+      <PageSection id="shift-swaps-pending" title="Pending requests" defaultOpen>
         {requests.length === 0 ? (
           <EmptyState
             title="No pending shift requests"
@@ -189,7 +182,7 @@ export function ShiftSwapClient() {
             ))}
           </ul>
         )}
-      </section>
-    </div>
+      </PageSection>
+    </PageSectionShell>
   );
 }

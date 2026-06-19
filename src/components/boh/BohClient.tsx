@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, Clock, Minus, Plus, RefreshCw, RotateCcw } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
-import { Input, Select, FormField, Modal } from "@/components/ui/form";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
+import { Select, Input, FormField, Modal } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiPatch, apiPost, apiDelete } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useMenuSync } from "@/hooks/useMenuSync";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 interface MenuItemRow {
   id: string;
@@ -43,9 +45,9 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function BohClient() {
   const { can } = useAuth();
   const canSchedules = can("manage_menu");
+  const { query } = usePageSearch();
   const [data, setData] = useState<BohPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [scheduleForm, setScheduleForm] = useState({
@@ -79,14 +81,14 @@ export function BohClient() {
   );
 
   const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
     const items = data?.items ?? [];
     if (!q) return items;
     return items.filter(
       (i) =>
         i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)
     );
-  }, [data?.items, filter]);
+  }, [data?.items, query]);
 
   const handle86 = async (item: MenuItemRow) => {
     setSavingId(item.id);
@@ -147,15 +149,17 @@ export function BohClient() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
+    <PageSectionShell pageId="boh">
+      <PageSection
+        id="boh-sync"
+        title="Live menu sync"
+        description="Revision updates every 5s across POS & ordering."
+        defaultOpen
+      >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Live menu sync
-          </p>
           <p className="text-sm text-slate-700">
-            Revision <strong>{data?.menuRevision ?? 0}</strong> · updates every 5s across POS &
-            ordering
+            Revision <strong>{data?.menuRevision ?? 0}</strong>
           </p>
           {daypartLabel && (
             <p className="mt-1 flex items-center gap-1 text-sm text-orange-700">
@@ -169,13 +173,9 @@ export function BohClient() {
           Refresh
         </Button>
       </div>
+      </PageSection>
 
-      <Input
-        placeholder="Search items to 86 or set stock…"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
-
+      <PageSection id="boh-menu-items" title="Menu items">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((item) => {
           const is86 = !item.available;
@@ -273,20 +273,19 @@ export function BohClient() {
           );
         })}
       </div>
+      </PageSection>
 
       {canSchedules && (
-        <section className="rounded-xl border bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="font-bold text-slate-900">Dayparting & scheduled menus</h2>
-              <p className="text-sm text-slate-600">
-                Auto-show/hide categories and happy hour pricing by time and day.
-              </p>
-            </div>
-            <Button size="sm" onClick={() => setScheduleOpen(true)}>
-              Add rule
-            </Button>
-          </div>
+        <PageSection
+          id="boh-schedules"
+          title="Dayparting & scheduled menus"
+          description="Auto-show/hide categories and happy hour pricing by time and day."
+        >
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button size="sm" onClick={() => setScheduleOpen(true)}>
+            Add rule
+          </Button>
+        </div>
           <ul className="mt-4 space-y-2">
             {(data?.schedules ?? []).map((rule) => (
               <li
@@ -318,7 +317,7 @@ export function BohClient() {
               </li>
             ))}
           </ul>
-        </section>
+        </PageSection>
       )}
 
       <Modal
@@ -391,6 +390,6 @@ export function BohClient() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageSectionShell>
   );
 }

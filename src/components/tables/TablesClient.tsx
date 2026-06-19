@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import {
   Plus,
   Pencil,
@@ -24,6 +24,9 @@ import {
   layoutNewTable,
   toTableBounds,
 } from "@/lib/tables/floor-plan-layout";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface TableOrder {
   id: string;
@@ -61,6 +64,7 @@ export function TablesClient({
   };
 }) {
   const [tab, setTab] = useState<TabId>("floor");
+  const { query } = usePageSearch();
   const [tables, setTables] = useState<Table[]>(initialTables);
   const [planWidth, setPlanWidth] = useState(initialFloorPlan.width);
   const [planHeight, setPlanHeight] = useState(initialFloorPlan.height);
@@ -84,6 +88,17 @@ export function TablesClient({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const visibleTables = useMemo(
+    () =>
+      filterBySearchQuery(tables, query, (table) => [
+        table.label,
+        String(table.number),
+        table.section,
+        table.status,
+      ]),
+    [tables, query]
+  );
 
   const reloadFloorPlan = useCallback(async () => {
     const res = await fetch("/api/tables/floor-plan");
@@ -350,8 +365,9 @@ export function TablesClient({
       </div>
 
       {tab === "floor" && (
+        <PageSectionShell pageId="tables-floor">
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div>
+          <PageSection id="floor-canvas" title="Floor plan" defaultOpen>
             {tables.length === 0 ? (
               <EmptyState
                 icon={<LayoutGrid className="h-12 w-12" />}
@@ -364,17 +380,16 @@ export function TablesClient({
                 width={planWidth}
                 height={planHeight}
                 sections={sections}
-                tables={tables}
+                tables={query.trim() ? visibleTables : tables}
                 editMode={editMode}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 onMoveTable={onMoveTable}
               />
             )}
-          </div>
+          </PageSection>
 
-          <aside className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="font-semibold text-slate-900">Table details</h3>
+          <PageSection id="floor-details" title="Table details">
             {selectedTable ? (
               <div className="space-y-3 text-sm">
                 <p>
@@ -417,7 +432,7 @@ export function TablesClient({
             )}
 
             {editMode && (
-              <div className="border-t pt-4 text-xs text-slate-500">
+              <div className="mt-4 border-t pt-4 text-xs text-slate-500">
                 <p className="font-medium text-slate-700">Layout tips</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   <li>Drag tables into dining zones</li>
@@ -426,12 +441,14 @@ export function TablesClient({
                 </ul>
               </div>
             )}
-          </aside>
+          </PageSection>
         </div>
+        </PageSectionShell>
       )}
 
       {tab === "list" && (
-        <>
+        <PageSectionShell pageId="tables-list">
+          <PageSection id="table-grid" title="All tables" defaultOpen>
           {tables.length === 0 ? (
             <EmptyState
               icon={<LayoutGrid className="h-12 w-12" />}
@@ -441,7 +458,7 @@ export function TablesClient({
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {tables.map((table) => (
+              {visibleTables.map((table) => (
                 <div
                   key={table.id}
                   className={cn(
@@ -473,11 +490,16 @@ export function TablesClient({
               ))}
             </div>
           )}
-        </>
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {tab === "reservations" && (
-        <ReservationsPanel onReservationChange={reloadFloorPlan} />
+        <PageSectionShell pageId="tables-reservations">
+          <PageSection id="reservations" title="Reservations" defaultOpen>
+            <ReservationsPanel onReservationChange={reloadFloorPlan} />
+          </PageSection>
+        </PageSectionShell>
       )}
 
       <Modal

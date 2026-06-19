@@ -36,6 +36,7 @@ import {
   PO_PAYMENT_LABELS,
   type PoPaymentStatus,
 } from "@/lib/purchasing/po-receiving-status";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface PoSuggestion {
   inventoryItemId: string;
@@ -482,16 +483,14 @@ export function LoadingDockClient() {
       ) : (
         <>
           {tab === "drafts" && (
-            <div className="space-y-4">
-              <div className="card">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold text-slate-900">Smart purchase orders</h2>
-                    <p className="text-sm text-slate-500">
-                      Auto-built per vendor from par levels, sales velocity, holiday forecasts, and winning bid prices
-                    </p>
-                  </div>
-                  <Button onClick={buildDraftPos} disabled={buildingDrafts}>
+            <PageSectionShell pageId="loading-dock-drafts">
+              <PageSection
+                id="smart-pos"
+                title="Smart purchase orders"
+                description="Auto-built per vendor from par levels, sales velocity, holiday forecasts, and winning bid prices"
+                defaultOpen
+                headerActions={
+                  <Button onClick={buildDraftPos} disabled={buildingDrafts} size="sm">
                     {buildingDrafts ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -499,7 +498,8 @@ export function LoadingDockClient() {
                     )}
                     Build draft POs by vendor
                   </Button>
-                </div>
+                }
+              >
                 {draftOrders.length === 0 ? (
                   <p className="py-6 text-center text-slate-500">
                     No draft POs yet. Click above to generate one draft per vendor — then review and approve to email or EDI transmit.
@@ -541,90 +541,95 @@ export function LoadingDockClient() {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "bidding" && (
-            <div className="card">
-              <div className="mb-4">
-                <h2 className="font-semibold text-slate-900">Cross-vendor price comparison</h2>
-                <p className="text-sm text-slate-500">
-                  Compares vendor quotes, EDI catalog pricing, and invoice history — recommends the lowest in-stock vendor each week
-                </p>
+            <PageSectionShell pageId="loading-dock-bidding">
+              <PageSection
+                id="vendor-bidding"
+                title="Cross-vendor price comparison"
+                description="Compares vendor quotes, EDI catalog pricing, and invoice history — recommends the lowest in-stock vendor each week"
+                defaultOpen
+              >
                 {multiVendorBids.length > 0 && (
-                  <p className="mt-2 text-sm font-medium text-green-700">
+                  <p className="mb-4 text-sm font-medium text-green-700">
                     {multiVendorBids.length} items bid across vendors · est. weekly savings {formatCurrency(bidSavings)}
                   </p>
                 )}
-              </div>
-              {multiVendorBids.length === 0 ? (
-                <p className="py-8 text-center text-slate-500">
-                  Need 2+ vendor quotes per item. Seed data includes produce bidding — or add vendor price history and connect EDI catalogs.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-slate-500">
-                        <th className="pb-2 pr-4">Item</th>
-                        <th className="pb-2 pr-4">Vendor quotes</th>
-                        <th className="pb-2 pr-4">Winner</th>
-                        <th className="pb-2">Savings</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {multiVendorBids.map((b) => (
-                        <tr key={b.inventoryItemId} className="border-b border-slate-100">
-                          <td className="py-3 pr-4 font-medium">{b.itemName}</td>
-                          <td className="py-3 pr-4 text-xs text-slate-600">
-                            {b.vendors.map((v) => (
-                              <span
-                                key={v.vendor}
-                                className={`mr-2 inline-block rounded px-1.5 py-0.5 ${
-                                  v.vendor === b.recommendedVendor
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-slate-100"
-                                }`}
-                              >
-                                {v.vendor} {formatCurrency(v.unitPrice)}
-                              </span>
-                            ))}
-                          </td>
-                          <td className="py-3 pr-4 text-orange-700">{b.recommendedVendor}</td>
-                          <td className="py-3">
-                            {b.savingsPct > 0 ? (
-                              <span className="text-green-700">{b.savingsPct.toFixed(0)}%</span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
+                {multiVendorBids.length === 0 ? (
+                  <p className="py-8 text-center text-slate-500">
+                    Need 2+ vendor quotes per item. Seed data includes produce bidding — or add vendor price history and connect EDI catalogs.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-slate-500">
+                          <th className="pb-2 pr-4">Item</th>
+                          <th className="pb-2 pr-4">Vendor quotes</th>
+                          <th className="pb-2 pr-4">Winner</th>
+                          <th className="pb-2">Savings</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                      </thead>
+                      <tbody>
+                        {multiVendorBids.map((b) => (
+                          <tr key={b.inventoryItemId} className="border-b border-slate-100">
+                            <td className="py-3 pr-4 font-medium">{b.itemName}</td>
+                            <td className="py-3 pr-4 text-xs text-slate-600">
+                              {b.vendors.map((v) => (
+                                <span
+                                  key={v.vendor}
+                                  className={`mr-2 inline-block rounded px-1.5 py-0.5 ${
+                                    v.vendor === b.recommendedVendor
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-slate-100"
+                                  }`}
+                                >
+                                  {v.vendor} {formatCurrency(v.unitPrice)}
+                                </span>
+                              ))}
+                            </td>
+                            <td className="py-3 pr-4 text-orange-700">{b.recommendedVendor}</td>
+                            <td className="py-3">
+                              {b.savingsPct > 0 ? (
+                                <span className="text-green-700">{b.savingsPct.toFixed(0)}%</span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "scorecards" && (
-            <VendorScorecardsPanel
-              scorecards={scorecards}
-              summary={scorecardSummary}
-              loading={loading}
-            />
+            <PageSectionShell pageId="loading-dock-scorecards">
+              <PageSection id="vendor-scorecards" title="Vendor scorecards" defaultOpen>
+                <VendorScorecardsPanel
+                  scorecards={scorecards}
+                  summary={scorecardSummary}
+                  loading={loading}
+                />
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "vendors" && (
-            <div className="space-y-6">
+            <PageSectionShell pageId="loading-dock-vendors">
               {ediVendors.length > 0 && (
-                <section>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h2 className="font-semibold text-slate-900">EDI distributors</h2>
-                      <p className="text-sm text-slate-500">Sysco, US Foods, and Gordon Food Service — live catalog sync and EDI PO transmission</p>
-                    </div>
+                <PageSection
+                  id="edi-vendors"
+                  title="EDI distributors"
+                  description="Sysco, US Foods, and Gordon Food Service — live catalog sync and EDI PO transmission"
+                  defaultOpen
+                  headerActions={
                     <Link
                       href="/account?tab=integrations"
                       className="inline-flex items-center gap-1 text-sm font-medium text-orange-700 hover:text-orange-800"
@@ -632,10 +637,11 @@ export function LoadingDockClient() {
                       <Link2 className="h-4 w-4" />
                       Manage in Integrations
                     </Link>
-                  </div>
+                  }
+                >
                   <div className="grid gap-4 md:grid-cols-2">
                     {ediVendors.map((v) => (
-                      <div key={v.name} className="card border-orange-100">
+                      <div key={v.name} className="rounded-xl border border-orange-100 bg-white p-4">
                         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <p className="font-semibold text-slate-900">{v.name}</p>
@@ -680,24 +686,22 @@ export function LoadingDockClient() {
                       </div>
                     ))}
                   </div>
-                </section>
+                </PageSection>
               )}
 
-              <section>
-                <div className="mb-3">
-                  <h2 className="font-semibold text-slate-900">Local &amp; specialty suppliers</h2>
-                  <p className="text-sm text-slate-500">
-                    Pulled from inventory supplier fields, purchase orders, and credits
-                  </p>
-                </div>
+              <PageSection
+                id="local-suppliers"
+                title="Local & specialty suppliers"
+                description="Pulled from inventory supplier fields, purchase orders, and credits"
+              >
                 {supplierVendors.length === 0 ? (
-                  <div className="card py-8 text-center text-slate-500">
+                  <p className="py-8 text-center text-slate-500">
                     No vendors yet — set a supplier on inventory items to group orders here.
-                  </div>
+                  </p>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {supplierVendors.map((v) => (
-                      <div key={v.name} className="card">
+                      <div key={v.name} className="rounded-xl border bg-white p-4">
                         <div className="mb-3 flex items-start justify-between gap-2">
                           <p className="font-semibold text-slate-900">{v.name}</p>
                           {v.lowStockCount > 0 && (
@@ -753,24 +757,24 @@ export function LoadingDockClient() {
                     ))}
                   </div>
                 )}
-              </section>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "suggestions" && (
-            <div className="card">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold text-slate-900">Predictive Auto-Ordering</h2>
-                  <p className="text-sm text-slate-500">
-                    Based on sales velocity, current stock, and upcoming holidays
-                  </p>
-                </div>
-                <Button onClick={createPoFromSuggestions} disabled={creatingPo || suggestions.length === 0}>
-                  {creatingPo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />}
-                  Create PO from suggestions
-                </Button>
-              </div>
+            <PageSectionShell pageId="loading-dock-suggestions">
+              <PageSection
+                id="auto-order"
+                title="Predictive Auto-Ordering"
+                description="Based on sales velocity, current stock, and upcoming holidays"
+                defaultOpen
+                headerActions={
+                  <Button onClick={createPoFromSuggestions} disabled={creatingPo || suggestions.length === 0} size="sm">
+                    {creatingPo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />}
+                    Create PO from suggestions
+                  </Button>
+                }
+              >
               {suggestions.length === 0 ? (
                 <p className="py-8 text-center text-slate-500">Stock levels look healthy — no reorders suggested.</p>
               ) : (
@@ -805,26 +809,27 @@ export function LoadingDockClient() {
                   </table>
                 </div>
               )}
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "orders" && (
-            <div className="space-y-6">
+            <PageSectionShell pageId="loading-dock-orders">
               {pendingReceivingPos.length === 0 && receivedPos.length === 0 ? (
-                <div className="card py-8 text-center text-slate-500">
-                  No active purchase orders — approve a Smart PO or create one from Auto-Order.
-                </div>
+                <PageSection id="po-empty" title="POs & receiving">
+                  <p className="py-8 text-center text-slate-500">
+                    No active purchase orders — approve a Smart PO or create one from Auto-Order.
+                  </p>
+                </PageSection>
               ) : (
                 <>
                   {pendingReceivingPos.length > 0 && (
-                    <section>
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <h2 className="text-lg font-semibold text-slate-900">Pending</h2>
-                        <p className="text-sm text-slate-500">
-                          {pendingReceivingPos.length} PO(s) ·{" "}
-                          {formatCurrency(pendingReceivingPos.reduce((s, p) => s + p.totalAmount, 0))}
-                        </p>
-                      </div>
+                    <PageSection
+                      id="po-pending"
+                      title="Pending"
+                      description={`${pendingReceivingPos.length} PO(s) · ${formatCurrency(pendingReceivingPos.reduce((s, p) => s + p.totalAmount, 0))}`}
+                      defaultOpen
+                    >
                       <div className="space-y-4">
                         {pendingReceivingPos.map((po) => {
                           const paymentStatus = derivePoPaymentStatus(po, openCreditInvoiceIds);
@@ -842,18 +847,15 @@ export function LoadingDockClient() {
                           );
                         })}
                       </div>
-                    </section>
+                    </PageSection>
                   )}
 
                   {receivedPos.length > 0 && (
-                    <section>
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <h2 className="text-lg font-semibold text-slate-900">Received</h2>
-                        <p className="text-sm text-slate-500">
-                          {receivedPos.length} PO(s) ·{" "}
-                          {formatCurrency(receivedPos.reduce((s, p) => s + p.totalAmount, 0))}
-                        </p>
-                      </div>
+                    <PageSection
+                      id="po-received"
+                      title="Received"
+                      description={`${receivedPos.length} PO(s) · ${formatCurrency(receivedPos.reduce((s, p) => s + p.totalAmount, 0))}`}
+                    >
                       <div className="space-y-4">
                         {receivedPos.map((po) => {
                           const paymentStatus = derivePoPaymentStatus(po, openCreditInvoiceIds);
@@ -871,23 +873,28 @@ export function LoadingDockClient() {
                           );
                         })}
                       </div>
-                    </section>
+                    </PageSection>
                   )}
                 </>
               )}
-            </div>
+            </PageSectionShell>
           )}
 
-          {tab === "invoices" && <ThreeWayMatchPanel invoices={invoices} onRefresh={load} />}
+          {tab === "invoices" && (
+            <PageSectionShell pageId="loading-dock-invoices">
+              <PageSection id="three-way-match" title="Three-way match" defaultOpen>
+                <ThreeWayMatchPanel invoices={invoices} onRefresh={load} />
+              </PageSection>
+            </PageSectionShell>
+          )}
 
           {tab === "credits" && (
-            <div className="space-y-4">
-              <div className="card border-violet-100 bg-violet-50/40">
-                <div className="flex flex-wrap items-start gap-4">
+            <PageSectionShell pageId="loading-dock-credits">
+              <PageSection id="credit-intro" title="Credit memo tracking" defaultOpen>
+                <div className="flex flex-wrap items-start gap-4 rounded-lg border border-violet-100 bg-violet-50/40 p-4">
                   <Camera className="h-10 w-10 shrink-0 text-violet-600" />
                   <div className="flex-1">
-                    <h2 className="font-semibold text-slate-900">Credit memo tracking</h2>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="text-sm text-slate-600">
                       Dishwasher snaps shattered glass, rotten produce, or short-ships — Pinnacle generates a credit
                       request, emails the vendor rep, and <strong>locks accounting sync</strong> so your bookkeeper
                       cannot pay the full invoice until the credit is officially applied.
@@ -908,84 +915,81 @@ export function LoadingDockClient() {
                     {creditSaveNote}
                   </p>
                 )}
-              </div>
+              </PageSection>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="card">
-                  <h2 className="mb-4 font-semibold">Quick log (no photo)</h2>
+              <PageSection id="credit-quick-log" title="Quick log (no photo)">
+                <div className="space-y-3">
+                  <FormField label="Vendor">
+                    <Input
+                      value={creditForm.vendor}
+                      onChange={(e) => setCreditForm({ ...creditForm, vendor: e.target.value })}
+                      placeholder="Hill Country Meats"
+                    />
+                  </FormField>
+                  <FormField label="Credit amount">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={creditForm.amount}
+                      onChange={(e) => setCreditForm({ ...creditForm, amount: e.target.value })}
+                    />
+                  </FormField>
+                  <FormField label="Reason">
+                    <Input
+                      value={creditForm.reason}
+                      onChange={(e) => setCreditForm({ ...creditForm, reason: e.target.value })}
+                      placeholder="Damaged cases refused at dock"
+                    />
+                  </FormField>
+                  <Button onClick={saveCredit} disabled={savingCredit}>
+                    {savingCredit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Log credit & email rep
+                  </Button>
+                </div>
+              </PageSection>
+
+              <PageSection id="credit-tracker" title="Credit tracker">
+                {credits.length === 0 ? (
+                  <p className="text-sm text-slate-500">No credits logged.</p>
+                ) : (
                   <div className="space-y-3">
-                    <FormField label="Vendor">
-                      <Input
-                        value={creditForm.vendor}
-                        onChange={(e) => setCreditForm({ ...creditForm, vendor: e.target.value })}
-                        placeholder="Hill Country Meats"
-                      />
-                    </FormField>
-                    <FormField label="Credit amount">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={creditForm.amount}
-                        onChange={(e) => setCreditForm({ ...creditForm, amount: e.target.value })}
-                      />
-                    </FormField>
-                    <FormField label="Reason">
-                      <Input
-                        value={creditForm.reason}
-                        onChange={(e) => setCreditForm({ ...creditForm, reason: e.target.value })}
-                        placeholder="Damaged cases refused at dock"
-                      />
-                    </FormField>
-                    <Button onClick={saveCredit} disabled={savingCredit}>
-                      {savingCredit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Log credit & email rep
-                    </Button>
-                  </div>
-                </div>
-                <div className="card">
-                  <h2 className="mb-4 font-semibold">Credit tracker</h2>
-                  {credits.length === 0 ? (
-                    <p className="text-sm text-slate-500">No credits logged.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {credits.map((c) => (
-                        <div key={c.id} className="rounded-lg border border-slate-200 p-3">
-                          <div className="flex justify-between gap-2">
-                            <span className="font-medium">{c.vendor}</span>
-                            <span className="font-semibold text-orange-700">{formatCurrency(c.amount)}</span>
-                          </div>
-                          <p className="mt-1 text-sm text-slate-600">{c.reason}</p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                            {c.category && <Badge className="bg-slate-100">{c.category.replace(/_/g, " ")}</Badge>}
-                            {c.emailStatus && (
-                              <span className="flex items-center gap-1">
-                                Email: {c.emailStatus}
-                                {c.repEmail ? ` → ${c.repEmail}` : ""}
-                              </span>
-                            )}
-                            {c.accountingLocked && (
-                              <span className="flex items-center gap-1 text-amber-700">
-                                <ShieldCheck className="h-3 w-3" /> AP sync locked
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-2 flex items-center justify-between">
-                            <Badge className={c.status === "OPEN" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}>
-                              {c.status}
-                            </Badge>
-                            {c.status === "OPEN" && (
-                              <Button size="sm" variant="ghost" onClick={() => resolveCredit(c.id, "APPLIED")}>
-                                Mark memo received
-                              </Button>
-                            )}
-                          </div>
+                    {credits.map((c) => (
+                      <div key={c.id} className="rounded-lg border border-slate-200 p-3">
+                        <div className="flex justify-between gap-2">
+                          <span className="font-medium">{c.vendor}</span>
+                          <span className="font-semibold text-orange-700">{formatCurrency(c.amount)}</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                        <p className="mt-1 text-sm text-slate-600">{c.reason}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                          {c.category && <Badge className="bg-slate-100">{c.category.replace(/_/g, " ")}</Badge>}
+                          {c.emailStatus && (
+                            <span className="flex items-center gap-1">
+                              Email: {c.emailStatus}
+                              {c.repEmail ? ` → ${c.repEmail}` : ""}
+                            </span>
+                          )}
+                          {c.accountingLocked && (
+                            <span className="flex items-center gap-1 text-amber-700">
+                              <ShieldCheck className="h-3 w-3" /> AP sync locked
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <Badge className={c.status === "OPEN" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}>
+                            {c.status}
+                          </Badge>
+                          {c.status === "OPEN" && (
+                            <Button size="sm" variant="ghost" onClick={() => resolveCredit(c.id, "APPLIED")}>
+                              Mark memo received
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </PageSection>
+            </PageSectionShell>
           )}
         </>
       )}

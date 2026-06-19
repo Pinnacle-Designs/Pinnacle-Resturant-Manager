@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { PLAN_BY_ID } from "@/lib/plans";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { PlanId } from "@/lib/plans";
@@ -206,15 +207,19 @@ export function OnboardingClient() {
         })}
       </nav>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-6">
+        <PageSectionShell pageId="onboarding" defaultExpanded="all">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
 
         {step === 1 && (
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Restaurant details</h2>
-            <p className="mt-1 text-sm text-slate-500">Tell us about your location so reports and schedules are accurate.</p>
-            <div className="mt-6 space-y-4">
+          <PageSection
+            id="onboarding-restaurant"
+            title="Restaurant details"
+            description="Tell us about your location so reports and schedules are accurate."
+            defaultOpen
+          >
+            <div className="space-y-4">
               <FormField label="Restaurant name *">
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </FormField>
@@ -235,16 +240,17 @@ export function OnboardingClient() {
                 Continue <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+          </PageSection>
         )}
 
         {step === 2 && (
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Load sample data?</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              We can add a starter menu, inventory, staff, tables, and expenses so you can explore the app immediately.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+          <PageSection
+            id="onboarding-sample-data"
+            title="Load sample data?"
+            description="We can add a starter menu, inventory, staff, tables, and expenses so you can explore the app immediately."
+            defaultOpen
+          >
+            <div className="flex flex-wrap gap-3">
               <Button type="button" disabled={busy} onClick={() => void seedData()}>
                 Load sample data
               </Button>
@@ -255,17 +261,17 @@ export function OnboardingClient() {
             <button type="button" className="mt-4 text-sm text-slate-500 hover:text-slate-700" onClick={() => setStep(1)}>
               <ArrowLeft className="mr-1 inline h-3 w-3" /> Back
             </button>
-          </div>
+          </PageSection>
         )}
 
         {step === 3 && plan && (
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Subscription billing</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Connect Stripe for PCI-compliant autopay on your {plan.name} plan ({formatCurrency(plan.monthlyAmount)}/mo).
-              Card data never touches Pinnacle servers.
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-slate-600">
+          <PageSection
+            id="onboarding-billing"
+            title="Subscription billing"
+            description={`Connect Stripe for PCI-compliant autopay on your ${plan.name} plan (${formatCurrency(plan.monthlyAmount)}/mo). Card data never touches Pinnacle servers.`}
+            defaultOpen
+          >
+            <ul className="space-y-2 text-sm text-slate-600">
               {PLAN_BY_ID[plan.id].features.slice(0, 4).map((f) => (
                 <li key={f}>✓ {f}</li>
               ))}
@@ -288,21 +294,23 @@ export function OnboardingClient() {
             <button type="button" className="mt-4 text-sm text-slate-500 hover:text-slate-700" onClick={() => setStep(2)}>
               <ArrowLeft className="mr-1 inline h-3 w-3" /> Back
             </button>
-          </div>
+          </PageSection>
         )}
 
         {step === 4 && (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-            <h2 className="mt-4 text-lg font-semibold text-slate-900">You&apos;re ready</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Your workspace is configured. Open the dashboard to start managing orders, inventory, and staff.
-            </p>
-            <Button type="button" className="mt-6" disabled={busy} onClick={() => void finish()}>
-              Go to dashboard
-            </Button>
-          </div>
+          <PageSection id="onboarding-launch" title="You're ready" defaultOpen>
+            <div className="text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
+              <p className="mt-2 text-sm text-slate-600">
+                Your workspace is configured. Open the dashboard to start managing orders, inventory, and staff.
+              </p>
+              <Button type="button" className="mt-6" disabled={busy} onClick={() => void finish()}>
+                Go to dashboard
+              </Button>
+            </div>
+          </PageSection>
         )}
+      </PageSectionShell>
       </div>
     </div>
   );

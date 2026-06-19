@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import {
   DollarSign,
   Scissors,
@@ -13,14 +13,16 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  ChefHat,
   UtensilsCrossed,
 } from "lucide-react";
 import { Button, Badge, StatCard } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { formatCurrency } from "@/lib/utils";
 import { formatYieldNote } from "@/lib/kitchen/yield";
 import { DAYPART_SHORT, MEAL_DAYPARTS } from "@/lib/kitchen/daypart";
 import { formatPortionLabel, roundKitchenQty, scaleRecipeQty } from "@/lib/kitchen/portion";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 interface CostLine {
   ingredient: string;
@@ -167,10 +169,9 @@ function TotalPrepSection({ total }: { total: PrepTotalBlock }) {
   const hasCarryover = total.tasks.some((t) => (t.carryoverQty ?? 0) > 0);
 
   return (
-    <section className="rounded-xl border-2 border-orange-200 bg-orange-50/40">
+    <div className="rounded-xl border-2 border-orange-200 bg-orange-50/40">
       <div className="border-b border-orange-200 px-4 py-3">
-        <h3 className="font-semibold text-slate-900">{total.label}</h3>
-        <div className="mt-2 flex flex-wrap gap-2 text-sm">
+        <div className="flex flex-wrap gap-2 text-sm">
           <Badge className="bg-white text-slate-800">~{total.forecastCovers} covers total</Badge>
           <Badge className="bg-amber-100 text-amber-900">Breakfast {total.breakfastCovers}</Badge>
           <Badge className="bg-orange-100 text-orange-900">Lunch {total.lunchCovers}</Badge>
@@ -272,7 +273,7 @@ function TotalPrepSection({ total }: { total: PrepTotalBlock }) {
           </table>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -425,6 +426,7 @@ function RecipeSpecCard({
 
 export function KitchenClient() {
   const [tab, setTab] = useState<Tab>("costing");
+  const { query } = usePageSearch();
   const [costing, setCosting] = useState<MenuCostRow[]>([]);
   const [prepList, setPrepList] = useState<PrepList | null>(null);
   const [recipeSpecs, setRecipeSpecs] = useState<KitchenRecipeSpec[]>([]);
@@ -478,6 +480,30 @@ export function KitchenClient() {
     costing.length > 0
       ? costing.reduce((s, c) => s + c.marginPct, 0) / costing.length
       : 0;
+
+  const filteredCosting = useMemo(
+    () =>
+      filterBySearchQuery(costing, query, (row) => [
+        row.name,
+        row.category,
+        ...row.allergens,
+        ...row.lines.map((line) => line.ingredient),
+      ]),
+    [costing, query]
+  );
+
+  const filteredRecipeSpecs = useMemo(
+    () =>
+      filterBySearchQuery(recipeSpecs, query, (spec) => [
+        spec.name,
+        spec.category,
+        spec.platingNotes,
+        spec.portionSpec,
+        spec.plateware,
+        spec.garnish,
+      ]),
+    [recipeSpecs, query]
+  );
   const lowMargin = costing.filter((c) => c.marginPct < 60).length;
 
   const tabs: { id: Tab; label: string }[] = [
@@ -491,14 +517,39 @@ export function KitchenClient() {
   const getPlateCount = (spec: KitchenRecipeSpec) =>
     plateOverrides[spec.menuItemId] ?? (spec.forecastPlates > 0 ? spec.forecastPlates : 1);
 
+  const prepDateControls = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(-1)} aria-label="Previous day">
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <input
+        type="date"
+        value={prepDate}
+        onChange={(e) => setPrepDate(e.target.value)}
+        className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+      />
+      <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(1)} aria-label="Next day">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="secondary" onClick={printPrepList}>
+        <Printer className="mr-2 h-4 w-4" />
+        Print
+      </Button>
+    </div>
+  );
+
   return (
     <div>
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Menu items costed" value={costing.length} subtext="Live from inventory prices" />
-        <StatCard label="Avg margin" value={`${avgMargin.toFixed(1)}%`} />
-        <StatCard label="Below 60% margin" value={lowMargin} subtext="Review pricing" />
-        <StatCard label="Ingredients to prep" value={prepList?.totalPrep.tasks.length ?? 0} subtext="B + L + D combined" />
-      </div>
+      <PageSectionShell pageId="kitchen-metrics">
+        <PageSection id="kitchen-key-metrics" title="Key metrics" defaultOpen>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Menu items costed" value={costing.length} subtext="Live from inventory prices" />
+            <StatCard label="Avg margin" value={`${avgMargin.toFixed(1)}%`} />
+            <StatCard label="Below 60% margin" value={lowMargin} subtext="Review pricing" />
+            <StatCard label="Ingredients to prep" value={prepList?.totalPrep.tasks.length ?? 0} subtext="B + L + D combined" />
+          </div>
+        </PageSection>
+      </PageSectionShell>
 
       <div className="no-print mb-4 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         {tabs.map((t) => (
@@ -525,21 +576,21 @@ export function KitchenClient() {
       ) : (
         <>
           {tab === "costing" && (
-            <div className="card">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">Dynamic Recipe Costing</h2>
-                  <p className="text-sm text-slate-500">
-                    Margins update automatically when vendor invoices change ingredient prices
-                  </p>
-                </div>
-                <Button onClick={recalculate} disabled={recalculating}>
-                  {recalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
-                  Recalculate all
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            <PageSectionShell pageId={`kitchen-${tab}`}>
+              <PageSection
+                id="kitchen-costing-table"
+                title="Dynamic Recipe Costing"
+                description="Margins update automatically when vendor invoices change ingredient prices"
+                defaultOpen
+                headerActions={
+                  <Button onClick={recalculate} disabled={recalculating} size="sm">
+                    {recalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DollarSign className="mr-2 h-4 w-4" />}
+                    Recalculate all
+                  </Button>
+                }
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-slate-500">
                       <th className="pb-2 pr-4">Item</th>
@@ -550,7 +601,7 @@ export function KitchenClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {costing.map((row) => (
+                    {filteredCosting.map((row) => (
                       <Fragment key={row.id}>
                         <tr
                           className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
@@ -610,48 +661,50 @@ export function KitchenClient() {
                   </tbody>
                 </table>
               </div>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "recipes" && (
-            <div className="space-y-4">
-              <div className="card">
-                <h2 className="mb-1 flex items-center gap-2 font-semibold">
-                  <ChefHat className="h-5 w-5 text-orange-600" />
-                  Recipes, portions &amp; plating
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Per-plate builds with standard portion sizes. Plate counts default from the prep list forecast for{" "}
-                  {prepList?.dayOfWeek ?? "today"} — adjust any item to scale ingredient totals.
-                </p>
-              </div>
-              <div className="space-y-4">
-                {recipeSpecs
-                  .filter((s) => s.lines.length > 0)
-                  .map((spec) => (
+            <PageSectionShell pageId={`kitchen-${tab}`}>
+              <PageSection
+                id="kitchen-recipes-intro"
+                title="Recipes, portions & plating"
+                description={`Per-plate builds with standard portion sizes. Plate counts default from the prep list forecast for ${prepList?.dayOfWeek ?? "today"} — adjust any item to scale ingredient totals.`}
+                defaultOpen
+              >
+                <p className="sr-only">Recipe builds below</p>
+              </PageSection>
+              {filteredRecipeSpecs
+                .filter((s) => s.lines.length > 0)
+                .map((spec) => (
+                  <PageSection key={spec.menuItemId} id={`kitchen-recipe-${spec.menuItemId}`} title={spec.name}>
                     <RecipeSpecCard
-                      key={spec.menuItemId}
                       spec={spec}
                       plateCount={getPlateCount(spec)}
                       onPlateCountChange={(n) =>
                         setPlateOverrides((prev) => ({ ...prev, [spec.menuItemId]: n }))
                       }
                     />
-                  ))}
-                {recipeSpecs.every((s) => s.lines.length === 0) && (
+                  </PageSection>
+                ))}
+              {filteredRecipeSpecs.every((s) => s.lines.length === 0) && (
+                <PageSection id="kitchen-recipes-empty" title="Recipes">
                   <p className="text-slate-500">Add recipes on the Menu page to see builds here.</p>
-                )}
-              </div>
-            </div>
+                </PageSection>
+              )}
+            </PageSectionShell>
           )}
 
           {tab === "yield" && (
-            <div className="card">
-              <h2 className="mb-2 font-semibold">Yield Management</h2>
-              <p className="mb-4 text-sm text-slate-500">
-                Raw ingredients lose weight to trim and cook loss before they reach the guest.
-              </p>
-              <div className="space-y-4">
+            <PageSectionShell pageId={`kitchen-${tab}`}>
+              <PageSection
+                id="kitchen-yield"
+                title="Yield Management"
+                description="Raw ingredients lose weight to trim and cook loss before they reach the guest."
+                defaultOpen
+              >
+                <div className="space-y-4">
                 {costing
                   .flatMap((c) =>
                     c.lines
@@ -680,96 +733,78 @@ export function KitchenClient() {
                 {costing.every((c) => c.lines.every((l) => l.yieldPct >= 100)) && (
                   <p className="text-slate-500">Set yield % on inventory items to see trim/cook loss here.</p>
                 )}
-              </div>
-            </div>
+                </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "prep" && prepList && (
-            <div className="card print:shadow-none" id="prep-list">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">
-                    Prep List — {prepList.dayOfWeek}, {prepList.date}
-                  </h2>
-                  <p className="text-sm text-slate-500">{prepList.summary}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(-1)} aria-label="Previous day">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <input
-                    type="date"
-                    value={prepDate}
-                    onChange={(e) => setPrepDate(e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => shiftPrepDate(1)} aria-label="Next day">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button variant="secondary" onClick={printPrepList}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
-                  </Button>
-                </div>
-              </div>
+            <PageSectionShell pageId={`kitchen-${tab}`}>
+              <div className="print:shadow-none" id="prep-list">
+                <PageSection
+                  id="kitchen-prep-header"
+                  title={`Prep List — ${prepList.dayOfWeek}, ${prepList.date}`}
+                  description={prepList.summary}
+                  defaultOpen
+                  headerActions={prepDateControls}
+                >
+                  <p className="sr-only">Prep list sections below</p>
+                </PageSection>
 
-              {prepList.aiInsight && (
-                <div className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-                  <p className="flex items-start gap-2 font-medium">
-                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
-                    Auto-generated from day-of-week &amp; meal-period trends
-                  </p>
-                  <p className="mt-1 text-indigo-800">{prepList.aiInsight}</p>
-                </div>
-              )}
+                {prepList.aiInsight && (
+                  <PageSection id="kitchen-prep-ai" title="AI analysis">
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                      <p className="flex items-start gap-2 font-medium">
+                        <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+                        Auto-generated from day-of-week &amp; meal-period trends
+                      </p>
+                      <p className="mt-1 text-indigo-800">{prepList.aiInsight}</p>
+                    </div>
+                  </PageSection>
+                )}
 
-              <div className="space-y-8">
                 {prepList.totalPrep && (
-                  <TotalPrepSection total={prepList.totalPrep} />
+                  <PageSection id="kitchen-prep-total" title={prepList.totalPrep.label}>
+                    <TotalPrepSection total={prepList.totalPrep} />
+                  </PageSection>
                 )}
 
                 {prepList.menuItems.length > 0 && (
-                  <section>
-                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      By menu item — full day (breakfast + lunch + dinner)
-                    </h3>
+                  <PageSection id="kitchen-prep-menu-items" title="By menu item — full day">
                     <div className="space-y-3">
                       {prepList.menuItems.map((item) => (
                         <PrepMenuItemCard key={item.menuItemId} item={item} />
                       ))}
                     </div>
-                  </section>
+                  </PageSection>
                 )}
 
                 {prepList.dayparts
                   .filter((block) => MEAL_DAYPARTS.includes(block.daypart as (typeof MEAL_DAYPARTS)[number]))
                   .map((block) => (
-                    <section key={block.daypart}>
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">
-                            {DAYPART_SHORT[block.daypart as keyof typeof DAYPART_SHORT] ?? block.daypart}
-                          </h3>
-                          <p className="text-xs text-slate-500">{block.label}</p>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="text-slate-600">~{block.forecastCovers} covers</span>
-                          {block.trendVsWeekAvgPct !== 0 && (
-                            <span
-                              className={
-                                block.trendVsWeekAvgPct > 0 ? "text-emerald-700" : "text-amber-700"
-                              }
-                            >
-                              {block.trendVsWeekAvgPct > 0 ? (
-                                <TrendingUp className="mr-0.5 inline h-3.5 w-3.5" />
-                              ) : (
-                                <TrendingDown className="mr-0.5 inline h-3.5 w-3.5" />
-                              )}
-                              {block.trendVsWeekAvgPct > 0 ? "+" : ""}
-                              {block.trendVsWeekAvgPct}% vs weekly avg
-                            </span>
-                          )}
-                        </div>
+                    <PageSection
+                      key={block.daypart}
+                      id={`kitchen-prep-${block.daypart}`}
+                      title={DAYPART_SHORT[block.daypart as keyof typeof DAYPART_SHORT] ?? block.daypart}
+                      description={block.label}
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-end gap-3 text-sm">
+                        <span className="text-slate-600">~{block.forecastCovers} covers</span>
+                        {block.trendVsWeekAvgPct !== 0 && (
+                          <span
+                            className={
+                              block.trendVsWeekAvgPct > 0 ? "text-emerald-700" : "text-amber-700"
+                            }
+                          >
+                            {block.trendVsWeekAvgPct > 0 ? (
+                              <TrendingUp className="mr-0.5 inline h-3.5 w-3.5" />
+                            ) : (
+                              <TrendingDown className="mr-0.5 inline h-3.5 w-3.5" />
+                            )}
+                            {block.trendVsWeekAvgPct > 0 ? "+" : ""}
+                            {block.trendVsWeekAvgPct}% vs weekly avg
+                          </span>
+                        )}
                       </div>
                       {block.menuItems.length === 0 ? (
                         <p className="text-sm text-slate-500">No forecasted sales for {block.daypart}.</p>
@@ -797,33 +832,33 @@ export function KitchenClient() {
                           </div>
                         </details>
                       )}
-                    </section>
+                    </PageSection>
                   ))}
               </div>
-            </div>
+            </PageSectionShell>
           )}
 
           {tab === "allergens" && (
-            <div className="space-y-4">
+            <PageSectionShell pageId={`kitchen-${tab}`}>
               {allergenAlerts.length > 0 && (
-                <div className="card border-amber-200 bg-amber-50">
-                  <h2 className="mb-3 flex items-center gap-2 font-semibold text-amber-900">
-                    <AlertTriangle className="h-5 w-5" />
-                    FOH alerts — vendor substitutions
-                  </h2>
+                <PageSection id="kitchen-allergen-alerts" title="FOH alerts — vendor substitutions" defaultOpen>
                   {allergenAlerts.map((a, i) => (
                     <div key={i} className="mb-2 text-sm text-amber-800">
-                      <p className="font-medium">{a.title}</p>
+                      <p className="flex items-center gap-2 font-medium text-amber-900">
+                        <AlertTriangle className="h-4 w-4" />
+                        {a.title}
+                      </p>
                       <p>{a.description}</p>
                     </div>
                   ))}
-                </div>
+                </PageSection>
               )}
-              <div className="card">
-                <h2 className="mb-4 font-semibold">Allergen & nutrition tagging</h2>
-                <p className="mb-4 text-sm text-slate-500">
-                  Allergens roll up from ingredients into each recipe. New vendor substitutions trigger Command Center alerts.
-                </p>
+              <PageSection
+                id="kitchen-allergen-tagging"
+                title="Allergen & nutrition tagging"
+                description="Allergens roll up from ingredients into each recipe. New vendor substitutions trigger Command Center alerts."
+                defaultOpen={allergenAlerts.length === 0}
+              >
                 <div className="space-y-2">
                   {costing
                     .filter((c) => c.allergens.length > 0)
@@ -840,8 +875,8 @@ export function KitchenClient() {
                       </div>
                     ))}
                 </div>
-              </div>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
         </>
       )}

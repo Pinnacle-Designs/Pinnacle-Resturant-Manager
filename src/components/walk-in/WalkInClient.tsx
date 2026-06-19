@@ -26,6 +26,7 @@ import {
   scaleReadingToInventoryUnit,
 } from "@/lib/walk-in/unit-convert";
 import { findItemByBarcode } from "@/lib/walk-in/barcode-match";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 interface Zone {
   id: string;
@@ -332,9 +333,9 @@ export function WalkInClient() {
       )}
 
       {tab === "count" && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="card">
-            <h2 className="mb-4 font-semibold">Start count</h2>
+        <PageSectionShell pageId="walk-in-count">
+          <div className="grid gap-6 lg:grid-cols-2">
+          <PageSection id="walk-in-start" title="Start count" defaultOpen>
             <FormField label="Storage zone">
               <select
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -361,20 +362,15 @@ export function WalkInClient() {
                 </Button>
               </div>
             )}
-          </div>
+          </PageSection>
 
           {session && currentItem && (
-            <div className="card">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-500">
-                    Step {routeIndex + 1} of {routeSteps.length} · {selectedZone?.name}
-                  </p>
-                  <h2 className="text-lg font-semibold">{currentItem.name}</h2>
-                  <p className="text-sm text-slate-500">
-                    Book: {currentItem.quantity} {currentItem.unit}
-                  </p>
-                </div>
+            <PageSection
+              id="walk-in-item"
+              title={currentItem.name}
+              description={`Step ${routeIndex + 1} of ${routeSteps.length} · ${selectedZone?.name} · Book: ${currentItem.quantity} ${currentItem.unit}`}
+            >
+              <div className="mb-3 flex items-center justify-end">
                 <ChevronRight className="h-5 w-5 text-slate-300" />
               </div>
 
@@ -484,14 +480,15 @@ export function WalkInClient() {
                   Skip
                 </Button>
               </div>
-            </div>
+            </PageSection>
           )}
-        </div>
+          </div>
+        </PageSectionShell>
       )}
 
       {tab === "fifo" && (
-        <div className="card">
-          <h2 className="mb-4 font-semibold">First-In, First-Out</h2>
+        <PageSectionShell pageId="walk-in-fifo">
+          <PageSection id="fifo-alerts" title="First-In, First-Out" defaultOpen>
           {fifoAlerts.length === 0 ? (
             <p className="text-slate-500">No expiry or rotation alerts.</p>
           ) : (
@@ -537,15 +534,18 @@ export function WalkInClient() {
               ))}
             </div>
           )}
-        </div>
+          </PageSection>
+        </PageSectionShell>
       )}
 
       {tab === "route" && (
-        <div className="card">
-          <h2 className="mb-2 font-semibold">Shelf-to-Sheet Route</h2>
-          <p className="mb-4 text-sm text-slate-500">
-            Count path matches your physical walk-through order — top shelf to bottom, door to back.
-          </p>
+        <PageSectionShell pageId="walk-in-route">
+          <PageSection
+            id="count-route"
+            title="Shelf-to-Sheet Route"
+            description="Count path matches your physical walk-through order — top shelf to bottom, door to back."
+            defaultOpen
+          >
           <FormField label="Zone">
             <select
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -575,7 +575,8 @@ export function WalkInClient() {
           {routeSteps.length === 0 && (
             <p className="mt-4 text-sm text-slate-500">No route configured — run seed or assign items to this zone.</p>
           )}
-        </div>
+          </PageSection>
+        </PageSectionShell>
       )}
     </div>
   );

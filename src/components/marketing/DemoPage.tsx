@@ -13,6 +13,7 @@ import { MarketingNav } from "./MarketingNav";
 import { DEMO_TOUR_STOPS } from "@/lib/marketing-content";
 import { embedLaunchUrl } from "@/lib/embed-config";
 import { cn } from "@/lib/utils";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 export function DemoPage() {
   const [iframeLoading, setIframeLoading] = useState(true);
@@ -74,47 +75,47 @@ export function DemoPage() {
         {/* Tour sidebar */}
         <aside className="w-full border-b border-white/10 bg-slate-900 lg:w-72 lg:border-b-0 lg:border-r">
           <div className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Tour the app
-            </p>
-            <nav className="mt-3 space-y-1">
-              {DEMO_TOUR_STOPS.map((stop) => (
+            <PageSectionShell pageId="demo-tour" defaultExpanded="all">
+              <PageSection id="demo-tour-stops" title="Tour the app" defaultOpen>
+                <nav className="space-y-1">
+                  {DEMO_TOUR_STOPS.map((stop) => (
+                    <button
+                      key={stop.id}
+                      type="button"
+                      onClick={() => selectStop(stop)}
+                      disabled={iframeLoading}
+                      className={cn(
+                        "flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition",
+                        activeStop.id === stop.id
+                          ? "bg-orange-500/20 text-orange-200 ring-1 ring-orange-500/40"
+                          : "text-slate-300 hover:bg-white/5",
+                        iframeLoading && "opacity-50"
+                      )}
+                    >
+                      <span className="text-sm font-medium">{stop.label}</span>
+                      <span className="text-xs opacity-70">{stop.blurb}</span>
+                    </button>
+                  ))}
+                </nav>
+              </PageSection>
+              <PageSection id="demo-command-center-tip" title="Command Center tip" defaultOpen>
+                <p className="text-xs text-slate-400">
+                  &quot;What&apos;s hurting my profit this week?&quot;
+                </p>
                 <button
-                  key={stop.id}
                   type="button"
-                  onClick={() => selectStop(stop)}
                   disabled={iframeLoading}
-                  className={cn(
-                    "flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition",
-                    activeStop.id === stop.id
-                      ? "bg-orange-500/20 text-orange-200 ring-1 ring-orange-500/40"
-                      : "text-slate-300 hover:bg-white/5",
-                    iframeLoading && "opacity-50"
-                  )}
+                  onClick={() => selectStop(DEMO_TOUR_STOPS.find((s) => s.id === "insights")!)}
+                  className="mt-2 flex items-center gap-1 text-xs font-medium text-orange-400 hover:text-orange-300 disabled:opacity-50"
                 >
-                  <span className="text-sm font-medium">{stop.label}</span>
-                  <span className="text-xs opacity-70">{stop.blurb}</span>
+                  Go to Command Center
+                  <ArrowRight className="h-3 w-3" />
                 </button>
-              ))}
-            </nav>
-            <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-3">
-              <p className="text-xs font-medium text-slate-300">Try asking the Command Center:</p>
-              <p className="mt-1 text-xs italic text-slate-400">
-                &quot;What&apos;s hurting my profit this week?&quot;
-              </p>
-              <button
-                type="button"
-                disabled={iframeLoading}
-                onClick={() => selectStop(DEMO_TOUR_STOPS.find((s) => s.id === "insights")!)}
-                className="mt-2 flex items-center gap-1 text-xs font-medium text-orange-400 hover:text-orange-300 disabled:opacity-50"
-              >
-                Go to Command Center
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
-            <p className="mt-4 text-[10px] text-slate-500">
-              Demo: owner@pinnacle.com / demo1234
-            </p>
+                <p className="mt-4 text-[10px] text-slate-500">
+                  Demo: owner@pinnacle.com / demo1234
+                </p>
+              </PageSection>
+            </PageSectionShell>
           </div>
         </aside>
 

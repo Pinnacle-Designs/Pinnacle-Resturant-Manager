@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Smartphone, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
 import { Logo } from "@/components/layout/Logo";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 
 export function ApplyClient({ applyCode }: { applyCode?: string }) {
   const [form, setForm] = useState({ name: "", phone: "", email: "", role: "Server" });
@@ -44,50 +45,52 @@ export function ApplyClient({ applyCode }: { applyCode?: string }) {
             </p>
           </div>
         ) : (
-          <>
-            <h1 className="text-xl font-bold text-slate-900">Apply now</h1>
-            <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
-              <Smartphone className="h-4 w-4" />
-              Prefer text? Reply APPLY to our hiring number.
-            </p>
-            <form className="mt-6 space-y-4" onSubmit={submit}>
-              <FormField label="Full name">
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </FormField>
-              <FormField label="Mobile phone">
-                <Input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  required
-                />
-              </FormField>
-              <FormField label="Email (optional)">
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </FormField>
-              {!applyCode && (
-                <FormField label="Role interested in">
+          <PageSectionShell pageId="apply">
+            <PageSection
+              id="apply-form"
+              title="Apply now"
+              description="Prefer text? Reply APPLY to our hiring number."
+              defaultOpen
+            >
+              <form className="space-y-4" onSubmit={submit}>
+                <FormField label="Full name">
                   <Input
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
                   />
                 </FormField>
-              )}
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <Button type="submit" className="w-full" disabled={loading}>
-                <Send className="h-4 w-4" />
-                {loading ? "Submitting…" : "Submit application"}
-              </Button>
-            </form>
-          </>
+                <FormField label="Mobile phone">
+                  <Input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    required
+                  />
+                </FormField>
+                <FormField label="Email (optional)">
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </FormField>
+                {!applyCode && (
+                  <FormField label="Role interested in">
+                    <Input
+                      value={form.role}
+                      onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    />
+                  </FormField>
+                )}
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  <Send className="h-4 w-4" />
+                  {loading ? "Submitting…" : "Submit application"}
+                </Button>
+              </form>
+            </PageSection>
+          </PageSectionShell>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button, Badge, StatCard } from "@/components/ui";
+import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
 import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
 import { formatCurrency } from "@/lib/utils";
@@ -96,27 +97,31 @@ export function BackOfficeClient() {
       <ForgottenClockOutAlert variant="banner" className="mb-6" />
       <ComplianceAlertsBanner variant="banner" className="mb-6" />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Live COGS (MTD)"
-          value={data ? `${data.liveCogs.liveCogsPct}%` : "—"}
-          subtext={data?.liveCogs.monthLabel}
-        />
-        <StatCard
-          label="AvT variance"
-          value={data ? formatCurrency(data.avt.totalVarianceCost) : "—"}
-          subtext={`${overLines} items over theoretical`}
-        />
-        <StatCard
-          label="Waste loss (30d)"
-          value={data ? formatCurrency(data.waste.totalCost) : "—"}
-        />
-        <StatCard
-          label="Menu stars"
-          value={me?.stars ?? "—"}
-          subtext={`${me?.dogs ?? 0} dogs to review`}
-        />
-      </div>
+      <PageSectionShell pageId="back-office-metrics">
+        <PageSection id="bo-key-metrics" title="Key metrics" defaultOpen>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Live COGS (MTD)"
+              value={data ? `${data.liveCogs.liveCogsPct}%` : "—"}
+              subtext={data?.liveCogs.monthLabel}
+            />
+            <StatCard
+              label="AvT variance"
+              value={data ? formatCurrency(data.avt.totalVarianceCost) : "—"}
+              subtext={`${overLines} items over theoretical`}
+            />
+            <StatCard
+              label="Waste loss (30d)"
+              value={data ? formatCurrency(data.waste.totalCost) : "—"}
+            />
+            <StatCard
+              label="Menu stars"
+              value={me?.stars ?? "—"}
+              subtext={`${me?.dogs ?? 0} dogs to review`}
+            />
+          </div>
+        </PageSection>
+      </PageSectionShell>
 
       <div className="no-print mb-4 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {tabs.map((t) => (
@@ -143,69 +148,75 @@ export function BackOfficeClient() {
       ) : (
         <>
           {tab === "avt" && (
-            <div className="card">
-              <h2 className="mb-1 font-semibold">Actual vs. Theoretical Variance</h2>
-              <p className="mb-4 text-sm text-slate-500">{data.avt.summary}</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-slate-500">
-                      <th className="pb-2 pr-4">Ingredient</th>
-                      <th className="pb-2 pr-4">Theoretical</th>
-                      <th className="pb-2 pr-4">Actual</th>
-                      <th className="pb-2 pr-4">Variance</th>
-                      <th className="pb-2 pr-4">$ Impact</th>
-                      <th className="pb-2">Flag</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.avt.lines.slice(0, 20).map((l) => (
-                      <tr key={l.name} className="border-b border-slate-100">
-                        <td className="py-3 pr-4 font-medium">{l.name}</td>
-                        <td className="py-3 pr-4">
-                          {l.theoreticalQty} {l.unit}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {l.actualQty} {l.unit}
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className={l.variancePct > 0 ? "text-red-600" : "text-green-700"}>
-                            {l.varianceQty > 0 ? "+" : ""}
-                            {l.variancePct}%
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4">{formatCurrency(l.varianceCost)}</td>
-                        <td className="py-3">
-                          <Badge
-                            className={
-                              l.flag === "OVER"
-                                ? "bg-red-100 text-red-800"
-                                : l.flag === "UNDER"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-green-100 text-green-800"
-                            }
-                          >
-                            {l.flag}
-                          </Badge>
-                          {l.likelyCause && (
-                            <p className="mt-1 text-xs text-slate-500">{l.likelyCause}</p>
-                          )}
-                        </td>
+            <PageSectionShell pageId={`back-office-${tab}`}>
+              <PageSection
+                id="bo-avt-variance"
+                title="Actual vs. Theoretical Variance"
+                description={data.avt.summary}
+                defaultOpen
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-slate-500">
+                        <th className="pb-2 pr-4">Ingredient</th>
+                        <th className="pb-2 pr-4">Theoretical</th>
+                        <th className="pb-2 pr-4">Actual</th>
+                        <th className="pb-2 pr-4">Variance</th>
+                        <th className="pb-2 pr-4">$ Impact</th>
+                        <th className="pb-2">Flag</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    </thead>
+                    <tbody>
+                      {data.avt.lines.slice(0, 20).map((l) => (
+                        <tr key={l.name} className="border-b border-slate-100">
+                          <td className="py-3 pr-4 font-medium">{l.name}</td>
+                          <td className="py-3 pr-4">
+                            {l.theoreticalQty} {l.unit}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {l.actualQty} {l.unit}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span className={l.variancePct > 0 ? "text-red-600" : "text-green-700"}>
+                              {l.varianceQty > 0 ? "+" : ""}
+                              {l.variancePct}%
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4">{formatCurrency(l.varianceCost)}</td>
+                          <td className="py-3">
+                            <Badge
+                              className={
+                                l.flag === "OVER"
+                                  ? "bg-red-100 text-red-800"
+                                  : l.flag === "UNDER"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-green-100 text-green-800"
+                              }
+                            >
+                              {l.flag}
+                            </Badge>
+                            {l.likelyCause && (
+                              <p className="mt-1 text-xs text-slate-500">{l.likelyCause}</p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "cogs" && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="card">
-                <h2 className="mb-4 font-semibold">Live COGS — {data.liveCogs.monthLabel}</h2>
-                <p className="mb-4 text-xs text-slate-500">
-                  Updated {new Date(data.liveCogs.asOf).toLocaleString()} — no waiting for month-end close
-                </p>
+            <PageSectionShell pageId={`back-office-${tab}`}>
+              <PageSection
+                id="bo-cogs-summary"
+                title={`Live COGS — ${data.liveCogs.monthLabel}`}
+                description={`Updated ${new Date(data.liveCogs.asOf).toLocaleString()} — no waiting for month-end close`}
+                defaultOpen
+              >
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600">MTD sales</span>
@@ -226,9 +237,8 @@ export function BackOfficeClient() {
                     <span>{formatCurrency(data.liveCogs.mtdWasteCost)}</span>
                   </div>
                 </div>
-              </div>
-              <div className="card">
-                <h2 className="mb-4 font-semibold">Daily COGS %</h2>
+              </PageSection>
+              <PageSection id="bo-cogs-daily" title="Daily COGS %">
                 <div className="space-y-2">
                   {data.liveCogs.dailyTrend.slice(-10).map((d) => (
                     <div key={d.date} className="flex items-center gap-3 text-sm">
@@ -243,102 +253,108 @@ export function BackOfficeClient() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "matrix" && me && (
-            <div className="card">
-              <h2 className="mb-2 font-semibold">Menu Engineering Matrix</h2>
-              <p className="mb-4 text-sm text-slate-500">
-                Popularity vs. profit margin — last {me.periodDays} days
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {(Object.keys(QUADRANT_STYLES) as Array<keyof typeof QUADRANT_STYLES>).map((key) => {
-                  const style = QUADRANT_STYLES[key];
-                  const count =
-                    key === "star" ? me.stars : key === "plowhorse" ? me.plowhorses : key === "puzzle" ? me.puzzles : me.dogs;
-                  return (
-                    <div key={key} className={`rounded-lg p-3 text-center ${style.bg}`}>
-                      <p className={`text-sm font-medium ${style.text}`}>{style.label}</p>
-                      <p className="text-2xl font-bold">{count}</p>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="relative mx-auto aspect-square max-w-lg rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="absolute left-1/2 top-0 bottom-8 w-px bg-slate-300" />
-                <div className="absolute left-0 right-0 top-1/2 bottom-8 h-px bg-slate-300" />
-                <p className="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs text-slate-500">
-                  Popularity →
-                </p>
-                <p className="absolute left-1 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-slate-500">
-                  Margin →
-                </p>
-                {me.items
-                  .filter((i) => i.quantitySold > 0)
-                  .map((item) => {
-                    const x = Math.min(95, Math.max(5, (item.popularityPct / (me.avgPopularityPct * 2 || 1)) * 50));
-                    const y = Math.min(95, Math.max(5, 100 - (item.marginPct / (me.avgMarginPct * 2 || 1)) * 50));
-                    const style = QUADRANT_STYLES[item.quadrant];
+            <PageSectionShell pageId={`back-office-${tab}`}>
+              <PageSection
+                id="bo-matrix-quadrants"
+                title="Quadrant summary"
+                description={`Popularity vs. profit margin — last ${me.periodDays} days`}
+                defaultOpen
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {(Object.keys(QUADRANT_STYLES) as Array<keyof typeof QUADRANT_STYLES>).map((key) => {
+                    const style = QUADRANT_STYLES[key];
+                    const count =
+                      key === "star" ? me.stars : key === "plowhorse" ? me.plowhorses : key === "puzzle" ? me.puzzles : me.dogs;
                     return (
-                      <div
-                        key={item.id}
-                        className="absolute group"
-                        style={{ left: `${x}%`, bottom: `${y}%`, transform: "translate(-50%, 50%)" }}
-                        title={`${item.name} — ${item.marginPct.toFixed(0)}% margin, ${item.popularityPct.toFixed(1)}% mix`}
-                      >
-                        <div className={`h-3 w-3 rounded-full ${style.className} ring-2 ring-white`} />
-                        <span className="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white group-hover:block">
-                          {item.name}
-                        </span>
+                      <div key={key} className={`rounded-lg p-3 text-center ${style.bg}`}>
+                        <p className={`text-sm font-medium ${style.text}`}>{style.label}</p>
+                        <p className="text-2xl font-bold">{count}</p>
                       </div>
                     );
                   })}
-                <span className="absolute right-2 top-2 text-xs text-emerald-700">Puzzles</span>
-                <span className="absolute left-2 top-2 text-xs text-emerald-700">Stars</span>
-                <span className="absolute right-2 bottom-10 text-xs text-slate-500">Dogs</span>
-                <span className="absolute left-2 bottom-10 text-xs text-blue-700">Plowhorses</span>
-              </div>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-slate-500">
-                      <th className="pb-2">Item</th>
-                      <th className="pb-2">Quadrant</th>
-                      <th className="pb-2">Sold</th>
-                      <th className="pb-2">Margin</th>
-                      <th className="pb-2">Contribution</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {me.items
-                      .filter((i) => i.quantitySold > 0)
-                      .sort((a, b) => b.contribution - a.contribution)
-                      .slice(0, 12)
-                      .map((i) => (
-                        <tr key={i.id} className="border-b border-slate-100">
-                          <td className="py-2 font-medium">{i.name}</td>
-                          <td className="py-2">
-                            <Badge className={QUADRANT_STYLES[i.quadrant].bg + " " + QUADRANT_STYLES[i.quadrant].text}>
-                              {QUADRANT_STYLES[i.quadrant].label}
-                            </Badge>
-                          </td>
-                          <td className="py-2">{i.quantitySold}</td>
-                          <td className="py-2">{i.marginPct.toFixed(1)}%</td>
-                          <td className="py-2">{formatCurrency(i.contribution)}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                </div>
+              </PageSection>
+              <PageSection id="bo-matrix-chart" title="Menu matrix chart">
+                <div className="relative mx-auto aspect-square max-w-lg rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="absolute left-1/2 top-0 bottom-8 w-px bg-slate-300" />
+                  <div className="absolute left-0 right-0 top-1/2 bottom-8 h-px bg-slate-300" />
+                  <p className="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs text-slate-500">
+                    Popularity →
+                  </p>
+                  <p className="absolute left-1 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-slate-500">
+                    Margin →
+                  </p>
+                  {me.items
+                    .filter((i) => i.quantitySold > 0)
+                    .map((item) => {
+                      const x = Math.min(95, Math.max(5, (item.popularityPct / (me.avgPopularityPct * 2 || 1)) * 50));
+                      const y = Math.min(95, Math.max(5, 100 - (item.marginPct / (me.avgMarginPct * 2 || 1)) * 50));
+                      const style = QUADRANT_STYLES[item.quadrant];
+                      return (
+                        <div
+                          key={item.id}
+                          className="absolute group"
+                          style={{ left: `${x}%`, bottom: `${y}%`, transform: "translate(-50%, 50%)" }}
+                          title={`${item.name} — ${item.marginPct.toFixed(0)}% margin, ${item.popularityPct.toFixed(1)}% mix`}
+                        >
+                          <div className={`h-3 w-3 rounded-full ${style.className} ring-2 ring-white`} />
+                          <span className="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white group-hover:block">
+                            {item.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  <span className="absolute right-2 top-2 text-xs text-emerald-700">Puzzles</span>
+                  <span className="absolute left-2 top-2 text-xs text-emerald-700">Stars</span>
+                  <span className="absolute right-2 bottom-10 text-xs text-slate-500">Dogs</span>
+                  <span className="absolute left-2 bottom-10 text-xs text-blue-700">Plowhorses</span>
+                </div>
+              </PageSection>
+              <PageSection id="bo-matrix-items" title="Top contributors">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-slate-500">
+                        <th className="pb-2">Item</th>
+                        <th className="pb-2">Quadrant</th>
+                        <th className="pb-2">Sold</th>
+                        <th className="pb-2">Margin</th>
+                        <th className="pb-2">Contribution</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {me.items
+                        .filter((i) => i.quantitySold > 0)
+                        .sort((a, b) => b.contribution - a.contribution)
+                        .slice(0, 12)
+                        .map((i) => (
+                          <tr key={i.id} className="border-b border-slate-100">
+                            <td className="py-2 font-medium">{i.name}</td>
+                            <td className="py-2">
+                              <Badge className={QUADRANT_STYLES[i.quadrant].bg + " " + QUADRANT_STYLES[i.quadrant].text}>
+                                {QUADRANT_STYLES[i.quadrant].label}
+                              </Badge>
+                            </td>
+                            <td className="py-2">{i.quantitySold}</td>
+                            <td className="py-2">{i.marginPct.toFixed(1)}%</td>
+                            <td className="py-2">{formatCurrency(i.contribution)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </PageSection>
+            </PageSectionShell>
           )}
 
           {tab === "waste" && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="card">
-                <h2 className="mb-4 font-semibold">Loss by category</h2>
+            <PageSectionShell pageId={`back-office-${tab}`}>
+              <PageSection id="bo-waste-category" title="Loss by category" defaultOpen>
                 <div className="space-y-2">
                   {data.waste.byCategory.map((c) => (
                     <div key={c.category} className="flex justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
@@ -349,9 +365,8 @@ export function BackOfficeClient() {
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="card">
-                <h2 className="mb-4 font-semibold">By employee</h2>
+              </PageSection>
+              <PageSection id="bo-waste-employee" title="By employee">
                 <div className="space-y-2">
                   {data.waste.byEmployee.map((e) => (
                     <div key={e.name} className="flex justify-between text-sm">
@@ -360,9 +375,8 @@ export function BackOfficeClient() {
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="card lg:col-span-2">
-                <h2 className="mb-4 font-semibold">Recent waste log</h2>
+              </PageSection>
+              <PageSection id="bo-waste-recent" title="Recent waste log">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -389,8 +403,8 @@ export function BackOfficeClient() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
+              </PageSection>
+            </PageSectionShell>
           )}
         </>
       )}

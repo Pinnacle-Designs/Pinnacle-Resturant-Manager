@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui";
+import {
+  CollapsibleGroup,
+  CollapsibleGroupControls,
+  CollapsibleSection,
+} from "@/components/ui/Collapsible";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiFetch } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -99,100 +104,115 @@ export function RecipeBuilderModal({
 
   return (
     <Modal open={open} onClose={onClose} title={`Recipe — ${menuItem.name}`}>
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600">
-          Build the exact ingredient list. When this item is fired to the kitchen, inventory deducts
-          these amounts automatically.
-        </p>
-
-        {loading ? (
-          <p className="text-sm text-slate-500">Loading recipe…</p>
-        ) : (
-          <div className="space-y-3">
-            {lines.map((line, idx) => (
-              <div key={idx} className="flex items-end gap-2">
-                <FormField label={idx === 0 ? "Ingredient" : " "} className="flex-1">
-                  <Select
-                    value={line.inventoryItemId}
-                    onChange={(e) => {
-                      const next = [...lines];
-                      next[idx] = { ...next[idx], inventoryItemId: e.target.value };
-                      setLines(next);
-                    }}
-                  >
-                    <option value="">Select inventory item…</option>
-                    {inventory.map((inv) => (
-                      <option key={inv.id} value={inv.id}>
-                        {inv.name} ({inv.unit} @ {formatCurrency(inv.costPerUnit)})
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField label={idx === 0 ? "Qty / plate" : " "} className="w-28">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={line.quantity}
-                    onChange={(e) => {
-                      const next = [...lines];
-                      next[idx] = { ...next[idx], quantity: e.target.value };
-                      setLines(next);
-                    }}
-                    placeholder="0"
-                  />
-                </FormField>
+      <CollapsibleGroup defaultExpanded="all" expandKey={menuItem.id}>
+        <CollapsibleGroupControls className="mb-3" />
+        <div className="space-y-3">
+          <CollapsibleSection
+            id="recipe-ingredients"
+            title="Ingredients"
+            description="When this item fires to the kitchen, inventory deducts these amounts automatically."
+            defaultOpen
+            variant="plain"
+            bodyClassName="!pt-2"
+          >
+            {loading ? (
+              <p className="text-sm text-slate-500">Loading recipe…</p>
+            ) : (
+              <div className="space-y-3">
+                {lines.map((line, idx) => (
+                  <div key={idx} className="flex items-end gap-2">
+                    <FormField label={idx === 0 ? "Ingredient" : " "} className="flex-1">
+                      <Select
+                        value={line.inventoryItemId}
+                        onChange={(e) => {
+                          const next = [...lines];
+                          next[idx] = { ...next[idx], inventoryItemId: e.target.value };
+                          setLines(next);
+                        }}
+                      >
+                        <option value="">Select inventory item…</option>
+                        {inventory.map((inv) => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.name} ({inv.unit} @ {formatCurrency(inv.costPerUnit)})
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label={idx === 0 ? "Qty / plate" : " "} className="w-28">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={line.quantity}
+                        onChange={(e) => {
+                          const next = [...lines];
+                          next[idx] = { ...next[idx], quantity: e.target.value };
+                          setLines(next);
+                        }}
+                        placeholder="0"
+                      />
+                    </FormField>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setLines(lines.filter((_, i) => i !== idx))}
+                      disabled={lines.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
-                  onClick={() => setLines(lines.filter((_, i) => i !== idx))}
-                  disabled={lines.length === 1}
+                  onClick={() => setLines([...lines, { inventoryItemId: "", quantity: "" }])}
                 >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Plus className="h-4 w-4" />
+                  Add ingredient
                 </Button>
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setLines([...lines, { inventoryItemId: "", quantity: "" }])}
-            >
-              <Plus className="h-4 w-4" />
-              Add ingredient
-            </Button>
-          </div>
-        )}
+            )}
+          </CollapsibleSection>
 
-        <div className="rounded-lg bg-slate-50 p-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-slate-600">Menu price</span>
-            <span className="font-semibold">{formatCurrency(menuItem.price)}</span>
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span className="text-slate-600">Theoretical food cost</span>
-            <span className="font-semibold text-orange-600">{formatCurrency(theoreticalCost)}</span>
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span className="text-slate-600">Margin</span>
-            <span className="font-semibold">
-              {formatCurrency(margin)} ({marginPct.toFixed(1)}%)
-            </span>
-          </div>
+          <CollapsibleSection
+            id="recipe-costing"
+            title="Cost & margin"
+            defaultOpen
+            variant="plain"
+            bodyClassName="!pt-2"
+          >
+            <div className="rounded-lg bg-slate-50 p-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Menu price</span>
+                <span className="font-semibold">{formatCurrency(menuItem.price)}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-slate-600">Theoretical food cost</span>
+                <span className="font-semibold text-orange-600">{formatCurrency(theoreticalCost)}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-slate-600">Margin</span>
+                <span className="font-semibold">
+                  {formatCurrency(margin)} ({marginPct.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+          </CollapsibleSection>
         </div>
+      </CollapsibleGroup>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving || loading}>
-            <UtensilsCrossed className="h-4 w-4" />
-            {saving ? "Saving…" : "Save recipe"}
-          </Button>
-        </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving || loading}>
+          <UtensilsCrossed className="h-4 w-4" />
+          {saving ? "Saving…" : "Save recipe"}
+        </Button>
       </div>
     </Modal>
   );

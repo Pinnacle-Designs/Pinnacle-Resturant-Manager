@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil, Plus, Trash2, Users } from "lucide-react";
-import { Button, Badge, EmptyState } from "@/components/ui";
+import { Button, Badge, EmptyState, CollapsibleSection, CollapsibleGroup, CollapsibleGroupControls } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { filterBySearchQuery } from "@/lib/search/text-match";
+import { usePageSearch } from "@/hooks/usePageSearch";
 
 interface StaffMember {
   id: string;
@@ -34,6 +36,17 @@ export function StaffClient({
   canEdit?: boolean;
 }) {
   const [staff, setStaff] = useState(initialStaff);
+  const { query } = usePageSearch();
+  const visibleStaff = useMemo(
+    () =>
+      filterBySearchQuery(staff, query, (member) => [
+        member.name,
+        member.role,
+        member.email,
+        member.phone,
+      ]),
+    [staff, query]
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [form, setForm] = useState({
@@ -134,47 +147,59 @@ export function StaffClient({
         </div>
       )}
 
-      {staff.length === 0 ? (
+      {visibleStaff.length === 0 ? (
         <EmptyState
           icon={<Users className="h-12 w-12" />}
-          title="No staff members"
-          description="Add your team to track roles and staffing."
-          action={canEdit ? <Button onClick={openCreate}>Add Staff</Button> : undefined}
+          title={query.trim() ? "No matching staff" : "No staff members"}
+          description={
+            query.trim()
+              ? "Try a different search term."
+              : "Add your team to track roles and staffing."
+          }
+          action={canEdit && !query.trim() ? <Button onClick={openCreate}>Add Staff</Button> : undefined}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {staff.map((member) => (
-            <div key={member.id} className="card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-slate-900">{member.name}</h3>
-                  <p className="text-sm text-slate-500">{member.role}</p>
+        <CollapsibleGroup
+          defaultExpanded={query.trim() ? "all" : "first"}
+          expandKey={query.trim() ? "search" : "browse"}
+        >
+          <CollapsibleGroupControls className="mb-4" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleStaff.map((member) => (
+              <CollapsibleSection
+                key={member.id}
+                id={member.id}
+                title={member.name}
+                description={member.role}
+                badge={
+                  <Badge className={member.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}>
+                    {member.active ? "Active" : "Inactive"}
+                  </Badge>
+                }
+                variant="card"
+              >
+                <div className="space-y-1 text-sm text-slate-600">
+                  {member.email && <p>{member.email}</p>}
+                  {member.phone && <p>{member.phone}</p>}
+                  {member.hourlyRate !== undefined && (
+                    <p className="font-medium text-slate-900">{formatCurrency(member.hourlyRate)}/hr</p>
+                  )}
                 </div>
-                <Badge className={member.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}>
-                  {member.active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <div className="mt-4 space-y-1 text-sm text-slate-600">
-                {member.email && <p>{member.email}</p>}
-                {member.phone && <p>{member.phone}</p>}
-                {member.hourlyRate !== undefined && (
-                  <p className="font-medium text-slate-900">{formatCurrency(member.hourlyRate)}/hr</p>
+                {canEdit && (
+                  <div className="mt-4 flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => openEdit(member)}>
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(member.id)}>
+                      <Trash2 className="h-3 w-3 text-red-500" />
+                    </Button>
+                  </div>
                 )}
-              </div>
-              {canEdit && (
-                <div className="mt-4 flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => openEdit(member)}>
-                    <Pencil className="h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(member.id)}>
-                    <Trash2 className="h-3 w-3 text-red-500" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+              </CollapsibleSection>
+            ))}
+          </div>
+        </CollapsibleGroup>
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Staff" : "Add Staff"}>
