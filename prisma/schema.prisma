@@ -172,6 +172,13 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
+enum RehireStatus {
+  UNKNOWN
+  YES
+  NO
+  MAYBE
+}
+
 enum ApplicationSource {
   TEXT_APPLY
   WEB
@@ -911,6 +918,9 @@ model StaffMember {
   hireDate   DateTime?
   terminatedAt DateTime?
   terminationReason String?
+  rating     Int?
+  rehirable  RehireStatus @default(UNKNOWN)
+  talentNotes String?
   imageUrl   String?
   clockPinHash String?
   createdAt  DateTime @default(now())
@@ -1060,6 +1070,9 @@ model Applicant {
   name         String
   phone        String
   email        String?
+  rating       Int?
+  rehirable    RehireStatus @default(UNKNOWN)
+  talentNotes  String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   applications Application[]

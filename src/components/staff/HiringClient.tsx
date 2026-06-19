@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Phone,
   UserPlus,
+  UserMinus,
   Calendar,
   CheckCircle2,
   Send,
@@ -14,7 +15,9 @@ import {
 import { Button, EmptyState } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { OnboardingLinkPanel } from "@/components/hiring/OnboardingLinkPanel";
+import { HiringHistoryClient } from "@/components/staff/HiringHistoryClient";
 import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
+import { ScrollableTabs, TabPill } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const PIPELINE: { status: string; label: string; color: string }[] = [
@@ -49,6 +52,7 @@ interface SmsMessage {
 }
 
 export function HiringClient() {
+  const [hiringView, setHiringView] = useState<"pipeline" | "history">("pipeline");
   const [applications, setApplications] = useState<Application[]>([]);
   const [settings, setSettings] = useState<{
     applyPhone: string | null;
@@ -118,6 +122,9 @@ export function HiringClient() {
       const updated = await res.json();
       if (res.ok && updated?.id) {
         setSelected(mergeApplication(selected, updated));
+        if (status === "REJECTED" || status === "WITHDRAWN") {
+          setSelected(null);
+        }
       }
       await load();
     } finally {
@@ -203,6 +210,18 @@ export function HiringClient() {
 
   return (
     <>
+      <ScrollableTabs className="mb-4 border-b border-slate-200 pb-2" menuLabel="Hiring">
+        <TabPill active={hiringView === "pipeline"} onClick={() => setHiringView("pipeline")}>
+          Active pipeline
+        </TabPill>
+        <TabPill active={hiringView === "history"} onClick={() => setHiringView("history")}>
+          Hiring history
+        </TabPill>
+      </ScrollableTabs>
+
+      {hiringView === "history" ? (
+        <HiringHistoryClient />
+      ) : (
       <PageSectionShell pageId="hiring">
         <PageSection id="hiring-onboarding" title="Mobile onboarding" defaultOpen>
           <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-white p-4">
@@ -297,6 +316,7 @@ export function HiringClient() {
           )}
         </PageSection>
       </PageSectionShell>
+      )}
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.applicant.name || "Applicant"}>
         {selected && (
@@ -321,6 +341,13 @@ export function HiringClient() {
               <Button size="sm" disabled={sending} onClick={() => updateStatus("HIRED")}>
                 <CheckCircle2 className="h-4 w-4" />
                 Hire & send onboarding
+              </Button>
+              <Button size="sm" variant="secondary" disabled={sending} onClick={() => updateStatus("REJECTED")}>
+                <UserMinus className="h-4 w-4" />
+                Reject
+              </Button>
+              <Button size="sm" variant="ghost" disabled={sending} onClick={() => updateStatus("WITHDRAWN")}>
+                Mark withdrawn
               </Button>
             </div>
 

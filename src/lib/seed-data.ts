@@ -88,6 +88,8 @@ async function seedHiringSample(locationId: string) {
     { name: "Rebecca Huang", phone: "+15559001002", status: "INTERVIEW_SCHEDULED" as const, role: "Bartender" },
     { name: "Devon Price", phone: "+15559001003", status: "OFFERED" as const, role: "Host" },
     { name: "Aisha Coleman", phone: "+15559001004", status: "HIRED" as const, role: "Line Cook" },
+    { name: "Jordan Lee", phone: "+15559001005", status: "REJECTED" as const, role: "Server" },
+    { name: "Sam Ortiz", phone: "+15559001006", status: "WITHDRAWN" as const, role: "Prep Cook" },
   ];
 
   for (const row of pipeline) {
@@ -98,6 +100,11 @@ async function seedHiringSample(locationId: string) {
         name: row.name,
         phone: row.phone,
         email: `${row.name.split(" ")[0].toLowerCase()}@example.com`,
+        ...(row.status === "REJECTED"
+          ? { rating: 2, rehirable: "NO" as const, talentNotes: "No-show for trial shift." }
+          : row.status === "WITHDRAWN"
+            ? { rating: 4, rehirable: "MAYBE" as const, talentNotes: "Strong references — took another job." }
+            : {}),
       },
       update: { name: row.name },
     });
@@ -116,6 +123,12 @@ async function seedHiringSample(locationId: string) {
         source: row.status === "NEW" ? "TEXT_APPLY" : "WEB",
         status: row.status,
         hiredAt: row.status === "HIRED" ? new Date() : null,
+        notes:
+          row.status === "REJECTED"
+            ? "Late to interview, poor references from last employer."
+            : row.status === "WITHDRAWN"
+              ? "Accepted offer elsewhere before start date."
+              : null,
       },
     });
 
@@ -275,6 +288,9 @@ async function seedRetentionSample(locationId: string) {
         hireDate: subMonths(new Date(), 8),
         terminatedAt: subMonths(new Date(), 1),
         terminationReason: "Voluntary — moved out of town",
+        rating: 5,
+        rehirable: "YES",
+        talentNotes: "Excellent guest rapport — would rehire if they return to the area.",
       },
     });
 

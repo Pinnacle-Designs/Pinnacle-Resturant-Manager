@@ -19,25 +19,44 @@
   }
 
   function isPitchPage() {
-    return /pitch\.html$/i.test(location.pathname) || /\/docs\/pitch\.html$/i.test(location.pathname);
+    return /pitch\.html$/i.test(location.pathname);
   }
 
-  function homeBase() {
-    if (isPitchPage()) {
-      return location.pathname.indexOf("/docs") === 0 ? "/docs" : "./index.html";
+  /** Explicit index URL — avoids /docs#hash (directory + hash) which breaks on many servers. */
+  function docsIndexHref() {
+    var path = location.pathname;
+    var docsIdx = path.indexOf("/docs");
+    if (docsIdx >= 0) {
+      return path.slice(0, docsIdx + 5) + "/index.html";
     }
-    return "";
+    return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/") + "index.html";
+  }
+
+  function isDocsIndexPage() {
+    var path = location.pathname;
+    if (/\/docs\/?$/i.test(path)) return true;
+    if (/\/docs\/index\.html$/i.test(path)) return true;
+    if (!isPitchPage() && /index\.html$/i.test(path)) return true;
+    return false;
   }
 
   function sectionHref(hash) {
-    if (location.pathname.indexOf("/docs") === 0 && !isPitchPage()) {
-      return "/docs" + hash;
+    if (isPitchPage()) {
+      return docsIndexHref() + hash;
     }
-    return homeBase() + hash;
+    if (isDocsIndexPage()) {
+      return hash;
+    }
+    return docsIndexHref() + hash;
   }
 
   function investorsHref() {
-    return location.pathname.indexOf("/docs") === 0 ? "/docs/pitch.html" : "./pitch.html";
+    var path = location.pathname;
+    var docsIdx = path.indexOf("/docs");
+    if (docsIdx >= 0) {
+      return path.slice(0, docsIdx + 5) + "/pitch.html";
+    }
+    return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/") + "pitch.html";
   }
 
   function logoHref() {

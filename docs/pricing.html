@@ -6,8 +6,12 @@
   <script>
     (function () {
       var hash = location.hash || "#pricing";
+      var path = location.pathname;
+      var docsIdx = path.indexOf("/docs");
       var target =
-        location.pathname.indexOf("/docs") === 0 ? "/docs" + hash : "index.html" + hash;
+        docsIdx >= 0
+          ? path.slice(0, docsIdx + 5) + "/index.html" + hash
+          : "index.html" + hash;
       location.replace(target);
     })();
   </script>
