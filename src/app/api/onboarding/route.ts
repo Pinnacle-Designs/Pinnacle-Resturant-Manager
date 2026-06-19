@@ -113,6 +113,7 @@ export async function PATCH(request: NextRequest) {
         seatCount: seatCount ?? undefined,
         currencyCode: regional.currencyCode,
         measurementSystem: regional.measurementSystem,
+        volumeStandard: regional.volumeStandard,
         locale: regional.locale,
         ...(geo
           ? { latitude: geo.latitude, longitude: geo.longitude, timezone: geo.timezone }

@@ -7,6 +7,9 @@ import { Button, EmptyState } from "@/components/ui";
 import { Input, Select, FormField, Modal } from "@/components/ui/form";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { InventoryScanModal } from "@/components/inventory/InventoryScanModal";
+import { UnitSelect } from "@/components/inventory/UnitSelect";
+import { useLocationLocale } from "@/components/location/LocationLocaleProvider";
+import { defaultWeightUnit } from "@/lib/location/measurements";
 import { StorageZonesPanel, type StorageZoneRow } from "@/components/inventory/StorageZonesPanel";
 import { InventoryItemsByZone } from "@/components/inventory/InventoryItemsByZone";
 import { WalkInClient } from "@/components/walk-in/WalkInClient";
@@ -57,6 +60,8 @@ export function InventoryClient({
     barcode: "",
     storageZoneId: "",
   });
+  const { settings } = useLocationLocale();
+  const defaultUnit = defaultWeightUnit(settings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +96,7 @@ export function InventoryClient({
     setForm({
       name: "",
       quantity: "",
-      unit: "lbs",
+      unit: defaultUnit,
       minQuantity: "",
       costPerUnit: "",
       portionSize: "",
@@ -292,15 +297,7 @@ export function InventoryClient({
               <Input type="number" step="0.01" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
             </FormField>
             <FormField label="Unit">
-              <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-                <option value="lbs">lbs</option>
-                <option value="oz">oz</option>
-                <option value="kg">kg</option>
-                <option value="units">units</option>
-                <option value="heads">heads</option>
-                <option value="bottles">bottles</option>
-                <option value="cases">cases</option>
-              </Select>
+              <UnitSelect value={form.unit} onChange={(unit) => setForm({ ...form, unit })} />
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-4">

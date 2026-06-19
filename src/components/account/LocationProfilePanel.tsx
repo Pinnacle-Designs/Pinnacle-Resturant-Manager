@@ -5,6 +5,7 @@ import { Globe, Loader2, MapPin, RefreshCw, Coins, Ruler } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
 import { useLocationLocale } from "@/components/location/LocationLocaleProvider";
+import { measurementSystemLabel } from "@/lib/location/locale";
 
 interface LocationProfile {
   id: string;
@@ -19,6 +20,7 @@ interface LocationProfile {
   timezone: string | null;
   currencyCode: string;
   measurementSystem: string;
+  volumeStandard: string;
   locale: string;
   latitude: number | null;
   longitude: number | null;
@@ -141,7 +143,16 @@ export function LocationProfilePanel() {
           {location?.measurementSystem && (
             <Badge className="bg-purple-100 text-purple-800">
               <Ruler className="mr-1 inline h-3.5 w-3.5" />
-              {location.measurementSystem === "metric" ? "Metric (kg, °C)" : "Imperial (lbs, °F)"}
+              {measurementSystemLabel({
+                measurementSystem:
+                  location.measurementSystem === "metric" || location.measurementSystem === "mixed"
+                    ? location.measurementSystem
+                    : "imperial",
+                volumeStandard:
+                  location.volumeStandard === "uk" || location.volumeStandard === "metric"
+                    ? location.volumeStandard
+                    : "us",
+              })}
             </Badge>
           )}
           {location?.timezone && (

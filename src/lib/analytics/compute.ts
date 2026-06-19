@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { resolveLocationGeo } from "@/lib/location/geo";
 import { orderHour } from "@/lib/location/time";
+import { weatherMeasurementSystem, type LocationLocaleSettings } from "@/lib/location/locale";
 import { fetchWeatherForecast } from "@/lib/external/weather";
 import {
   buildCategoryCoverage,
@@ -1998,9 +1999,23 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     if (geo) {
       weatherGeo = geo.label;
       try {
-        const units: "imperial" | "metric" =
-          location.measurementSystem === "metric" ? "metric" : "imperial";
-        const w = await fetchWeatherForecast(geo.lat, geo.lon, units);
+        const localeSettings: LocationLocaleSettings = {
+          currencyCode: location.currencyCode ?? "USD",
+          locale: location.locale ?? "en-US",
+          measurementSystem:
+            location.measurementSystem === "metric" || location.measurementSystem === "mixed"
+              ? location.measurementSystem
+              : "imperial",
+          volumeStandard:
+            location.volumeStandard === "uk" || location.volumeStandard === "metric"
+              ? location.volumeStandard
+              : "us",
+        };
+        const w = await fetchWeatherForecast(
+          geo.lat,
+          geo.lon,
+          weatherMeasurementSystem(localeSettings)
+        );
         weatherForecast = w.forecasts;
         weatherSource = w.source;
       } catch {

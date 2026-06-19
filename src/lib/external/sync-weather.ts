@@ -3,14 +3,18 @@ import { resolveLocationGeo, type LocationGeoInput } from "@/lib/location/geo";
 import { startOfDayInTimezone } from "@/lib/location/time";
 import { fetchWeatherForecast } from "./weather";
 import { syncHolidayCalendar } from "./sync-holidays";
-import type { MeasurementSystem } from "@/lib/location/locale";
+import { weatherMeasurementSystem, type LocationLocaleSettings } from "@/lib/location/locale";
 
 const SYNC_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /** Sync 7-day weather forecast into ExternalFactor records. */
 export async function syncWeatherForecasts(
   locationId: string,
-  location: LocationGeoInput & { measurementSystem?: string | null }
+  location: LocationGeoInput & {
+    measurementSystem?: string | null;
+    volumeStandard?: string | null;
+    countryCode?: string;
+  }
 ) {
   const recent = await prisma.externalFactor.findFirst({
     where: {
@@ -31,8 +35,19 @@ export async function syncWeatherForecasts(
   }
 
   const timeZone = geo.timezone ?? location.timezone ?? "America/New_York";
-  const measurementSystem: MeasurementSystem =
-    location.measurementSystem === "metric" ? "metric" : "imperial";
+  const localeSettings: LocationLocaleSettings = {
+    currencyCode: "USD",
+    locale: "en-US",
+    measurementSystem:
+      location.measurementSystem === "metric" || location.measurementSystem === "mixed"
+        ? location.measurementSystem
+        : "imperial",
+    volumeStandard:
+      location.volumeStandard === "uk" || location.volumeStandard === "metric"
+        ? location.volumeStandard
+        : "us",
+  };
+  const measurementSystem = weatherMeasurementSystem(localeSettings);
   const { source, forecasts } = await fetchWeatherForecast(geo.lat, geo.lon, measurementSystem);
   const today = startOfDayInTimezone(new Date(), timeZone);
 
@@ -65,7 +80,11 @@ export async function syncWeatherForecasts(
 /** Weather + holidays — called from analytics, Crystal Ball, and location save. */
 export async function syncExternalFactorsForLocation(
   locationId: string,
-  location: LocationGeoInput & { measurementSystem?: string | null; countryCode?: string }
+  location: LocationGeoInput & {
+    measurementSystem?: string | null;
+    volumeStandard?: string | null;
+    countryCode?: string;
+  }
 ) {
   const [weather, holidays] = await Promise.all([
     syncWeatherForecasts(locationId, location),

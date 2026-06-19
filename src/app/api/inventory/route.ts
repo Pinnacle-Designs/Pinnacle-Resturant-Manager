@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLocationIdFromRequest } from "@/lib/location";
+import { defaultInventoryUnitForLocation } from "@/lib/location/server-locale";
 import {
   ensureInventoryStorageLayout,
   inferStorageZoneSlug,
@@ -22,13 +23,14 @@ export async function POST(request: NextRequest) {
   const locationId = await getLocationIdFromRequest(request);
   await ensureInventoryStorageLayout(locationId);
   const body = await request.json();
+  const defaultUnit = await defaultInventoryUnitForLocation(locationId);
 
   let storageZoneId: string | null = body.storageZoneId ?? null;
   if (!storageZoneId && body.name) {
     const slug = inferStorageZoneSlug({
       name: String(body.name),
       barcode: body.barcode ? String(body.barcode) : null,
-      unit: String(body.unit ?? "lbs"),
+      unit: String(body.unit ?? defaultUnit),
     });
     const zone = await prisma.storageZone.findFirst({ where: { locationId, slug } });
     storageZoneId = zone?.id ?? null;

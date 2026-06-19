@@ -10,6 +10,8 @@ import {
   setActiveLocationLocale,
   type LocationLocaleSettings,
   type MeasurementSystem,
+  type VolumeStandard,
+  measurementSystemLabel,
 } from "@/lib/location/locale";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -23,6 +25,8 @@ interface LocationLocaleContextValue {
   formatTemperature: (celsius: number) => string;
   currencyCode: string;
   measurementSystem: MeasurementSystem;
+  volumeStandard: VolumeStandard;
+  measurementLabel: string;
 }
 
 const LocationLocaleContext = createContext<LocationLocaleContextValue>({
@@ -35,6 +39,8 @@ const LocationLocaleContext = createContext<LocationLocaleContextValue>({
   formatTemperature: (c) => formatTemperatureAmount(c),
   currencyCode: "USD",
   measurementSystem: "imperial",
+  volumeStandard: "us",
+  measurementLabel: measurementSystemLabel(DEFAULT_LOCALE_SETTINGS),
 });
 
 export function LocationLocaleProvider({ children }: { children: React.ReactNode }) {
@@ -53,9 +59,13 @@ export function LocationLocaleProvider({ children }: { children: React.ReactNode
       const res = await fetch("/api/locations/current");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const ms = data.location.measurementSystem;
+      const vs = data.location.volumeStandard;
       const next: LocationLocaleSettings = {
         currencyCode: data.location.currencyCode ?? "USD",
-        measurementSystem: data.location.measurementSystem === "metric" ? "metric" : "imperial",
+        measurementSystem:
+          ms === "metric" || ms === "mixed" ? ms : "imperial",
+        volumeStandard: vs === "uk" || vs === "metric" ? vs : "us",
         locale: data.location.locale ?? "en-US",
       };
       setSettings(next);
@@ -84,6 +94,8 @@ export function LocationLocaleProvider({ children }: { children: React.ReactNode
       formatTemperature: (c) => formatTemperatureAmount(c, settings),
       currencyCode: settings.currencyCode,
       measurementSystem: settings.measurementSystem,
+      volumeStandard: settings.volumeStandard,
+      measurementLabel: measurementSystemLabel(settings),
     }),
     [settings, loading, refresh]
   );

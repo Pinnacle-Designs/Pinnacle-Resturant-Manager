@@ -24,6 +24,7 @@ const locationSelect = {
   timezone: true,
   currencyCode: true,
   measurementSystem: true,
+  volumeStandard: true,
   locale: true,
   latitude: true,
   longitude: true,
@@ -113,6 +114,7 @@ export async function PATCH(request: NextRequest) {
       ...(seatCount != null ? { seatCount } : {}),
       currencyCode: regional.currencyCode,
       measurementSystem: regional.measurementSystem,
+      volumeStandard: regional.volumeStandard,
       locale: regional.locale,
       ...(backfillFromGeo && geo?.city ? { city: geo.city } : city !== undefined ? { city: city || null } : {}),
       ...(backfillFromGeo && geo?.stateProvince
@@ -150,7 +152,7 @@ export async function PATCH(request: NextRequest) {
     localTime: locationNowLabel(updated.timezone),
     sync: syncResult,
     message: geo
-      ? `Location saved — ${regional.currencyCode}, ${regional.measurementSystem} units, local time, weather, and holidays synced`
+      ? `Location saved — ${regional.currencyCode}, ${regional.measurementSystem} units (${regional.volumeStandard} volume), local time, weather, and holidays synced`
       : merged.postalCode?.trim()
         ? "Location saved — we couldn't verify that postal code. Check country and try again."
         : "Location saved — add a valid postal code to enable weather & holidays",

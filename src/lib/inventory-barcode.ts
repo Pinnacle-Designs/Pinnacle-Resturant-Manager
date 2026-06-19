@@ -98,8 +98,12 @@ export function suggestionFromCatalog(
 export async function identifyBarcodeWithAI(
   barcode: string,
   imageBase64: string | undefined,
-  existingItemNames: string[]
+  existingItemNames: string[],
+  allowedUnits?: string
 ): Promise<BarcodeProductSuggestion> {
+  const unitList =
+    allowedUnits ??
+    "g, kg, t, oz, lbs, ml, cl, L, tsp, tbsp, fl_oz, cup, pt, gal, each, units, dozen, case, heads, bottles, cans";
   const fallback: BarcodeProductSuggestion = {
     name: `Item ${barcode}`,
     unit: "units",
@@ -119,14 +123,14 @@ export async function identifyBarcodeWithAI(
           ? [
               {
                 type: "text",
-                text: `Identify this grocery/restaurant inventory product for barcode ${barcode}. Return JSON: name (product name for kitchen inventory), brand (optional), unit (one of: lbs, oz, kg, units, bottles, cases, heads), supplier (optional), packageSize (optional string), category (optional), confidence (high|medium|low). Existing inventory names for matching context: ${existingItemNames.slice(0, 20).join(", ") || "none"}.`,
+                text: `Identify this grocery/restaurant inventory product for barcode ${barcode}. Return JSON: name (product name for kitchen inventory), brand (optional), unit (one of: ${unitList}), supplier (optional), packageSize (optional string), category (optional), confidence (high|medium|low). Existing inventory names for matching context: ${existingItemNames.slice(0, 20).join(", ") || "none"}.`,
               },
               {
                 type: "image_url",
                 image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
               },
             ]
-          : `Identify the grocery or restaurant inventory product for barcode ${barcode}. Return JSON: name, brand (optional), unit (lbs|oz|kg|units|bottles|cases|heads), supplier (optional), packageSize (optional), category (optional), confidence (high|medium|low). Existing inventory: ${existingItemNames.slice(0, 20).join(", ") || "none"}.`,
+          : `Identify the grocery or restaurant inventory product for barcode ${barcode}. Return JSON: name, brand (optional), unit (${unitList}), supplier (optional), packageSize (optional), category (optional), confidence (high|medium|low). Existing inventory: ${existingItemNames.slice(0, 20).join(", ") || "none"}.`,
       },
     ];
 

@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Input, FormField, Modal } from "@/components/ui/form";
+import { UnitSelect } from "@/components/inventory/UnitSelect";
+import { useLocationLocale } from "@/components/location/LocationLocaleProvider";
+import { defaultWeightUnit } from "@/lib/location/measurements";
 import { apiPost } from "@/lib/api";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useScaleSerial } from "@/hooks/useScaleSerial";
@@ -46,11 +49,13 @@ interface InventoryScanModalProps {
 }
 
 export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanModalProps) {
+  const { settings } = useLocationLocale();
+  const defaultUnit = defaultWeightUnit(settings);
   const [barcode, setBarcode] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("lbs");
+  const [unit, setUnit] = useState(defaultUnit);
   const [supplier, setSupplier] = useState("");
   const [resolving, setResolving] = useState(false);
   const [receiving, setReceiving] = useState(false);
@@ -66,7 +71,7 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
     const item = result.existingItem;
     const suggestion = result.suggestion;
     setName(item?.name ?? suggestion?.name ?? "");
-    setUnit(item?.unit ?? suggestion?.unit ?? "lbs");
+    setUnit(item?.unit ?? suggestion?.unit ?? defaultUnit);
     setSupplier(item?.supplier ?? suggestion?.supplier ?? suggestion?.brand ?? "");
     if (suggestion?.packageSize) {
       const num = parseFloat(suggestion.packageSize);
@@ -74,7 +79,7 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
         setQuantity((prev) => prev || String(num));
       }
     }
-  }, []);
+  }, [defaultUnit]);
 
   const resolveBarcode = useCallback(
     async (code: string, captureFrame = false) => {
@@ -152,7 +157,7 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
       setScanResult(null);
       setName("");
       setQuantity("");
-      setUnit("lbs");
+      setUnit(defaultUnit);
       setSupplier("");
       setError(null);
       setSuccess(null);
@@ -162,7 +167,7 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
 
     void start();
     return () => stop();
-  }, [open, start, stop, disconnect]);
+  }, [open, start, stop, disconnect, defaultUnit]);
 
   const handleManualLookup = () => {
     resolveLockRef.current = "";
@@ -392,7 +397,7 @@ export function InventoryScanModal({ open, onClose, onReceived }: InventoryScanM
             />
           </FormField>
           <FormField label="Unit">
-            <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <UnitSelect value={unit} onChange={setUnit} />
           </FormField>
         </div>
 

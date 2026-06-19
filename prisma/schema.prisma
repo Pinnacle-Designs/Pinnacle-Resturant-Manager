@@ -322,6 +322,8 @@ model Location {
   currencyCode   String   @default("USD")
   /// imperial (US) or metric — synced from country/postal
   measurementSystem String @default("imperial")
+  /// us | uk | metric — volume standard for pints, gallons, fl oz
+  volumeStandard   String @default("us")
   /// BCP 47 locale for number/date formatting (e.g. en-US, en-GB)
   locale         String   @default("en-US")
   geoFenceRadiusM Int     @default(150)

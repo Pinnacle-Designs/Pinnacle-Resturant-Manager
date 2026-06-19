@@ -9,6 +9,8 @@ import {
   normalizeBarcode,
   suggestionFromCatalog,
 } from "@/lib/inventory-barcode";
+import { getLocationLocaleSettings } from "@/lib/location/server-locale";
+import { barcodeAiUnitList } from "@/lib/location/locale";
 
 export async function POST(request: NextRequest) {
   const { error } = await requirePermission(request, "manage_inventory");
@@ -44,10 +46,12 @@ export async function POST(request: NextRequest) {
   let source: "catalog" | "ai" = catalog ? "catalog" : "ai";
 
   if (!suggestion) {
+    const locale = await getLocationLocaleSettings(locationId);
     suggestion = await identifyBarcodeWithAI(
       barcode,
       imageBase64,
-      items.map((i) => i.name)
+      items.map((i) => i.name),
+      barcodeAiUnitList(locale)
     );
     source = "ai";
   }

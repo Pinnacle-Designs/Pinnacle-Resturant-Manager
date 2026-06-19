@@ -2,6 +2,7 @@ import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { resolveLocationGeo } from "@/lib/location/geo";
 import { dateKeyInTimezone } from "@/lib/location/time";
+import { weatherMeasurementSystem, type LocationLocaleSettings } from "@/lib/location/locale";
 import { fetchWeatherForecast } from "@/lib/external/weather";
 import {
   learnExternalPatterns,
@@ -96,9 +97,23 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
 
   if (geo) {
     geoLabel = geo.label;
-    const units: "imperial" | "metric" =
-      location.measurementSystem === "metric" ? "metric" : "imperial";
-    const w = await fetchWeatherForecast(geo.lat, geo.lon, units);
+    const localeSettings: LocationLocaleSettings = {
+      currencyCode: location.currencyCode ?? "USD",
+      locale: location.locale ?? "en-US",
+      measurementSystem:
+        location.measurementSystem === "metric" || location.measurementSystem === "mixed"
+          ? location.measurementSystem
+          : "imperial",
+      volumeStandard:
+        location.volumeStandard === "uk" || location.volumeStandard === "metric"
+          ? location.volumeStandard
+          : "us",
+    };
+    const w = await fetchWeatherForecast(
+      geo.lat,
+      geo.lon,
+      weatherMeasurementSystem(localeSettings)
+    );
     weatherSource = w.source;
     forecast = w.forecasts;
   }
