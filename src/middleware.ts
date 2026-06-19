@@ -15,7 +15,7 @@ import {
   WORKSPACE_COOKIE_NAME,
   parseWorkspaceCookieToken,
 } from "@/lib/workspace-cookie";
-import { hasActiveBilling, isBillingAllowedPath } from "@/lib/plan-enforcement";
+import { hasActiveBilling, isBillingAllowedPath } from "@/lib/plan-billing";
 import type { PlanId } from "@/lib/plans";
 
 const PUBLIC_PATHS = [
@@ -216,7 +216,8 @@ export async function middleware(request: NextRequest) {
     !platformAdmin &&
     workspace?.setupComplete &&
     !hasActiveBilling(workspace) &&
-    !isBillingAllowedPath(pathname)
+    !isBillingAllowedPath(pathname) &&
+    !isEmbeddableEmbedParam(embedParam)
   ) {
     if (pathname.startsWith("/api/")) {
       return applyFramePolicy(

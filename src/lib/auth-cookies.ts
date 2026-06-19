@@ -2,10 +2,10 @@ import type { NextResponse } from "next/server";
 import { enrichUserWithPlan } from "./location-plan";
 import { createSessionToken, sessionCookieOptions, type SessionUser } from "./session";
 import {
-  buildWorkspaceSnapshot,
   createWorkspaceCookieToken,
   workspaceCookieOptions,
 } from "./workspace-cookie";
+import { buildWorkspaceSnapshot } from "./workspace-snapshot";
 
 export interface PreparedAuthSession {
   sessionUser: SessionUser;

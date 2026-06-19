@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSecureAuth } from "@/lib/api-auth";
 import { applyAuthCookies } from "@/lib/auth-cookies";
 import { billingRequired, hasActiveBilling, isWithinTrial } from "@/lib/plan-enforcement";
-import { buildWorkspaceSnapshot } from "@/lib/workspace-cookie";
+import { buildWorkspaceSnapshot } from "@/lib/workspace-snapshot";
 import { seedLocationData } from "@/lib/seed-data";
 import { syncLocationGeoFields } from "@/lib/location/geo";
 import { resolveLocationLocale } from "@/lib/location/locale";
