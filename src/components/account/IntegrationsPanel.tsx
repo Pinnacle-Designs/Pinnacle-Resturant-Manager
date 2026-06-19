@@ -154,7 +154,7 @@ export function IntegrationsPanel() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">The nervous system</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Connect POS, accounting, vendors, and 280+ restaurant systems — data flows automatically, no re-keying.
+          Connect POS, accounting, vendors, and numerous restaurant systems — data flows automatically, no re-keying.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export function IntegrationsPanel() {
           Connected
         </TabPill>
         <TabPill active={view === "marketplace"} onClick={() => setView("marketplace")}>
-          Marketplace (280+)
+          Integration marketplace
         </TabPill>
       </ScrollableTabs>
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Pinnacle Restaurant Manager — POS, KDS, sub-recipe costing, omnichannel menu sync, payroll &amp; holiday pay, 280+ integrations, loading dock &amp; purchasing, 12-tab analytics, Stripe billing, and AI Command Center. Try the live demo." />
+  <meta name="description" content="Pinnacle Restaurant Manager — POS, KDS, sub-recipe costing, omnichannel menu sync, payroll &amp; holiday pay, numerous integration options, loading dock &amp; purchasing, 12-tab analytics, Stripe billing, and AI Command Center. Try the live demo." />
   <meta name="theme-color" content="#0f172a" />
   <title>Pinnacle Restaurant Manager — AI-Powered Restaurant Operations</title>
   <link rel="icon" href="./assets/logo.png" type="image/png" />
@@ -44,7 +44,7 @@
             <p class="hero-lead">
               Pinnacle is an all-in-one manager — full POS with split checks and kitchen routing,
               menu engineering with sub-recipes and rolled-up ingredient tracking, omnichannel sync to six channels,
-              payroll with holiday-pay rules, 280+ integration partners, loading dock &amp; purchasing,
+              payroll with holiday-pay rules, numerous integration options, loading dock &amp; purchasing,
               12-tab analytics, and an AI command center that answers questions like
               <em>"What's hurting my profit this week?"</em> using live data from every
               part of your business.
@@ -78,7 +78,7 @@
         <div class="stats-bar">
           <div><div class="stat-value">12</div><div class="stat-label">Analytics modules</div></div>
           <div><div class="stat-value">6</div><div class="stat-label">Menu channels synced</div></div>
-          <div><div class="stat-value">280+</div><div class="stat-label">Integration partners</div></div>
+          <div><div class="stat-value">Many</div><div class="stat-label">Integration options</div></div>
           <div><div class="stat-value">350+</div><div class="stat-label">AI question library</div></div>
           <div><div class="stat-value">5</div><div class="stat-label">Staff roles &amp; permissions</div></div>
         </div>
@@ -188,7 +188,7 @@
           <article class="feature-card highlight">
             <div class="feature-icon">🔗</div>
             <h3>Integrations Hub</h3>
-            <p>280+ partner marketplace, live POS inventory sync, QuickBooks/Xero/Sage journals, and Sysco/US Foods EDI.</p>
+            <p>Numerous integration options — live POS inventory sync, QuickBooks/Xero/Sage journals, and Sysco/US Foods EDI.</p>
           </article>
           <article class="feature-card highlight">
             <div class="feature-icon">📷</div>
@@ -337,7 +337,7 @@
           <div class="highlight-card">
             <div class="icon">🛒</div>
             <h3>Integration marketplace</h3>
-            <p>Browse 280+ POS, payroll, accounting, reservations, and delivery partners — connect live integrations or plan roadmap items.</p>
+            <p>Browse numerous POS, payroll, accounting, reservations, and delivery integration options — connect live integrations or plan roadmap items.</p>
           </div>
         </div>
         <p style="margin-top:2rem;text-align:center;color:var(--slate-300);font-size:0.9375rem">
@@ -611,7 +611,7 @@
               <li>Purchasing &amp; loading dock</li>
               <li>Forecasting &amp; Crystal Ball</li>
               <li>Marketing ROI &amp; guest insights</li>
-              <li>Integrations hub <span class="pricing-muted">(280+)</span></li>
+              <li>Integrations hub</li>
               <li>Payroll runs &amp; export tools</li>
               <li>Priority support</li>
               <li>Up to <strong>25</strong> users</li>
@@ -776,7 +776,7 @@
       <div class="footer-grid">
         <div>
           <img src="./assets/logo.png" alt="Pinnacle Restaurant Manager" class="footer-logo" width="220" height="44" />
-          <p class="footer-tagline">AI-powered restaurant management — POS, KDS, sub-recipe costing, payroll &amp; holiday pay, omnichannel menu sync, loading dock, 280+ integrations, analytics, and a command center that answers the questions owners actually ask.</p>
+          <p class="footer-tagline">AI-powered restaurant management — POS, KDS, sub-recipe costing, payroll &amp; holiday pay, omnichannel menu sync, loading dock, numerous integration options, analytics, and a command center that answers the questions owners actually ask.</p>
         </div>
         <div class="footer-cols">
           <div class="footer-col">
@@ -866,6 +866,9 @@
       loadScript(base + "config.js")
         .then(function () {
           return loadScript(base + "site-nav.js");
+        })
+        .then(function () {
+          return loadScript(base + "back-to-top.js");
         })
         .then(function () {
           return loadScript(base + "live-demo.js");
