@@ -31,7 +31,7 @@ Full setup, environment variables, Stripe billing, deployment, and admin panel: 
 ## Signup flow
 
 ```
-/signup?plan=GROWTH  →  create account  →  /onboarding  →  /dashboard
+/signup?plan=GROWTH  →  create account  →  /onboarding  →  Stripe (optional)  →  /download  →  /dashboard
 ```
 
 Plans: **Starter** ($79), **Growth** ($249), **Pro** ($449) per location/month. **Group** from $599 + $249/additional (2–10 locations). **Enterprise** custom from $1,500/mo.

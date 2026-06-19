@@ -27,6 +27,7 @@ export function hasActiveBilling(snapshot: WorkspaceSnapshot): boolean {
 export function isBillingAllowedPath(pathname: string): boolean {
   return (
     pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/download") ||
     pathname.startsWith("/account") ||
     pathname.startsWith("/api/onboarding") ||
     pathname.startsWith("/api/account") ||

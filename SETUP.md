@@ -43,9 +43,10 @@ With `ENABLE_AUTH_SEED=true` in `.env` (or in development by default):
    - Restaurant details (name, address, phone, seats)
    - Optional sample data
    - Stripe subscription autopay (or skip)
+   - **Download app** — `/download` (PWA + store links when published)
    - Launch dashboard
 
-New owners are redirected to onboarding until `setupComplete` is true.
+New owners are redirected to onboarding until `setupComplete` is true. After Stripe checkout, owners land on `/download` before finishing onboarding.
 
 ## Environment variables
 
@@ -97,6 +98,12 @@ Alternatively set `isPlatformAdmin` on a user via Prisma Studio or the admin pan
 | `OPENAI_API_KEY` | AI insights, receipt OCR, photo analysis |
 | `SUPPORT_EMAIL` | Shown in Account → Payments & support |
 | `ENABLE_AUTH_SEED` | Enable `/api/auth/seed` in production |
+| `NEXT_PUBLIC_APP_STORE_URL` | iOS App Store URL for `/download` page |
+| `NEXT_PUBLIC_PLAY_STORE_URL` | Google Play URL for `/download` page |
+
+## Legal pages
+
+Public routes: `/privacy` and `/terms`. Link these from signup and your marketing site before App Store / Play Store submission.
 
 ## Billing setup (owners)
 

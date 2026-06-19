@@ -72,8 +72,8 @@ export async function createStripeCheckoutSession(input: {
     line_items: [lineItem],
     success_url:
       input.returnTo === "onboarding"
-        ? `${base}/onboarding?stripe=success`
-        : `${base}/account?tab=billing&stripe=success`,
+        ? `${base}/download?from=onboarding`
+        : `${base}/download?from=checkout`,
     cancel_url:
       input.returnTo === "onboarding"
         ? `${base}/onboarding?stripe=cancel`

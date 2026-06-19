@@ -35,6 +35,11 @@ export const PAYMENT_SECURITY_PRACTICES: PaymentSecurityPractice[] = [
       "Login, billing, password, and checkout endpoints are rate-limited to reduce abuse.",
   },
   {
+    title: "Tenant isolation",
+    detail:
+      "API requests are scoped to the signed-in user's location in production. The x-location-id header cannot access another restaurant's data.",
+  },
+  {
     title: "Webhook verification",
     detail:
       "Stripe webhooks are signature-verified before updating subscription status.",

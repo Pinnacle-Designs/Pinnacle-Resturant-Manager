@@ -79,7 +79,12 @@ export function OnboardingClient() {
       setCountryCode(json.location.countryCode || "US");
       setSeatCount(String(json.location.seatCount || 40));
       const saved = Math.min(4, Math.max(1, (json.location.onboardingStep || 0) + 1)) as Step;
-      setStep(saved);
+      const nextStep =
+        json.location.autopayEnabled && saved < 4 ? (4 as Step) : saved;
+      setStep(nextStep);
+      if (json.location.autopayEnabled && saved < 4) {
+        setMessage("Stripe autopay connected. You're almost ready.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load onboarding");
     } finally {
@@ -356,11 +361,20 @@ export function OnboardingClient() {
             <div className="text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
               <p className="mt-2 text-sm text-slate-600">
-                Your workspace is configured. Open the dashboard to start managing orders, inventory, and staff.
+                Your workspace is configured. Install the app on your devices, then open the dashboard
+                to start managing orders, inventory, and staff.
               </p>
-              <Button type="button" className="mt-6" disabled={busy} onClick={() => void finish()}>
-                Go to dashboard
-              </Button>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <a
+                  href="/download?from=onboarding"
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Download app
+                </a>
+                <Button type="button" disabled={busy} onClick={() => void finish()}>
+                  Go to dashboard
+                </Button>
+              </div>
             </div>
           </PageSection>
         )}

@@ -6,9 +6,8 @@ import { Button } from "@/components/ui";
 import { Input, FormField, Modal } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { PLANS, type PlanId, parsePlanId } from "@/lib/plans";
-import { InstallAppPrompt } from "@/components/auth/InstallAppPrompt";
 
-type Step = "plan" | "account" | "install";
+type Step = "plan" | "account";
 
 interface SignupFlowProps {
   initialPlan?: PlanId;
@@ -46,7 +45,7 @@ export function SignupFlow({ initialPlan = "GROWTH", onSuccess, onCancel, embedd
       if (onSuccess) {
         onSuccess();
       } else {
-        setStep("install");
+        window.location.assign("/onboarding");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create account");
@@ -54,18 +53,6 @@ export function SignupFlow({ initialPlan = "GROWTH", onSuccess, onCancel, embedd
       setLoading(false);
     }
   };
-
-  if (step === "install") {
-    return (
-      <InstallAppPrompt
-        plan={selectedPlan}
-        embedded={embedded}
-        onContinue={() => {
-          window.location.assign("/onboarding");
-        }}
-      />
-    );
-  }
 
   if (step === "plan") {
     return (
@@ -181,6 +168,17 @@ export function SignupFlow({ initialPlan = "GROWTH", onSuccess, onCancel, embedd
           />
         </FormField>
         {error && <p className="text-sm text-red-600">{error}</p>}
+        <p className="text-xs text-slate-500">
+          By creating an account you agree to our{" "}
+          <a href="/terms" className="font-medium text-orange-600 hover:text-orange-500">
+            Terms
+          </a>{" "}
+          and{" "}
+          <a href="/privacy" className="font-medium text-orange-600 hover:text-orange-500">
+            Privacy Policy
+          </a>
+          .
+        </p>
         <div className={cn("flex gap-2", embedded ? "flex-col-reverse sm:flex-row sm:justify-end" : "")}>
           <Button type="button" variant="secondary" onClick={() => setStep("plan")}>
             Back

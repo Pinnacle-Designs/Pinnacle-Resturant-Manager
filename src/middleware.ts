@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   "/embed",
   "/login",
   "/signup",
+  "/privacy",
+  "/terms",
   "/docs",
   "/api/auth/login",
   "/api/auth/register",
@@ -116,6 +118,7 @@ function applyDevCors(request: NextRequest, response: NextResponse): NextRespons
 function isOnboardingAllowedPath(pathname: string): boolean {
   return (
     pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/download") ||
     pathname.startsWith("/api/onboarding") ||
     pathname.startsWith("/api/account/billing/stripe/") ||
     pathname.startsWith("/api/auth/logout")

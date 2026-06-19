@@ -20,6 +20,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isLogin = pathname === "/login";
   const isSignup = pathname === "/signup";
   const isOnboarding = pathname === "/onboarding";
+  const isDownload = pathname === "/download";
+  const isLegal = pathname === "/privacy" || pathname === "/terms";
   const isTableside = pathname === "/tableside";
   const isEmbedRoute = pathname === "/embed";
   const embedParam = searchParams.get("embed");
@@ -27,7 +29,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isEmbedFull = embedParam === "full";
   const isEmbedMobile = embedParam === "mobile" || embedParam === "1";
 
-  if (isLogin || isSignup || isOnboarding || isMarketing || isEmbedRoute || isTableside) {
+  if (isLogin || isSignup || isOnboarding || isDownload || isLegal || isMarketing || isEmbedRoute || isTableside) {
     return <>{children}</>;
   }
 
