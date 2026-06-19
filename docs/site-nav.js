@@ -13,8 +13,16 @@
     { hash: "#pricing", label: "Pricing" },
   ];
 
+  /** "/docs" segment only (not "/documentation"). Supports /repo/docs/... on GitHub Pages. */
+  function getDocsPrefix() {
+    var path = location.pathname;
+    var m = path.match(/^(.*\/docs)(?=\/|$)/);
+    return m ? m[1] : null;
+  }
+
   function docsAssetBase() {
-    if (location.pathname.indexOf("/docs") === 0) return "/docs/";
+    var prefix = getDocsPrefix();
+    if (prefix) return prefix + "/";
     return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/");
   }
 
@@ -22,13 +30,10 @@
     return /pitch\.html$/i.test(location.pathname);
   }
 
-  /** Explicit index URL — avoids /docs#hash (directory + hash) which breaks on many servers. */
+  /** Explicit index file — never /docs#hash (directory + hash breaks without index routing). */
   function docsIndexHref() {
-    var path = location.pathname;
-    var docsIdx = path.indexOf("/docs");
-    if (docsIdx >= 0) {
-      return path.slice(0, docsIdx + 5) + "/index.html";
-    }
+    var prefix = getDocsPrefix();
+    if (prefix) return prefix + "/index.html";
     return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/") + "index.html";
   }
 
@@ -51,11 +56,8 @@
   }
 
   function investorsHref() {
-    var path = location.pathname;
-    var docsIdx = path.indexOf("/docs");
-    if (docsIdx >= 0) {
-      return path.slice(0, docsIdx + 5) + "/pitch.html";
-    }
+    var prefix = getDocsPrefix();
+    if (prefix) return prefix + "/pitch.html";
     return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/") + "pitch.html";
   }
 

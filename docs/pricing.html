@@ -7,11 +7,10 @@
     (function () {
       var hash = location.hash || "#pricing";
       var path = location.pathname;
-      var docsIdx = path.indexOf("/docs");
-      var target =
-        docsIdx >= 0
-          ? path.slice(0, docsIdx + 5) + "/index.html" + hash
-          : "index.html" + hash;
+      var m = path.match(/^(.*\/docs)(?=\/|$)/);
+      var target = m
+        ? m[1] + "/index.html" + hash
+        : "index.html" + hash;
       location.replace(target);
     })();
   </script>
