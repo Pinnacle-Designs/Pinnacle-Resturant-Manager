@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/api-platform-admin";
+import { applyAuthCookies } from "@/lib/auth-cookies";
 import { parsePlanId } from "@/lib/plans";
 import { privateJsonResponse } from "@/lib/secure-response";
 
@@ -8,7 +9,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requirePlatformAdmin(request);
+  const { user, error } = await requirePlatformAdmin(request);
   if (error) return error;
 
   const { id } = await params;
@@ -38,5 +39,9 @@ export async function PATCH(
     },
   });
 
-  return privateJsonResponse({ location: updated });
+  const response = privateJsonResponse({ location: updated });
+  if (user?.locationId === id && plan) {
+    await applyAuthCookies(response, user);
+  }
+  return response;
 }

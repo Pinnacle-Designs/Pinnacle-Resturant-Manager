@@ -346,7 +346,7 @@ export function OnboardingClient() {
               </p>
             )}
             <ul className="space-y-2 text-sm text-slate-600">
-              {PLAN_BY_ID[plan.id].features.slice(0, 4).map((f) => (
+              {PLAN_BY_ID[plan.id].features.map((f) => (
                 <li key={f}>✓ {f}</li>
               ))}
             </ul>

@@ -3,13 +3,15 @@ import { prisma } from "./prisma";
 import { hashPassword } from "./auth";
 
 /** Embed / marketing live-demo accounts — not for normal sign-in. */
+export const OWNER_DEMO_EMAIL = "owner@pinnacle.com";
+
 export const DEMO_USERS: Array<{
   email: string;
   password: string;
   name: string;
   role: AppRole;
 }> = [
-  { email: "owner@pinnacle.com", password: "demo1234", name: "Marcus Reed", role: "OWNER" },
+  { email: OWNER_DEMO_EMAIL, password: "demo1234", name: "Marcus Reed", role: "OWNER" },
   { email: "manager@pinnacle.com", password: "demo1234", name: "Elena Vasquez", role: "MANAGER" },
   { email: "server@pinnacle.com", password: "demo1234", name: "Priya Nair", role: "SERVER" },
   { email: "kitchen@pinnacle.com", password: "demo1234", name: "Marcus Reed", role: "KITCHEN" },

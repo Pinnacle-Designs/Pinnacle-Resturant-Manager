@@ -16,6 +16,16 @@ function stripePriceIdForPlan(plan: PlanId): string | null {
   return map[plan]?.trim() || null;
 }
 
+/** Resolve plan from a Stripe price id (subscription line item). */
+export function planFromStripePriceId(priceId: string | null | undefined): PlanId | null {
+  if (!priceId) return null;
+  const entries: PlanId[] = ["STARTER", "GROWTH", "PRO"];
+  for (const plan of entries) {
+    if (stripePriceIdForPlan(plan) === priceId) return plan;
+  }
+  return null;
+}
+
 function resolveCheckoutPriceId(plan: PlanId): string {
   const priceId = stripePriceIdForPlan(plan);
   if (priceId) return priceId;

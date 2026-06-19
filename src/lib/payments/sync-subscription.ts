@@ -4,6 +4,7 @@ import type { PlanId } from "@/lib/plans";
 import {
   retrieveStripeCustomerPaymentSummary,
   retrieveStripeSubscription,
+  planFromStripePriceId,
 } from "./stripe-server";
 
 export async function upsertStripeSubscriptionConnection(input: {
@@ -52,6 +53,7 @@ export async function syncLocationFromStripeSubscription(
     : startOfDay(addMonths(new Date(), 1));
 
   const card = await retrieveStripeCustomerPaymentSummary(customerId);
+  const plan = resolvePlanFromStripeSubscription(subscription);
 
   await upsertStripeSubscriptionConnection({
     locationId,
@@ -76,6 +78,7 @@ export async function syncLocationFromStripeSubscription(
       paymentLast4: card?.last4 ?? null,
       paymentExpMonth: card?.expMonth ?? null,
       paymentExpYear: card?.expYear ?? null,
+      ...(plan ? { plan } : {}),
     },
   });
 }
@@ -113,4 +116,15 @@ export function planFromStripeMetadata(metadata: Record<string, string> | null |
   const raw = metadata?.plan?.toUpperCase();
   if (raw === "STARTER" || raw === "GROWTH" || raw === "PRO") return raw;
   return null;
+}
+
+function resolvePlanFromStripeSubscription(subscription: Awaited<
+  ReturnType<typeof retrieveStripeSubscription>
+>): PlanId | null {
+  const fromMetadata = planFromStripeMetadata(subscription.metadata ?? undefined);
+  if (fromMetadata) return fromMetadata;
+
+  const price = subscription.items?.data?.[0]?.price;
+  const priceId = typeof price === "string" ? price : price?.id;
+  return planFromStripePriceId(priceId);
 }

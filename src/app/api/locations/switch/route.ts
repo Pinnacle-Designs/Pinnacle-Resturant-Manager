@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { requireSecureAuth } from "@/lib/api-auth";
+import { applyAuthCookies } from "@/lib/auth-cookies";
 import { isProductionRuntime } from "@/lib/dev-routes";
 import { privateJsonResponse } from "@/lib/secure-response";
 
@@ -30,7 +31,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const response = privateJsonResponse({ success: true });
+  const response = privateJsonResponse({ success: true, locationId });
+  await applyAuthCookies(response, { ...user!, locationId });
   response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,

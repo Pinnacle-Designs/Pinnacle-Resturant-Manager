@@ -105,6 +105,7 @@ const API_PLAN_EXEMPT = new Set([
 const API_RESOURCE_TO_ROUTE: Record<string, string> = {
   "purchase-orders": "/purchase-orders",
   "loading-dock": "/loading-dock",
+  "purchasing": "/loading-dock",
   "back-office": "/back-office",
   "crystal-ball": "/crystal-ball",
   "log-book": "/log-book",
@@ -214,7 +215,19 @@ export const PLAN_BY_ID = Object.fromEntries(PLANS.map((p) => [p.id, p])) as Rec
   PlanDefinition
 >;
 
+/** Starter — daily AI question cap. */
 export const STARTER_AI_DAILY_LIMIT = 10;
+
+/** Growth — fair-use monthly receipt OCR cap (Starter has none). */
+export const GROWTH_OCR_MONTHLY_LIMIT = 50;
+
+export function canUseReceiptOcr(plan: PlanId | null | undefined): boolean {
+  return plan === "GROWTH" || plan === "PRO";
+}
+
+export function hasUnlimitedReceiptOcr(plan: PlanId | null | undefined): boolean {
+  return plan === "PRO";
+}
 
 export function parsePlanId(raw: unknown): PlanId | null {
   const value = String(raw || "").trim().toUpperCase();

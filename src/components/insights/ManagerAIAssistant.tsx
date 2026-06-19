@@ -538,6 +538,14 @@ export function ManagerAIAssistant() {
         </PageSection>
 
         <PageSection id="cc-library" title="Browse 350+ manager questions">
+          {!commandCenterEnabled ? (
+            <PlanUpgradeBanner
+              title={`${PLAN_BY_ID.GROWTH.name} unlocks the prompt library`}
+              description={`Starter includes ${STARTER_AI_DAILY_LIMIT} AI questions per day with basic prompts only.`}
+              requiredPlan="GROWTH"
+            />
+          ) : (
+          <>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -608,6 +616,8 @@ export function ManagerAIAssistant() {
               </div>
             ))}
           </div>
+          </>
+          )}
         </PageSection>
       </PageSectionShell>
       </div>

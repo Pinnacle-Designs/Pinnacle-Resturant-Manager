@@ -31,7 +31,7 @@ export default function LoginForm() {
 
     const from = searchParams.get("from") || "/dashboard";
     const embed = searchParams.get("embed");
-    let target = from;
+    let target = data.redirectTo || from;
     if (embed && (embed === "mobile" || embed === "full" || embed === "1") && !from.includes("embed=")) {
       const embedValue = embed === "1" ? "mobile" : embed;
       target = from + (from.includes("?") ? "&" : "?") + "embed=" + embedValue;

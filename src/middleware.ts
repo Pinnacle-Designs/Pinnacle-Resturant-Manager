@@ -129,10 +129,14 @@ async function resolveEffectivePlan(
   request: NextRequest,
   sessionPlan?: PlanId
 ): Promise<PlanId> {
+  // Session JWT is refreshed from the database on GET /api/auth/login (AuthProvider mount).
+  if (sessionPlan) return sessionPlan;
+
   const workspaceToken = request.cookies.get(WORKSPACE_COOKIE_NAME)?.value;
   const workspace = await parseWorkspaceCookieToken(workspaceToken);
   if (workspace?.plan) return workspace.plan;
-  return sessionPlan ?? "STARTER";
+
+  return "STARTER";
 }
 
 export async function middleware(request: NextRequest) {

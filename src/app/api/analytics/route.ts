@@ -3,6 +3,8 @@ import { getLocationIdFromRequest } from "@/lib/location";
 import { requirePermission } from "@/lib/api-auth";
 import { computeAnalytics } from "@/lib/analytics/compute";
 import { normalizeAnalyticsPayload } from "@/lib/analytics/normalize";
+import { getRequestPlan } from "@/lib/plan-api";
+import { filterAnalyticsPayloadForPlan } from "@/lib/plan-features";
 
 export async function GET(request: NextRequest) {
   const { error } = await requirePermission(request, "view_analytics");
@@ -10,7 +12,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const locationId = await getLocationIdFromRequest(request);
-    const data = normalizeAnalyticsPayload(await computeAnalytics(locationId));
+    const plan = await getRequestPlan(request);
+    const data = normalizeAnalyticsPayload(
+      filterAnalyticsPayloadForPlan(
+        normalizeAnalyticsPayload(await computeAnalytics(locationId)),
+        plan
+      )
+    );
     return NextResponse.json(data);
   } catch (err) {
     console.error("Analytics API error:", err);

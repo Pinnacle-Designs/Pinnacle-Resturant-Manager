@@ -97,7 +97,10 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
     if (!payload || !sig) return null;
     if (!(await verifyPayload(payload, sig))) return null;
 
-    const data = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as SessionUser & {
+    const decoded = new TextDecoder().decode(fromBase64Url(payload));
+    if (!decoded.trim()) return null;
+
+    const data = JSON.parse(decoded) as SessionUser & {
       exp: number;
     };
     if (data.exp < Date.now()) return null;

@@ -57,10 +57,10 @@ export function SubscriptionContractModal({
       open={open}
       onClose={handleClose}
       title={`${planDef.name} subscription agreement`}
-      size="fullscreen"
+      size="xl"
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
           <div className="flex items-start gap-3">
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
             <div>
@@ -81,7 +81,7 @@ export function SubscriptionContractModal({
           </Link>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
+        <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
           <p className="text-xs text-slate-500">Effective {contract.effectiveDate}</p>
           <h3 className="mt-2 text-lg font-semibold text-slate-900">{contract.title}</h3>
 
@@ -104,7 +104,7 @@ export function SubscriptionContractModal({
           </div>
         </div>
 
-        <div className="shrink-0 space-y-3 border-t border-slate-200 pt-4">
+        <div className="space-y-3 border-t border-slate-200 pt-4">
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
             <input
               type="checkbox"

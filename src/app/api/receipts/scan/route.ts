@@ -6,6 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { analyzeReceipt } from "@/lib/ai";
 import { getLocationIdFromRequest } from "@/lib/location";
 import { requirePermission } from "@/lib/api-auth";
+import { getRequestPlan } from "@/lib/plan-api";
+import {
+  GROWTH_OCR_MONTHLY_LIMIT,
+  PLAN_BY_ID,
+  canUseReceiptOcr,
+  hasUnlimitedReceiptOcr,
+} from "@/lib/plans";
+import { startOfMonth } from "date-fns";
 import type { PhotoCategory } from "@prisma/client";
 
 async function fileToBase64(file: File): Promise<string> {
@@ -16,6 +24,38 @@ async function fileToBase64(file: File): Promise<string> {
 export async function POST(request: NextRequest) {
   const { error } = await requirePermission(request, "view_receipts");
   if (error) return error;
+
+  const plan = await getRequestPlan(request);
+  if (!canUseReceiptOcr(plan)) {
+    return NextResponse.json(
+      {
+        error: `Receipt OCR is included on ${PLAN_BY_ID.GROWTH.name} and ${PLAN_BY_ID.PRO.name} plans.`,
+        requiredPlan: "GROWTH",
+      },
+      { status: 403 }
+    );
+  }
+
+  if (!hasUnlimitedReceiptOcr(plan)) {
+    const locationId = await getLocationIdFromRequest(request);
+    const monthStart = startOfMonth(new Date());
+    const used = await prisma.photo.count({
+      where: {
+        locationId,
+        category: "RECEIPT",
+        createdAt: { gte: monthStart },
+      },
+    });
+    if (used >= GROWTH_OCR_MONTHLY_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Growth includes ${GROWTH_OCR_MONTHLY_LIMIT} receipt scans per month. Upgrade to ${PLAN_BY_ID.PRO.name} for unlimited OCR.`,
+          requiredPlan: "PRO",
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   try {
     const formData = await request.formData();

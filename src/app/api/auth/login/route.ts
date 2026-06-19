@@ -7,7 +7,11 @@ import { prepareAuthSession, attachAuthCookies } from "@/lib/auth-cookies";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
-import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled, devDemoLoginEnabled } from "@/lib/demo-users";
+import { isDemoAccountEmail, isPlanDemoAccountEmail, planDemoLoginEnabled, devDemoLoginEnabled, OWNER_DEMO_EMAIL } from "@/lib/demo-users";
+import {
+  ensureOwnerDemoPostCheckout,
+  ownerDemoPostCheckoutRedirect,
+} from "@/lib/demo-owner-billing";
 import { resolveUserWorkspace } from "@/lib/user-workspace";
 import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/client-ip";
@@ -81,6 +85,7 @@ export async function POST(request: NextRequest) {
 
   let workspace = null;
   let workspaceError: string | undefined;
+  let redirectTo: string | undefined;
 
   if (useDemoWorkspace) {
     try {
@@ -98,6 +103,10 @@ export async function POST(request: NextRequest) {
           data: { locationId: workspace.locationId },
         });
         user.locationId = workspace.locationId;
+        if (email === OWNER_DEMO_EMAIL) {
+          await ensureOwnerDemoPostCheckout(workspace.locationId, user.id);
+          redirectTo = ownerDemoPostCheckoutRedirect(email) ?? undefined;
+        }
       } else {
         workspace = await resolveUserWorkspace(user);
       }
@@ -117,6 +126,7 @@ export async function POST(request: NextRequest) {
     user: prepared.sessionUser,
     workspace,
     workspaceError,
+    redirectTo,
   });
 
   if (forEmbed) {

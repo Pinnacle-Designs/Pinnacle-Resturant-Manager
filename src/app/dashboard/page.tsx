@@ -69,11 +69,27 @@ async function getDashboardData() {
     monthlyExpenses,
     photoCount,
     insights: insights.map((i) => ({
-      ...i,
+      id: i.id,
+      title: i.title,
+      description: i.description,
+      category: i.category,
+      severity: i.severity,
+      actionable: i.actionable,
+      resolved: i.resolved,
       createdAt: i.createdAt.toISOString(),
     })),
-    activity,
-    lowStock,
+    activity: activity.map((log) => ({
+      id: log.id,
+      action: log.action,
+      details: log.details,
+    })),
+    lowStock: lowStock.map((item) => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      minQuantity: item.minQuantity,
+    })),
   };
 }
 
