@@ -88,6 +88,8 @@ export function MarketingFooter() {
         <p className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-400">
           © {new Date().getFullYear()} Pinnacle Restaurant Manager. Built for independent
           restaurants and growing groups.
+          <br />
+          Built &amp; managed by Pinnacle Designs LLC
         </p>
       </div>
     </footer>
