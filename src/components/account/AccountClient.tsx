@@ -24,6 +24,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PermissionsTab } from "@/components/account/PermissionsTab";
 import { LocationProfilePanel } from "@/components/account/LocationProfilePanel";
 import { BillingIntegrations } from "@/components/account/BillingIntegrations";
+import {
+  SubscriptionContractModal,
+  subscriptionCheckoutPayload,
+} from "@/components/billing/SubscriptionContractModal";
 import { IntegrationsPanel } from "@/components/account/IntegrationsPanel";
 import { PaymentSupportPanel } from "@/components/account/PaymentSupportPanel";
 import { PLAN_BY_ID } from "@/lib/plans";
@@ -113,6 +117,9 @@ export function AccountClient() {
   const [expYear, setExpYear] = useState("");
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  const [billingContractOpen, setBillingContractOpen] = useState(false);
+  const [billingContractError, setBillingContractError] = useState<string | null>(null);
+  const [initialAutopayEnabled, setInitialAutopayEnabled] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -128,6 +135,7 @@ export function AccountClient() {
       setName(json.profile.name);
       setBillingEmail(json.billing.billingEmail || json.profile.email);
       setAutopayEnabled(json.billing.autopayEnabled);
+      setInitialAutopayEnabled(json.billing.autopayEnabled);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load account");
     } finally {
@@ -226,16 +234,19 @@ export function AccountClient() {
     }
   };
 
-  const saveBilling = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitBilling = async (includeTerms: boolean) => {
     if (!data?.billing.canManage) return;
     setBillingSaving(true);
     setBillingMessage(null);
+    setBillingContractError(null);
     try {
       const payload: Record<string, unknown> = {
         autopayEnabled,
         billingEmail,
       };
+      if (includeTerms) {
+        Object.assign(payload, subscriptionCheckoutPayload(data.billing.plan));
+      }
       if (cardNumber.trim()) {
         payload.cardNumber = cardNumber.replace(/\D/g, "");
         payload.expMonth = Number(expMonth);
@@ -253,15 +264,36 @@ export function AccountClient() {
       setCardNumber("");
       setExpMonth("");
       setExpYear("");
+      setInitialAutopayEnabled(autopayEnabled);
+      setBillingContractOpen(false);
       setBillingMessage(
         autopayEnabled ? "Autopay is enabled for your subscription" : "Billing settings saved"
       );
       await loadAccount();
     } catch (err) {
-      setBillingMessage(err instanceof Error ? err.message : "Could not save billing");
+      const message = err instanceof Error ? err.message : "Could not save billing";
+      if (billingContractOpen) {
+        setBillingContractError(message);
+      } else {
+        setBillingMessage(message);
+      }
     } finally {
       setBillingSaving(false);
     }
+  };
+
+  const saveBilling = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!data?.billing.canManage) return;
+
+    const enablingAutopay = autopayEnabled && !initialAutopayEnabled;
+    if (enablingAutopay) {
+      setBillingContractError(null);
+      setBillingContractOpen(true);
+      return;
+    }
+
+    void submitBilling(false);
   };
 
   const removePaymentMethod = async () => {
@@ -546,6 +578,7 @@ export function AccountClient() {
 
               <PageSection id="account-billing-integrations" title="Payment integrations">
               <BillingIntegrations
+                planId={data.billing.plan}
                 planName={data.billing.planName}
                 monthlyAmount={data.billing.monthlyAmount}
                 canManage={data.billing.canManage}
@@ -690,6 +723,18 @@ export function AccountClient() {
                 </PageSection>
               )}
             </PageSectionShell>
+          )}
+
+          {tab === "billing" && data && (
+            <SubscriptionContractModal
+              open={billingContractOpen}
+              onClose={() => setBillingContractOpen(false)}
+              plan={data.billing.plan}
+              onAccept={() => submitBilling(true)}
+              busy={billingSaving}
+              error={billingContractError}
+              continueLabel="Agree & enable autopay"
+            />
           )}
 
           {tab === "integrations" && (

@@ -11,6 +11,9 @@ import {
 import { isRateLimited } from "@/lib/rate-limit";
 import { privateJsonResponse } from "@/lib/secure-response";
 import { getProviderConnection } from "@/lib/payments/providers";
+import { validateSubscriptionTermsAcceptance } from "@/lib/subscription-contracts";
+import { recordSubscriptionTermsAcceptance } from "@/lib/subscription-terms-record";
+import type { PlanId } from "@/lib/plans";
 
 export async function PATCH(request: NextRequest) {
   const { user, error } = await requireSecureAuth(request);
@@ -59,12 +62,14 @@ export async function PATCH(request: NextRequest) {
   const location = await prisma.location.findUnique({
     where: { id: locationId! },
     select: {
+      plan: true,
       paymentLast4: true,
       paymentBrand: true,
       paymentExpMonth: true,
       paymentExpYear: true,
       billingEmail: true,
       nextBillingDate: true,
+      autopayEnabled: true,
     },
   });
 
@@ -109,6 +114,15 @@ export async function PATCH(request: NextRequest) {
       { error: "Add a payment method before enabling autopay" },
       { status: 400 }
     );
+  }
+
+  const enablingAutopay = autopayEnabled && !location.autopayEnabled;
+  if (enablingAutopay) {
+    const termsCheck = validateSubscriptionTermsAcceptance(body, location.plan as PlanId);
+    if (!termsCheck.ok) {
+      return privateJsonResponse({ error: termsCheck.error }, { status: 400 });
+    }
+    await recordSubscriptionTermsAcceptance(locationId!, location.plan as PlanId, user!.id);
   }
 
   const nextBillingDate =

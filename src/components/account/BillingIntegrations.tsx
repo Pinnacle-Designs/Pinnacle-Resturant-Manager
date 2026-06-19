@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { CreditCard, Link2, Unplug } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { cn, formatCurrency } from "@/lib/utils";
+import type { PlanId } from "@/lib/plans";
+import {
+  SubscriptionContractModal,
+  subscriptionCheckoutPayload,
+} from "@/components/billing/SubscriptionContractModal";
 
 interface ProviderConnection {
   provider: string;
@@ -36,6 +41,7 @@ interface ProvidersPayload {
 }
 
 interface BillingIntegrationsProps {
+  planId: PlanId;
   planName: string;
   monthlyAmount: number;
   canManage: boolean;
@@ -45,6 +51,7 @@ interface BillingIntegrationsProps {
 }
 
 export function BillingIntegrations({
+  planId,
   planName,
   monthlyAmount,
   canManage,
@@ -56,6 +63,8 @@ export function BillingIntegrations({
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
 
   const loadProviders = useCallback(async () => {
     setLoading(true);
@@ -79,16 +88,25 @@ export function BillingIntegrations({
     window.location.assign(url);
   };
 
-  const startStripeCheckout = async () => {
+  const startStripeCheckout = () => {
+    setContractError(null);
+    setContractOpen(true);
+  };
+
+  const confirmStripeCheckout = async () => {
     setBusy("stripe-checkout");
-    setMessage(null);
+    setContractError(null);
     try {
-      const res = await fetch("/api/account/billing/stripe/checkout", { method: "POST" });
+      const res = await fetch("/api/account/billing/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscriptionCheckoutPayload(planId)),
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not start Stripe checkout");
       if (json.url) await openUrl(json.url);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Could not start Stripe checkout");
+      setContractError(err instanceof Error ? err.message : "Could not start Stripe checkout");
     } finally {
       setBusy(null);
     }
@@ -360,6 +378,15 @@ export function BillingIntegrations({
           Payments & support
         </a>
       </p>
+
+      <SubscriptionContractModal
+        open={contractOpen}
+        onClose={() => setContractOpen(false)}
+        plan={planId}
+        onAccept={confirmStripeCheckout}
+        busy={busy === "stripe-checkout"}
+        error={contractError}
+      />
     </div>
   );
 }

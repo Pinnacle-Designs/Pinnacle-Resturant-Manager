@@ -6,6 +6,8 @@ import { createStripeCheckoutSession } from "@/lib/payments/stripe-server";
 import { getProviderConnection, stripeConfigured } from "@/lib/payments/providers";
 import { isRateLimited } from "@/lib/rate-limit";
 import { privateJsonResponse } from "@/lib/secure-response";
+import { validateSubscriptionTermsAcceptance } from "@/lib/subscription-contracts";
+import { recordSubscriptionTermsAcceptance } from "@/lib/subscription-terms-record";
 import type { PlanId } from "@/lib/plans";
 
 export async function POST(request: NextRequest) {
@@ -34,8 +36,15 @@ export async function POST(request: NextRequest) {
     return privateJsonResponse({ error: "Location not found" }, { status: 404 });
   }
 
-  const existing = await getProviderConnection(locationId!, "SUBSCRIPTION");
   const body = await request.json().catch(() => ({}));
+  const termsCheck = validateSubscriptionTermsAcceptance(body, location.plan as PlanId);
+  if (!termsCheck.ok) {
+    return privateJsonResponse({ error: termsCheck.error }, { status: 400 });
+  }
+
+  await recordSubscriptionTermsAcceptance(locationId!, location.plan as PlanId, user!.id);
+
+  const existing = await getProviderConnection(locationId!, "SUBSCRIPTION");
   const returnTo = body?.returnTo === "onboarding" ? "onboarding" : "billing";
   const session = await createStripeCheckoutSession({
     locationId: locationId!,

@@ -16,6 +16,10 @@ import { PageSectionShell, PageSection } from "@/components/layout/PageSections"
 import { PLAN_BY_ID } from "@/lib/plans";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { PlanId } from "@/lib/plans";
+import {
+  SubscriptionContractModal,
+  subscriptionCheckoutPayload,
+} from "@/components/billing/SubscriptionContractModal";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -53,6 +57,8 @@ export function OnboardingClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -159,20 +165,29 @@ export function OnboardingClient() {
     }
   };
 
-  const startStripe = async () => {
+  const startStripe = () => {
+    setContractError(null);
+    setContractOpen(true);
+  };
+
+  const confirmStripeCheckout = async () => {
+    if (!plan) return;
     setBusy(true);
-    setError(null);
+    setContractError(null);
     try {
       const res = await fetch("/api/account/billing/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnTo: "onboarding" }),
+        body: JSON.stringify({
+          returnTo: "onboarding",
+          ...subscriptionCheckoutPayload(plan.id),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not start Stripe checkout");
       if (json.url) window.location.assign(json.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start Stripe checkout");
+      setContractError(err instanceof Error ? err.message : "Could not start Stripe checkout");
     } finally {
       setBusy(false);
     }
@@ -380,6 +395,17 @@ export function OnboardingClient() {
         )}
       </PageSectionShell>
       </div>
+
+      {plan && (
+        <SubscriptionContractModal
+          open={contractOpen}
+          onClose={() => setContractOpen(false)}
+          plan={plan.id}
+          onAccept={confirmStripeCheckout}
+          busy={busy}
+          error={contractError}
+        />
+      )}
     </div>
   );
 }

@@ -327,6 +327,11 @@ model Location {
   paymentExpMonth Int?
   paymentExpYear  Int?
   nextBillingDate DateTime?
+  /// Subscription agreement acceptance (required before checkout / autopay)
+  subscriptionTermsAcceptedAt DateTime?
+  subscriptionTermsVersion    String?
+  subscriptionTermsPlan       SubscriptionPlan?
+  subscriptionTermsAcceptedById String?
   setupComplete Boolean  @default(true)
   onboardingStep Int    @default(0)
   latitude       Float?

@@ -43,6 +43,26 @@ export default function TermsPage() {
           law. Guest card payments at the table are processed by your connected Square or Stripe Connect
           account under their terms.
         </p>
+        <p className="text-slate-600 leading-relaxed">
+          Plan-specific subscription agreements (month-to-month, cancel anytime):
+        </p>
+        <ul className="list-disc space-y-1 pl-5 text-slate-600">
+          <li>
+            <Link href="/terms/subscription/starter" className="font-medium text-orange-600 hover:text-orange-500">
+              Starter — $79/mo
+            </Link>
+          </li>
+          <li>
+            <Link href="/terms/subscription/growth" className="font-medium text-orange-600 hover:text-orange-500">
+              Growth — $249/mo
+            </Link>
+          </li>
+          <li>
+            <Link href="/terms/subscription/pro" className="font-medium text-orange-600 hover:text-orange-500">
+              Pro — $449/mo
+            </Link>
+          </li>
+        </ul>
       </section>
 
       <section className="mt-10 space-y-3">
