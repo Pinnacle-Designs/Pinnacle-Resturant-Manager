@@ -12,15 +12,66 @@ interface InstallAppPromptProps {
   embedded?: boolean;
 }
 
+function ManualInstallGuide({ isIOS, swReady }: { isIOS: boolean; swReady: boolean }) {
+  if (isIOS) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-left">
+        <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+          <Smartphone className="h-4 w-4 text-orange-500" />
+          iPhone / iPad — Add to Home Screen
+        </p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
+          <li>
+            Tap <Share className="inline h-3.5 w-3.5" /> Share in Safari
+          </li>
+          <li>
+            Scroll down and tap <strong>Add to Home Screen</strong>
+          </li>
+          <li>
+            Tap <strong>Add</strong> to install Pinnacle
+          </li>
+        </ol>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-left">
+      <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+        <MonitorSmartphone className="h-4 w-4 text-orange-500" />
+        Install on this device
+      </p>
+      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
+        <li>
+          Look for the <strong>Install</strong> icon in your browser&apos;s address bar (Chrome, Edge, or
+          Brave)
+        </li>
+        <li>
+          Or open the browser menu (⋮) and choose <strong>Install app</strong> or{" "}
+          <strong>Install Pinnacle</strong>
+        </li>
+        <li>
+          On Android, you can also tap <strong>Add to Home screen</strong>
+        </li>
+      </ol>
+      {swReady && (
+        <p className="mt-3 text-xs text-slate-500">
+          If no install option appears yet, refresh this page once — the app is preparing for install.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function InstallAppPrompt({ plan, onContinue, embedded }: InstallAppPromptProps) {
   const {
     canNativeInstall,
     install,
     installing,
     isInstalled,
-    showIOSInstructions,
-    showDesktopHint,
     isIOS,
+    swReady,
+    showManualInstallGuide,
   } = usePwaInstall();
 
   const { appStoreUrl, playStoreUrl } = getAppDownloadLinks();
@@ -79,48 +130,11 @@ export function InstallAppPrompt({ plan, onContinue, embedded }: InstallAppPromp
               disabled={installing}
             >
               <Download className="h-4 w-4" />
-              {installing ? "Installing…" : "Install app (browser)"}
+              {installing ? "Installing…" : "Install app"}
             </Button>
           )}
 
-          {showIOSInstructions && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                <Smartphone className="h-4 w-4 text-orange-500" />
-                {appStoreUrl ? "Or add to Home Screen" : "iPhone / iPad"}
-              </p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
-                <li>
-                  Tap <Share className="inline h-3.5 w-3.5" /> Share in Safari
-                </li>
-                <li>
-                  Scroll down and tap <strong>Add to Home Screen</strong>
-                </li>
-                <li>Tap <strong>Add</strong> to install Pinnacle</li>
-              </ol>
-            </div>
-          )}
-
-          {showDesktopHint && !canNativeInstall && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                <MonitorSmartphone className="h-4 w-4 text-orange-500" />
-                {isIOS ? "Desktop" : "Desktop or Android"}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Open the browser menu and choose <strong>Install app</strong> or{" "}
-                <strong>Add to Home screen</strong>. In Chrome, you may also see an install icon in the
-                address bar.
-              </p>
-            </div>
-          )}
-
-          {!storeListings && !canNativeInstall && !showIOSInstructions && !showDesktopHint && (
-            <p className="text-center text-sm text-slate-500">
-              Open this page on your phone or tablet to install. Store links appear here once the iOS and
-              Android apps are published.
-            </p>
-          )}
+          {showManualInstallGuide && <ManualInstallGuide isIOS={isIOS} swReady={swReady} />}
         </div>
       )}
 

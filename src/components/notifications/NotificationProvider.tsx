@@ -4,14 +4,13 @@ import { useEffect } from "react";
 import { showCriticalNotifications } from "@/lib/notifications";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { parseJsonResponse } from "@/lib/fetch-json";
+import { registerPwaServiceWorker } from "@/lib/pwa";
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, loading, can } = useAuth();
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(console.error);
-    }
+    void registerPwaServiceWorker();
   }, []);
 
   useEffect(() => {

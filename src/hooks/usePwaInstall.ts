@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { registerPwaServiceWorker } from "@/lib/pwa";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,10 +29,15 @@ export function usePwaInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [swReady, setSwReady] = useState(false);
 
   useEffect(() => {
     setIsIOS(detectIOS());
     setIsInstalled(detectInstalled());
+
+    void registerPwaServiceWorker().then((registration) => {
+      setSwReady(Boolean(registration));
+    });
 
     const onInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -69,13 +75,16 @@ export function usePwaInstall() {
     }
   }, [deferredPrompt]);
 
+  const canNativeInstall = Boolean(deferredPrompt);
+
   return {
-    canNativeInstall: Boolean(deferredPrompt),
+    canNativeInstall,
     install,
     installing,
     isInstalled,
     isIOS,
+    swReady,
     showIOSInstructions: isIOS && !isInstalled,
-    showDesktopHint: !isIOS && !deferredPrompt && !isInstalled,
+    showManualInstallGuide: !isInstalled && !canNativeInstall,
   };
 }

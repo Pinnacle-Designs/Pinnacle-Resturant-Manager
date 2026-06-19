@@ -24,7 +24,8 @@ export function DownloadClient() {
   const continueHref = from === "onboarding" ? "/onboarding" : "/dashboard";
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-12">
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-lg px-4 py-12">
       {from === "checkout" && (
         <p className="mb-6 text-center text-sm font-medium text-green-700">
           Payment received — thank you. Install the app to run your restaurant from any device.
@@ -36,6 +37,7 @@ export function DownloadClient() {
           window.location.assign(continueHref);
         }}
       />
+      </div>
     </div>
   );
 }
