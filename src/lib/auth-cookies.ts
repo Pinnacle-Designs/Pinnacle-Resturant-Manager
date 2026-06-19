@@ -1,0 +1,53 @@
+import type { NextResponse } from "next/server";
+import { enrichUserWithPlan } from "./location-plan";
+import { createSessionToken, sessionCookieOptions, type SessionUser } from "./session";
+import {
+  buildWorkspaceSnapshot,
+  createWorkspaceCookieToken,
+  workspaceCookieOptions,
+} from "./workspace-cookie";
+
+export interface PreparedAuthSession {
+  sessionUser: SessionUser;
+  sessionToken: string;
+  workspaceToken: string | null;
+}
+
+export async function prepareAuthSession(user: SessionUser): Promise<PreparedAuthSession> {
+  const sessionUser = await enrichUserWithPlan(user);
+  const sessionToken = await createSessionToken(sessionUser);
+  let workspaceToken: string | null = null;
+
+  if (sessionUser.locationId) {
+    const snapshot = await buildWorkspaceSnapshot(sessionUser.locationId);
+    if (snapshot) {
+      workspaceToken = await createWorkspaceCookieToken(snapshot);
+    }
+  }
+
+  return { sessionUser, sessionToken, workspaceToken };
+}
+
+export function attachAuthCookies(
+  response: NextResponse,
+  prepared: PreparedAuthSession,
+  options?: { forEmbed?: boolean; secure?: boolean }
+) {
+  response.cookies.set(
+    sessionCookieOptions(prepared.sessionToken, options?.forEmbed ?? false, options?.secure)
+  );
+  if (prepared.workspaceToken) {
+    response.cookies.set(workspaceCookieOptions(prepared.workspaceToken, options?.secure));
+  }
+}
+
+/** Refresh session + workspace cookies on an existing response. */
+export async function applyAuthCookies(
+  response: NextResponse,
+  user: SessionUser,
+  options?: { forEmbed?: boolean; secure?: boolean }
+): Promise<SessionUser> {
+  const prepared = await prepareAuthSession(user);
+  attachAuthCookies(response, prepared, options);
+  return prepared.sessionUser;
+}

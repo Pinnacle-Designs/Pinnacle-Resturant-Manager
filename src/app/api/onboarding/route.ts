@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createSessionToken, sessionCookieOptions } from "@/lib/auth";
 import { requireSecureAuth } from "@/lib/api-auth";
-import { enrichUserWithPlan } from "@/lib/location-plan";
+import { applyAuthCookies } from "@/lib/auth-cookies";
+import { billingRequired, hasActiveBilling, isWithinTrial } from "@/lib/plan-enforcement";
+import { buildWorkspaceSnapshot } from "@/lib/workspace-cookie";
 import { seedLocationData } from "@/lib/seed-data";
 import { syncLocationGeoFields } from "@/lib/location/geo";
 import { resolveLocationLocale } from "@/lib/location/locale";
@@ -54,6 +55,8 @@ export async function GET(request: NextRequest) {
       monthlyAmount: planMonthlyAmount(plan),
     },
     stripeConfigured: stripeConfigured(),
+    billingRequired: billingRequired(),
+    trialDays: Number(process.env.PLAN_TRIAL_DAYS ?? 14),
   });
 }
 
@@ -157,6 +160,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === "billing-skipped") {
+    if (billingRequired()) {
+      const location = await prisma.location.findUnique({
+        where: { id: user!.locationId },
+        select: { createdAt: true },
+      });
+      if (!location || !isWithinTrial(location.createdAt)) {
+        return privateJsonResponse(
+          {
+            error:
+              "Your trial has ended. Connect Stripe autopay to continue, or contact support.",
+          },
+          { status: 403 }
+        );
+      }
+    }
     await prisma.location.update({
       where: { id: user!.locationId },
       data: { onboardingStep: Math.max(3, 3) },
@@ -165,18 +183,34 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === "complete") {
+    const location = await prisma.location.findUnique({
+      where: { id: user!.locationId },
+      select: { autopayEnabled: true, createdAt: true },
+    });
+    if (!location) {
+      return privateJsonResponse({ error: "Location not found" }, { status: 404 });
+    }
+
+    if (billingRequired()) {
+      const snapshot = await buildWorkspaceSnapshot(user!.locationId!);
+      if (snapshot && !hasActiveBilling(snapshot)) {
+        return privateJsonResponse(
+          {
+            error:
+              "Set up Stripe autopay to launch, or finish onboarding during your free trial window.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     await prisma.location.update({
       where: { id: user!.locationId },
       data: { setupComplete: true, onboardingStep: 4 },
     });
 
-    const sessionUser = await enrichUserWithPlan({
-      ...user!,
-      setupComplete: true,
-    });
     const response = privateJsonResponse({ message: "Onboarding complete" });
-    const token = await createSessionToken(sessionUser);
-    response.cookies.set(sessionCookieOptions(token));
+    await applyAuthCookies(response, { ...user!, setupComplete: true });
     return response;
   }
 

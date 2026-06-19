@@ -490,21 +490,6 @@
     });
   }
 
-  function initNav() {
-    var toggle = document.getElementById("nav-toggle");
-    var mobile = document.getElementById("nav-mobile");
-    if (toggle && mobile) {
-      toggle.addEventListener("click", function () {
-        mobile.classList.toggle("open");
-      });
-      mobile.querySelectorAll("a").forEach(function (a) {
-        a.addEventListener("click", function () {
-          mobile.classList.remove("open");
-        });
-      });
-    }
-  }
-
   function initPageLinks() {
     resolveAppUrl().then(function (url) {
       if (url) wireOptionalAppLinks(url);
@@ -514,7 +499,7 @@
   function init() {
     initHeroDemo();
     initPageLinks();
-    initNav();
+    /* Mobile nav handled by site-nav.js */
     var year = document.getElementById("year");
     if (year) year.textContent = new Date().getFullYear();
   }

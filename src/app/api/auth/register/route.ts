@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { createSessionToken, hashPassword, sessionCookieOptions } from "@/lib/auth";
-import { enrichUserWithPlan } from "@/lib/location-plan";
+import { hashPassword } from "@/lib/auth";
+import { prepareAuthSession, attachAuthCookies } from "@/lib/auth-cookies";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { parsePlanId } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const sessionUser = await enrichUserWithPlan({
+  const prepared = await prepareAuthSession({
     id: user.id,
     email: user.email,
     name: user.name,
@@ -86,9 +86,8 @@ export async function POST(request: NextRequest) {
     setupComplete: false,
   });
 
-  const token = await createSessionToken(sessionUser);
   const response = privateJsonResponse({
-    user: sessionUser,
+    user: prepared.sessionUser,
     workspace: {
       locationId: location.id,
       locationName: location.name,
@@ -96,7 +95,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  response.cookies.set(sessionCookieOptions(token, false));
+  attachAuthCookies(response, prepared);
   response.cookies.set(LOCATION_COOKIE_NAME, location.id, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,

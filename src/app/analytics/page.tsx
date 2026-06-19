@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getEnrichedSessionUser } from "@/lib/location-plan";
 import { hasPermissionInList } from "@/lib/permissions";
 import { AnalyticsClient } from "@/components/analytics/AnalyticsClient";
+import type { PlanId } from "@/lib/plans";
 
 export default async function AnalyticsPage() {
   const user = await getEnrichedSessionUser();
@@ -9,5 +10,5 @@ export default async function AnalyticsPage() {
     redirect("/dashboard");
   }
 
-  return <AnalyticsClient />;
+  return <AnalyticsClient plan={(user.plan ?? "STARTER") as PlanId} />;
 }

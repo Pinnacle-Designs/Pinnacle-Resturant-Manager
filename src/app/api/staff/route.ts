@@ -4,6 +4,8 @@ import { getLocationIdFromRequest } from "@/lib/location";
 import { getSessionUserFromRequest } from "@/lib/auth";
 import { requirePermission, stripSalaries, unauthorizedResponse } from "@/lib/api-auth";
 import { hashClockPin, isValidClockPin } from "@/lib/timeclock/clock-pin";
+import { getRequestPlan } from "@/lib/plan-api";
+import { assertCanAddStaffMember } from "@/lib/plan-enforcement";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -23,6 +25,12 @@ export async function POST(request: NextRequest) {
 
   const locationId = await getLocationIdFromRequest(request);
   const body = await request.json();
+
+  const plan = await getRequestPlan(request);
+  const seatCheck = await assertCanAddStaffMember(locationId, plan);
+  if (!seatCheck.ok) {
+    return NextResponse.json({ error: seatCheck.message, limit: seatCheck.limit }, { status: 403 });
+  }
 
   let clockPinHash: string | null = null;
   const pin = body.clockPin ? String(body.clockPin) : "1234";

@@ -6,6 +6,8 @@ import {
   generateSectionInsights,
   type AnalyticsSection,
 } from "@/lib/analytics/section-insights";
+import { getRequestPlan } from "@/lib/plan-api";
+import { canAccessAnalyticsTab, PLAN_BY_ID, requiredPlanForAnalyticsTab } from "@/lib/plans";
 
 export async function POST(request: NextRequest) {
   const { error } = await requirePermission(request, "view_analytics");
@@ -19,6 +21,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: `Invalid section. Must be one of: ${ANALYTICS_SECTIONS.join(", ")}` },
         { status: 400 }
+      );
+    }
+
+    const plan = await getRequestPlan(request);
+    if (!canAccessAnalyticsTab(plan, section)) {
+      const required = requiredPlanForAnalyticsTab(section);
+      return NextResponse.json(
+        {
+          error: `Upgrade to ${PLAN_BY_ID[required].name} to unlock this analytics module.`,
+          requiredPlan: required,
+        },
+        { status: 403 }
       );
     }
 

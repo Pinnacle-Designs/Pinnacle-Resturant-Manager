@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { PageHeader, StatCard, Badge, Button, ScrollableTabs, TabPill } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,13 @@ import type { AnalyticsPayload } from "@/lib/analytics/types";
 import { normalizeAnalyticsPayload } from "@/lib/analytics/normalize";
 import { SectionAnalysisPanel } from "@/components/analytics/SectionAnalysisPanel";
 import { AnalyticsTabShell, AnalyticsBlock } from "@/components/analytics/AnalyticsCollapsible";
+import {
+  analyticsTabsForPlan,
+  canAccessAnalyticsTab,
+  PLAN_BY_ID,
+  requiredPlanForAnalyticsTab,
+  type PlanId,
+} from "@/lib/plans";
 
 const TABS = [
   { id: "executive", label: "Executive" },
@@ -98,13 +106,20 @@ function DataTable({
   );
 }
 
-export function AnalyticsClient() {
+export function AnalyticsClient({ plan }: { plan: PlanId }) {
+  const allowedTabs = useMemo(() => analyticsTabsForPlan(plan), [plan]);
   const [data, setData] = useState<AnalyticsPayload | null>(null);
-  const [tab, setTab] = useState<TabId>("executive");
+  const [tab, setTab] = useState<TabId>(() => allowedTabs[0] ?? "executive");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [weatherSyncing, setWeatherSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!canAccessAnalyticsTab(plan, tab)) {
+      setTab(allowedTabs[0] ?? "executive");
+    }
+  }, [plan, tab, allowedTabs]);
 
   const loadAnalytics = useCallback(() => {
     setLoading(true);
@@ -200,23 +215,46 @@ export function AnalyticsClient() {
       )}
 
       <ScrollableTabs className="mb-4 gap-1 rounded-lg border bg-white p-1" menuLabel="Analytics">
-        {TABS.map(({ id, label }) => (
-          <TabPill
-            key={id}
-            id={id}
-            active={tab === id}
-            onClick={() => setTab(id)}
-            className={cn(
-              "px-2 text-xs sm:px-3 sm:text-sm",
-              tab === id && "bg-orange-500 text-white hover:bg-orange-500"
-            )}
-          >
-            {label}
-          </TabPill>
-        ))}
+        {TABS.map(({ id, label }) => {
+          const locked = !canAccessAnalyticsTab(plan, id);
+          return (
+            <TabPill
+              key={id}
+              id={id}
+              active={tab === id}
+              onClick={() => !locked && setTab(id)}
+              className={cn(
+                "px-2 text-xs sm:px-3 sm:text-sm",
+                tab === id && "bg-orange-500 text-white hover:bg-orange-500",
+                locked && "cursor-not-allowed opacity-45"
+              )}
+            >
+              {label}
+              {locked ? " 🔒" : ""}
+            </TabPill>
+          );
+        })}
       </ScrollableTabs>
 
-      {tab === "executive" && (
+      {!canAccessAnalyticsTab(plan, tab) && (
+        <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-medium text-orange-900">
+            {PLAN_BY_ID[requiredPlanForAnalyticsTab(tab)].name} plan required
+          </p>
+          <p className="mt-1 text-sm text-orange-800">
+            Your {PLAN_BY_ID[plan].name} plan includes {allowedTabs.length} analytics modules.
+            Upgrade to unlock {TABS.find((t) => t.id === tab)?.label}.
+          </p>
+          <Link
+            href="/account?tab=billing"
+            className="mt-3 inline-flex text-sm font-medium text-orange-600 hover:text-orange-500"
+          >
+            Upgrade plan →
+          </Link>
+        </div>
+      )}
+
+      {canAccessAnalyticsTab(plan, tab) && tab === "executive" && (
         <AnalyticsTabShell tabId="executive">
           <AnalyticsBlock id="exec-yesterday" title="Yesterday" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -267,7 +305,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "sales" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "sales" && (
         <AnalyticsTabShell tabId="sales">
           <AnalyticsBlock id="sales-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -350,7 +388,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "food" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "food" && (
         <AnalyticsTabShell tabId="food">
           <AnalyticsBlock id="food-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -526,7 +564,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "labor" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "labor" && (
         <AnalyticsTabShell tabId="labor">
           <AnalyticsBlock id="labor-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -645,7 +683,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "menu" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "menu" && (
         <AnalyticsTabShell tabId="menu">
           <AnalyticsBlock id="menu-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -758,7 +796,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "marketing" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "marketing" && (
         <AnalyticsTabShell tabId="marketing">
           <AnalyticsBlock id="marketing-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -909,7 +947,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "customer" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "customer" && (
         <AnalyticsTabShell tabId="customer">
           <AnalyticsBlock id="customer-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1052,7 +1090,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "operations" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "operations" && (
         <AnalyticsTabShell tabId="operations">
           <AnalyticsBlock id="operations-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1152,7 +1190,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "purchasing" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "purchasing" && (
         <AnalyticsTabShell tabId="purchasing">
           <AnalyticsBlock id="purchasing-metrics" title="Key metrics" defaultOpen>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -1190,7 +1228,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "forecasting" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "forecasting" && (
         <AnalyticsTabShell tabId="forecasting">
           <AnalyticsBlock id="forecasting-seasonal-note" title="Seasonal context" defaultOpen>
             <p className="text-sm text-slate-600">{data.forecasting.seasonalNote}</p>
@@ -1291,7 +1329,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "profitability" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "profitability" && (
         <AnalyticsTabShell tabId="profitability">
           <AnalyticsBlock
             id="profitability-metrics"
@@ -1407,7 +1445,7 @@ export function AnalyticsClient() {
         </AnalyticsTabShell>
       )}
 
-      {tab === "external" && (
+      {canAccessAnalyticsTab(plan, tab) && tab === "external" && (
         <AnalyticsTabShell tabId="external">
           <AnalyticsBlock
             id="external-intro"

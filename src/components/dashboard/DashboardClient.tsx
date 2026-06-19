@@ -101,10 +101,10 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               : "Choose a higher plan to get access."}
           </p>
           <Link
-            href="/docs/#pricing"
+            href="/account?tab=billing"
             className="mt-3 inline-flex text-sm font-medium text-orange-600 hover:text-orange-500"
           >
-            View plans →
+            Upgrade plan →
           </Link>
         </div>
       )}

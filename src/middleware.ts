@@ -4,8 +4,19 @@ import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
 import { canAccessPlanRoute } from "@/lib/plans";
 import { isPlatformAdmin } from "@/lib/platform-admin";
-import { getEmbedFrameAncestors, getMarketingFrameAncestors, isEmbeddableRequest, isEmbeddableEmbedParam } from "@/lib/embed-config";
+import {
+  getEmbedFrameAncestors,
+  getMarketingFrameAncestors,
+  isEmbeddableRequest,
+  isEmbeddableEmbedParam,
+} from "@/lib/embed-config";
 import { applyEmbedSessionParam } from "@/lib/embed-session-middleware";
+import {
+  WORKSPACE_COOKIE_NAME,
+  parseWorkspaceCookieToken,
+} from "@/lib/workspace-cookie";
+import { hasActiveBilling, isBillingAllowedPath } from "@/lib/plan-enforcement";
+import type { PlanId } from "@/lib/plans";
 
 const PUBLIC_PATHS = [
   "/",
@@ -111,6 +122,16 @@ function isOnboardingAllowedPath(pathname: string): boolean {
   );
 }
 
+async function resolveEffectivePlan(
+  request: NextRequest,
+  sessionPlan?: PlanId
+): Promise<PlanId> {
+  const workspaceToken = request.cookies.get(WORKSPACE_COOKIE_NAME)?.value;
+  const workspace = await parseWorkspaceCookieToken(workspaceToken);
+  if (workspace?.plan) return workspace.plan;
+  return sessionPlan ?? "STARTER";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const embedParam = request.nextUrl.searchParams.get("embed");
@@ -156,6 +177,10 @@ export async function middleware(request: NextRequest) {
   }
 
   const platformAdmin = isPlatformAdmin(user);
+  const workspace = await parseWorkspaceCookieToken(
+    request.cookies.get(WORKSPACE_COOKIE_NAME)?.value
+  );
+  const plan = await resolveEffectivePlan(request, user.plan);
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     if (!platformAdmin) {
@@ -184,6 +209,27 @@ export async function middleware(request: NextRequest) {
     return applyFramePolicy(request, NextResponse.redirect(new URL("/onboarding", request.url)));
   }
 
+  if (
+    !platformAdmin &&
+    workspace?.setupComplete &&
+    !hasActiveBilling(workspace) &&
+    !isBillingAllowedPath(pathname)
+  ) {
+    if (pathname.startsWith("/api/")) {
+      return applyFramePolicy(
+        request,
+        NextResponse.json(
+          { error: "Active subscription required. Set up billing in Account settings." },
+          { status: 402 }
+        )
+      );
+    }
+    const billingUrl = new URL("/account", request.url);
+    billingUrl.searchParams.set("tab", "billing");
+    billingUrl.searchParams.set("billing", "required");
+    return applyFramePolicy(request, NextResponse.redirect(billingUrl));
+  }
+
   if (!canAccessRoute(user.role, pathname, user.permissions)) {
     if (pathname.startsWith("/api/")) {
       return applyFramePolicy(
@@ -194,7 +240,7 @@ export async function middleware(request: NextRequest) {
     return applyFramePolicy(request, NextResponse.redirect(new URL("/dashboard", request.url)));
   }
 
-  if (!canAccessPlanRoute(user.plan, pathname)) {
+  if (!canAccessPlanRoute(plan, pathname)) {
     if (pathname.startsWith("/api/")) {
       return applyFramePolicy(
         request,
@@ -202,7 +248,8 @@ export async function middleware(request: NextRequest) {
       );
     }
     const upgradeUrl = new URL("/dashboard", request.url);
-    upgradeUrl.searchParams.set("upgrade", pathname.split("/").filter(Boolean)[0] ?? "");
+    const feature = pathname.split("/").filter(Boolean)[0] ?? "";
+    upgradeUrl.searchParams.set("upgrade", feature);
     return applyFramePolicy(request, NextResponse.redirect(upgradeUrl));
   }
 

@@ -1,11 +1,9 @@
 import { NextRequest } from "next/server";
 import {
   loginUser,
-  createSessionToken,
-  sessionCookieOptions,
   getSessionUserFromRequest,
 } from "@/lib/auth";
-import { enrichUserWithPlan } from "@/lib/location-plan";
+import { prepareAuthSession, attachAuthCookies } from "@/lib/auth-cookies";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
@@ -28,8 +26,10 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return privateJsonResponse({ user: null });
   }
-  const enriched = await enrichUserWithPlan(user);
-  return privateJsonResponse({ user: enriched });
+  const prepared = await prepareAuthSession(user);
+  const response = privateJsonResponse({ user: prepared.sessionUser });
+  attachAuthCookies(response, prepared);
+  return response;
 }
 
 export async function POST(request: NextRequest) {
@@ -108,26 +108,26 @@ export async function POST(request: NextRequest) {
   }
 
   const locationId = workspace?.locationId ?? user.locationId;
-  const sessionUser = await enrichUserWithPlan({
+  const prepared = await prepareAuthSession({
     ...user,
     locationId,
   });
-  const token = await createSessionToken(sessionUser);
 
   const response = privateJsonResponse({
-    user: sessionUser,
+    user: prepared.sessionUser,
     workspace,
     workspaceError,
   });
 
   if (forEmbed) {
     if (locationId) {
-      applyEmbedAuthCookies(response, request, token, locationId, true);
+      applyEmbedAuthCookies(response, request, prepared.sessionToken, locationId, true);
+      attachAuthCookies(response, prepared, { forEmbed: true, secure: true });
     } else {
-      response.cookies.set(sessionCookieOptions(token, true));
+      attachAuthCookies(response, prepared, { forEmbed: true, secure: true });
     }
   } else {
-    response.cookies.set(sessionCookieOptions(token, false));
+    attachAuthCookies(response, prepared);
     if (locationId) {
       response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
         path: "/",

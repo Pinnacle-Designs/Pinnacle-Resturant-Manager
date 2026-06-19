@@ -14,6 +14,14 @@ import {
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { PlanUpgradeBanner } from "@/components/account/PlanUpgradeBanner";
+import {
+  canUseAdvancedAI,
+  canUseCommandCenter,
+  PLAN_BY_ID,
+  STARTER_AI_DAILY_LIMIT,
+} from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
 interface DashboardCommand {
@@ -78,6 +86,12 @@ const SCAN_DOMAINS = [
   "Employee performance",
 ];
 
+const STARTER_QUICK_COMMANDS = [
+  "What were yesterday's sales?",
+  "Which inventory items are running low?",
+  "How many orders did we have this week?",
+];
+
 const QUICK_COMMANDS = [
   "What's hurting my profit this week?",
   "What needs my attention before dinner rush?",
@@ -138,6 +152,10 @@ function renderAnswerText(text: string) {
 }
 
 export function ManagerAIAssistant() {
+  const { user } = useAuth();
+  const plan = user?.plan ?? "STARTER";
+  const commandCenterEnabled = canUseCommandCenter(plan);
+  const advancedAiEnabled = canUseAdvancedAI(plan);
   const [commands, setCommands] = useState<DashboardCommand[]>([]);
   const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [categoryPrompts, setCategoryPrompts] = useState<Record<string, string[]>>({});
@@ -318,7 +336,7 @@ export function ManagerAIAssistant() {
             </Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {QUICK_COMMANDS.map((cmd) => (
+            {(commandCenterEnabled ? QUICK_COMMANDS : STARTER_QUICK_COMMANDS).map((cmd) => (
               <button
                 key={cmd}
                 type="button"
@@ -338,7 +356,24 @@ export function ManagerAIAssistant() {
 
       {/* Quick actions & response */}
       <div className="px-6 pb-6">
+      {!commandCenterEnabled && (
+        <PlanUpgradeBanner
+          className="mb-4"
+          title={`${PLAN_BY_ID.GROWTH.name} unlocks the full Command Center`}
+          description={`Your ${PLAN_BY_ID[plan].name} plan includes ${STARTER_AI_DAILY_LIMIT} AI questions per day. Upgrade for live scans, signal board commands, and the full prompt library.`}
+          requiredPlan="GROWTH"
+        />
+      )}
+      {!advancedAiEnabled && commandCenterEnabled && (
+        <PlanUpgradeBanner
+          className="mb-4"
+          title={`${PLAN_BY_ID.PRO.name} unlocks advanced profitability AI`}
+          description="Profit-by-item, shift, channel, and marketing ROI prompts require Pro."
+          requiredPlan="PRO"
+        />
+      )}
       <PageSectionShell pageId="command-center">
+        {commandCenterEnabled ? (
         <PageSection id="cc-quick" title="Quick commands" defaultOpen>
           <div className="flex flex-wrap gap-2">
             {commands.map((cmd) => (
@@ -355,6 +390,7 @@ export function ManagerAIAssistant() {
             ))}
           </div>
         </PageSection>
+        ) : null}
 
         <PageSection id="cc-response" title="Analysis results">
           <div className="px-6 py-5">

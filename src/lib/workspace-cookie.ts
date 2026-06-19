@@ -1,0 +1,148 @@
+import { prisma } from "./prisma";
+import type { PlanId } from "./plans";
+import { billingRequired, isWithinTrial } from "./plan-enforcement";
+
+export const WORKSPACE_COOKIE_NAME = "pinnacle_workspace";
+export const WORKSPACE_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+
+export interface WorkspaceSnapshot {
+  locationId: string;
+  plan: PlanId;
+  autopayEnabled: boolean;
+  billingRequired: boolean;
+  trialActive: boolean;
+  setupComplete: boolean;
+  exp: number;
+}
+
+function getSecret(): string {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET must be set in production");
+  }
+  return "pinnacle-dev-secret-change-me";
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function importHmacKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(getSecret()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+async function signPayload(payload: string): Promise<string> {
+  const key = await importHmacKey();
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return toBase64Url(new Uint8Array(sig));
+}
+
+async function verifyPayload(payload: string, signature: string): Promise<boolean> {
+  try {
+    const key = await importHmacKey();
+    const sigBytes = Uint8Array.from(fromBase64Url(signature));
+    return crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(payload));
+  } catch {
+    return false;
+  }
+}
+
+export async function buildWorkspaceSnapshot(
+  locationId: string
+): Promise<WorkspaceSnapshot | null> {
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: {
+      id: true,
+      plan: true,
+      autopayEnabled: true,
+      setupComplete: true,
+      createdAt: true,
+      active: true,
+    },
+  });
+  if (!location || !location.active) return null;
+
+  const plan = location.plan as PlanId;
+  const required = billingRequired();
+
+  return {
+    locationId: location.id,
+    plan,
+    autopayEnabled: location.autopayEnabled,
+    billingRequired: required,
+    trialActive: isWithinTrial(location.createdAt),
+    setupComplete: location.setupComplete,
+    exp: Date.now() + WORKSPACE_COOKIE_MAX_AGE * 1000,
+  };
+}
+
+export async function createWorkspaceCookieToken(
+  snapshot: WorkspaceSnapshot
+): Promise<string> {
+  const payload = toBase64Url(
+    new TextEncoder().encode(JSON.stringify(snapshot))
+  );
+  const sig = await signPayload(payload);
+  return `${payload}.${sig}`;
+}
+
+export async function parseWorkspaceCookieToken(
+  token: string | undefined
+): Promise<WorkspaceSnapshot | null> {
+  if (!token) return null;
+  try {
+    const [payload, sig] = token.split(".");
+    if (!payload || !sig) return null;
+    if (!(await verifyPayload(payload, sig))) return null;
+
+    const data = JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as WorkspaceSnapshot;
+    if (data.exp < Date.now()) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function workspaceCookieOptions(token: string, secure?: boolean) {
+  const useSecure = secure ?? process.env.NODE_ENV === "production";
+  return {
+    name: WORKSPACE_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: useSecure,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: WORKSPACE_COOKIE_MAX_AGE,
+  };
+}
+
+export function clearWorkspaceCookieOptions() {
+  return {
+    name: WORKSPACE_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 0,
+  };
+}

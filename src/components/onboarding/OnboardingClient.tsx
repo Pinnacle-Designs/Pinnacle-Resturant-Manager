@@ -41,6 +41,8 @@ interface OnboardingState {
   };
   plan: { id: PlanId; name: string; monthlyAmount: number };
   stripeConfigured: boolean;
+  billingRequired?: boolean;
+  trialDays?: number;
 }
 
 export function OnboardingClient() {
@@ -318,6 +320,11 @@ export function OnboardingClient() {
             description={`Connect Stripe for PCI-compliant autopay on your ${plan.name} plan (${formatCurrency(plan.monthlyAmount)}/mo). Card data never touches Pinnacle servers.`}
             defaultOpen
           >
+            {data?.billingRequired && (
+              <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Production accounts need autopay or an active {data.trialDays ?? 14}-day trial before launch.
+              </p>
+            )}
             <ul className="space-y-2 text-sm text-slate-600">
               {PLAN_BY_ID[plan.id].features.slice(0, 4).map((f) => (
                 <li key={f}>✓ {f}</li>
@@ -335,7 +342,7 @@ export function OnboardingClient() {
                 </p>
               )}
               <Button type="button" variant="secondary" disabled={busy} onClick={() => void skipBilling()}>
-                Skip for now
+                {data?.billingRequired ? "Continue on trial" : "Skip for now"}
               </Button>
             </div>
             <button type="button" className="mt-4 text-sm text-slate-500 hover:text-slate-700" onClick={() => setStep(2)}>
