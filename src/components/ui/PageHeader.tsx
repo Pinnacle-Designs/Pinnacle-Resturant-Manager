@@ -1,6 +1,7 @@
 "use client";
 
 import { PrintButton } from "@/components/ui/PrintButton";
+import { ReportToolbar } from "@/components/reports/ReportToolbar";
 
 interface PageHeaderProps {
   title: string;
@@ -8,9 +9,11 @@ interface PageHeaderProps {
   children?: React.ReactNode;
   /** Show print report button (default: true) */
   showPrint?: boolean;
+  /** Pre-select this report in the Reports customizer */
+  reportId?: string;
 }
 
-export function PageHeader({ title, description, children, showPrint = true }: PageHeaderProps) {
+export function PageHeader({ title, description, children, showPrint = true, reportId }: PageHeaderProps) {
   return (
     <div className="page-header mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -22,6 +25,7 @@ export function PageHeader({ title, description, children, showPrint = true }: P
       {(showPrint || children) && (
         <div className="no-print flex flex-wrap items-center gap-2">
           {showPrint && <PrintButton reportTitle={title} />}
+          {reportId && <ReportToolbar reportId={reportId} />}
           {children}
         </div>
       )}

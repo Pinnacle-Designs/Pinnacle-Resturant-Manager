@@ -311,6 +311,13 @@ model Location {
   onboardingStep Int    @default(0)
   latitude       Float?
   longitude      Float?
+  /// Postal / ZIP code — drives geocoding, holidays, weather, and local time
+  postalCode     String?
+  city           String?
+  stateProvince  String?
+  countryCode    String   @default("US")
+  /// IANA timezone e.g. America/Chicago — synced from coordinates
+  timezone       String?
   geoFenceRadiusM Int     @default(150)
   geoClockInRequired Boolean @default(true)
   punchPhotoRequired Boolean @default(true)
@@ -395,6 +402,7 @@ model Location {
   storageZones         StorageZone[]
   inventoryLots        InventoryLot[]
   countSessions        InventoryCountSession[]
+  reportTemplates      ReportTemplate[]
 }
 
 model KitchenStation {
@@ -1901,4 +1909,20 @@ model MenuScheduleRule {
   updatedAt       DateTime         @updatedAt
 
   @@index([locationId, active])
+}
+
+model ReportTemplate {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  reportId    String
+  name        String
+  description String?
+  /// JSON ReportConfig — columns, filters, sort, branding, rowLimit
+  configJson  String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([locationId, reportId])
 }

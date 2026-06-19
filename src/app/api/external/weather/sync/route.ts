@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLocationIdFromRequest } from "@/lib/location";
 import { requirePermission } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { syncWeatherForecasts } from "@/lib/external/sync-weather";
+import { syncExternalFactorsForLocation } from "@/lib/external/sync-weather";
 
 export async function POST(request: NextRequest) {
   const { error } = await requirePermission(request, "view_analytics");
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Location not found" }, { status: 404 });
     }
 
-    const result = await syncWeatherForecasts(locationId, location);
+    const result = await syncExternalFactorsForLocation(locationId, location);
     return NextResponse.json(result);
   } catch (err) {
     console.error("Weather sync error:", err);

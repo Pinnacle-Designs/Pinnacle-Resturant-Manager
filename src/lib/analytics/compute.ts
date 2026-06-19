@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { geocodeLocation } from "@/lib/external/geocode";
+import { resolveLocationGeo } from "@/lib/location/geo";
+import { orderHour } from "@/lib/location/time";
 import { fetchWeatherForecast } from "@/lib/external/weather";
 import {
   buildCategoryCoverage,
@@ -7,7 +8,7 @@ import {
   learnExternalPatterns,
   normalizeFactorCategory,
 } from "@/lib/external/pattern-learning";
-import { syncWeatherForecasts } from "@/lib/external/sync-weather";
+import { syncExternalFactorsForLocation } from "@/lib/external/sync-weather";
 import type {
   AnalyticsPayload,
   AnalyticsInsight,
@@ -164,12 +165,12 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
   const location = await prisma.location.findUnique({ where: { id: locationId } });
   if (location) {
     await Promise.race([
-      syncWeatherForecasts(locationId, location),
+      syncExternalFactorsForLocation(locationId, location),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("weather sync timeout")), 8_000)
+        setTimeout(() => reject(new Error("external sync timeout")), 10_000)
       ),
     ]).catch((err) => {
-      console.warn("Weather sync skipped:", err);
+      console.warn("External factor sync skipped:", err);
     });
   }
 
@@ -342,7 +343,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
   const channelProfitMap: Record<string, number> = {};
 
   for (const o of paidOrders) {
-    const hour = o.createdAt.getHours();
+    const hour = orderHour(o.createdAt, location?.timezone);
     const dp = daypartFromHour(hour);
     const netOrder = orderNetAmount(o);
     daypartMap[dp].sales += netOrder;
@@ -1292,7 +1293,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     late: { count: 0, totalRating: 0, categories: {} },
   };
   for (const r of negativeReviews) {
-    const dp = daypartFromHour(r.createdAt.getHours());
+    const dp = daypartFromHour(orderHour(r.createdAt, location?.timezone));
     daypartComplaints[dp].count += 1;
     daypartComplaints[dp].totalRating += r.rating;
     if (r.category) {
@@ -1381,7 +1382,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
   const ticketByHour: Record<number, { totalMinutes: number; count: number }> = {};
 
   for (const o of ticketTimes) {
-    const hour = o.createdAt.getHours();
+    const hour = orderHour(o.createdAt, location?.timezone);
     const dp = daypartFromHour(hour);
     ticketByDaypart[dp].totalMinutes += o.ticketTimeMinutes!;
     ticketByDaypart[dp].count += 1;
@@ -1993,7 +1994,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
   let weatherSource = "";
   let weatherGeo: string | null = null;
   if (location) {
-    const geo = await geocodeLocation(location.address, location.name);
+    const geo = await resolveLocationGeo(location);
     if (geo) {
       weatherGeo = geo.label;
       try {

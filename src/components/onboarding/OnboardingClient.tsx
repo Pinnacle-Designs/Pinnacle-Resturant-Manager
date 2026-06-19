@@ -51,6 +51,10 @@ export function OnboardingClient() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [stateProvince, setStateProvince] = useState("");
+  const [countryCode, setCountryCode] = useState("US");
   const [seatCount, setSeatCount] = useState("40");
 
   const load = useCallback(async () => {
@@ -103,7 +107,17 @@ export function OnboardingClient() {
 
   const saveDetails = async () => {
     try {
-      await patch({ action: "details", name, address, phone, seatCount: Number(seatCount) });
+      await patch({
+        action: "details",
+        name,
+        address,
+        phone,
+        postalCode,
+        city,
+        stateProvince,
+        countryCode,
+        seatCount: Number(seatCount),
+      });
       setStep(2);
       await load();
     } catch (err) {
@@ -224,8 +238,33 @@ export function OnboardingClient() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </FormField>
               <FormField label="Address">
-                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, City" />
+                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
               </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="City">
+                  <Input value={city} onChange={(e) => setCity(e.target.value)} />
+                </FormField>
+                <FormField label="State / province">
+                  <Input value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} placeholder="TX" />
+                </FormField>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Postal / ZIP code">
+                  <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="78701" />
+                </FormField>
+                <FormField label="Country">
+                  <select
+                    className="input w-full"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                  >
+                    <option value="US">United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="AU">Australia</option>
+                  </select>
+                </FormField>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Phone">
                   <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" />

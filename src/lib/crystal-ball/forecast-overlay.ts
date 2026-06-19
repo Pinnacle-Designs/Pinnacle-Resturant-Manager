@@ -1,6 +1,7 @@
 import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { geocodeLocation } from "@/lib/external/geocode";
+import { resolveLocationGeo } from "@/lib/location/geo";
+import { dateKeyInTimezone } from "@/lib/location/time";
 import { fetchWeatherForecast } from "@/lib/external/weather";
 import {
   learnExternalPatterns,
@@ -22,6 +23,8 @@ export interface DayForecastOverlay {
 export interface ForecastOverlayReport {
   weatherSource: string;
   geoLabel: string | null;
+  timezone: string | null;
+  localTime: string | null;
   learnedPatternCount: number;
   upcomingEvents: Array<{ date: string; description: string; impactPct: number }>;
   dailyOverlays: DayForecastOverlay[];
@@ -88,10 +91,8 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
   let geoLabel: string | null = null;
   let forecast: WeatherForecastDay[] = [];
 
-  const geo =
-    location.latitude != null && location.longitude != null
-      ? { lat: location.latitude, lon: location.longitude, label: location.name }
-      : await geocodeLocation(location.address, location.name);
+  const geo = await resolveLocationGeo(location);
+  const timeZone = geo?.timezone ?? location.timezone ?? null;
 
   if (geo) {
     geoLabel = geo.label;
@@ -101,7 +102,10 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
   }
 
   const eventByDate = new Map(
-    upcomingFactors.map((f) => [f.date.toISOString().split("T")[0]!, f])
+    upcomingFactors.map((f) => [
+      timeZone ? dateKeyInTimezone(f.date, timeZone) : f.date.toISOString().split("T")[0]!,
+      f,
+    ])
   );
 
   const dailyOverlays: DayForecastOverlay[] = forecast.map((day) => {
@@ -122,11 +126,13 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
       drivers.push(`Event: ${event.description} (+${event.impactPct}%)`);
     }
 
-    const holidayFactor = upcomingFactors.find(
-      (f) =>
-        f.date.toISOString().split("T")[0] === day.date &&
+    const holidayFactor = upcomingFactors.find((f) => {
+      const fKey = timeZone ? dateKeyInTimezone(f.date, timeZone) : f.date.toISOString().split("T")[0];
+      return (
+        fKey === day.date &&
         normalizeFactorCategory(f.factorType, f.description) === "holiday"
-    );
+      );
+    });
     if (holidayFactor) {
       multiplier *= 1 + holidayFactor.impactPct / 100;
       drivers.push(`Holiday lift: ${holidayFactor.description}`);
@@ -149,6 +155,14 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
   return {
     weatherSource,
     geoLabel,
+    timezone: timeZone,
+    localTime: timeZone
+      ? new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date())
+      : null,
     learnedPatternCount: learned.length,
     upcomingEvents: upcomingFactors.map((f) => ({
       date: f.date.toISOString().split("T")[0]!,

@@ -28,6 +28,16 @@ export const DAY_OF_WEEK_NAMES = [
   "Saturday",
 ] as const;
 
+export function daypartFromDate(date: Date, timeZone?: string | null): Daypart {
+  const hour = timeZone
+    ? parseInt(
+        new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hour12: false }).format(date),
+        10
+      ) % 24
+    : date.getHours();
+  return daypartFromHour(hour);
+}
+
 export function daypartFromHour(hour: number): Daypart {
   if (hour >= 5 && hour < 11) return "breakfast";
   if (hour >= 11 && hour < 15) return "lunch";

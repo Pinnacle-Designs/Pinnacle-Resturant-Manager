@@ -184,6 +184,7 @@ export function AnalyticsClient() {
       <PageHeader
         title="Analytics"
         description={`Restaurant intelligence — last ${data.periodDays} days`}
+        reportId="sales-by-item"
       />
 
       {!hasSalesData && (
@@ -1414,7 +1415,7 @@ export function AnalyticsClient() {
             description="Tracks weather, events, holidays, sports, tourism, and school schedules — learns patterns automatically."
             headerActions={
               <Button size="sm" variant="secondary" onClick={syncWeather} disabled={weatherSyncing}>
-                {weatherSyncing ? "Syncing weather..." : "Sync weather forecast"}
+                {weatherSyncing ? "Syncing…" : "Sync weather & holidays"}
               </Button>
             }
           >

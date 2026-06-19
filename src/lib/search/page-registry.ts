@@ -19,6 +19,7 @@ const PAGE_SEARCH: Record<string, PageSearchConfig> = {
   "/tables": { placeholder: "Search tables, sections, reservations…" },
   "/finances": { placeholder: "Search expenses, categories…" },
   "/analytics": { placeholder: "Search metrics and sections…" },
+  "/reports": { placeholder: "Search report types and templates…" },
   "/back-office": { placeholder: "Search variance lines, waste logs…" },
   "/crystal-ball": { placeholder: "Search forecasts and scenarios…" },
   "/social": { placeholder: "Search posts and accounts…" },

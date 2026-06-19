@@ -4,6 +4,8 @@ import { createSessionToken, sessionCookieOptions } from "@/lib/auth";
 import { requireSecureAuth } from "@/lib/api-auth";
 import { enrichUserWithPlan } from "@/lib/location-plan";
 import { seedLocationData } from "@/lib/seed-data";
+import { syncLocationGeoFields } from "@/lib/location/geo";
+import { syncExternalFactorsForLocation } from "@/lib/external/sync-weather";
 import { stripeConfigured } from "@/lib/payments/providers";
 import { PLAN_BY_ID } from "@/lib/plans";
 import { planMonthlyAmount } from "@/lib/billing";
@@ -30,6 +32,11 @@ export async function GET(request: NextRequest) {
       setupComplete: true,
       onboardingStep: true,
       autopayEnabled: true,
+      postalCode: true,
+      city: true,
+      stateProvince: true,
+      countryCode: true,
+      timezone: true,
     },
   });
 
@@ -64,11 +71,32 @@ export async function PATCH(request: NextRequest) {
     const name = String(body.name || "").trim().slice(0, 120);
     const address = String(body.address || "").trim().slice(0, 240);
     const phone = body.phone ? String(body.phone).trim().slice(0, 40) : null;
+    const postalCode = body.postalCode ? String(body.postalCode).trim().slice(0, 20) : null;
+    const city = body.city ? String(body.city).trim().slice(0, 80) : null;
+    const stateProvince = body.stateProvince ? String(body.stateProvince).trim().slice(0, 40) : null;
+    const countryCode = body.countryCode
+      ? String(body.countryCode).trim().slice(0, 2).toUpperCase()
+      : "US";
     const seatCount = body.seatCount != null ? Math.max(1, Math.min(500, Number(body.seatCount))) : undefined;
 
     if (!name) {
       return privateJsonResponse({ error: "Restaurant name is required" }, { status: 400 });
     }
+
+    const merged = {
+      name,
+      address: address || null,
+      phone,
+      postalCode,
+      city,
+      stateProvince,
+      countryCode,
+      seatCount: seatCount ?? 40,
+      latitude: null as number | null,
+      longitude: null as number | null,
+      timezone: null as string | null,
+    };
+    const geo = await syncLocationGeoFields(merged);
 
     const updated = await prisma.location.update({
       where: { id: user!.locationId },
@@ -76,13 +104,32 @@ export async function PATCH(request: NextRequest) {
         name,
         address: address || null,
         phone,
+        postalCode,
+        city,
+        stateProvince,
+        countryCode,
         seatCount: seatCount ?? undefined,
+        ...(geo
+          ? { latitude: geo.latitude, longitude: geo.longitude, timezone: geo.timezone }
+          : {}),
         onboardingStep: Math.max(1, 1),
       },
       select: { onboardingStep: true, setupComplete: true },
     });
 
-    return privateJsonResponse({ message: "Restaurant details saved", ...updated });
+    if (geo) {
+      const loc = await prisma.location.findUnique({ where: { id: user!.locationId } });
+      if (loc) {
+        await syncExternalFactorsForLocation(user!.locationId, loc).catch(() => {});
+      }
+    }
+
+    return privateJsonResponse({
+      message: geo
+        ? "Restaurant details saved — local time & forecasts synced"
+        : "Restaurant details saved",
+      ...updated,
+    });
   }
 
   if (action === "seed") {

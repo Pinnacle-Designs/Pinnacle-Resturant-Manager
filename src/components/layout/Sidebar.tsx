@@ -27,6 +27,7 @@ import {
   PieChart,
   Sparkles,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -61,6 +62,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "pie-chart": PieChart,
   sparkles: Sparkles,
   "book-open": BookOpen,
+  "file-text": FileText,
 };
 
 export function Sidebar() {

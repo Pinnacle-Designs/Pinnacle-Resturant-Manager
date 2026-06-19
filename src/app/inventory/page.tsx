@@ -32,6 +32,7 @@ export default async function InventoryPage({
       <PageHeader
         title="Inventory"
         description="Track stock by storage zone, run shelf-to-sheet counts, monthly inventory with variance & COGS, and manage par levels"
+        reportId="inventory-on-hand"
       />
       <Suspense fallback={<p className="text-sm text-slate-500">Loading inventory…</p>}>
         <InventoryClient initialItems={items} initialZones={zones} initialTab={tab} />

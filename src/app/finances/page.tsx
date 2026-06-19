@@ -22,7 +22,7 @@ export default async function FinancesPage() {
 
   return (
     <div>
-      <PageHeader title="Finances" description="Revenue, expenses, and profit overview" />
+      <PageHeader title="Finances" description="Revenue, expenses, and profit overview" reportId="expenses" />
       <FinancesClient
         initialExpenses={expenses.map((e) => ({
           ...e,

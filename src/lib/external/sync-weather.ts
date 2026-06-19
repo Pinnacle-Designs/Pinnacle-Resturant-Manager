@@ -1,19 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { geocodeLocation } from "./geocode";
+import { resolveLocationGeo, type LocationGeoInput } from "@/lib/location/geo";
+import { startOfDayInTimezone } from "@/lib/location/time";
 import { fetchWeatherForecast } from "./weather";
+import { syncHolidayCalendar } from "./sync-holidays";
 
 const SYNC_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-/** Sync 7-day weather forecast into ExternalFactor records (auto-runs from analytics). */
+/** Sync 7-day weather forecast into ExternalFactor records. */
 export async function syncWeatherForecasts(
   locationId: string,
-  location: { name: string; address: string | null }
+  location: LocationGeoInput
 ) {
   const recent = await prisma.externalFactor.findFirst({
     where: {
@@ -28,13 +24,14 @@ export async function syncWeatherForecasts(
     return { synced: false, reason: "recent_sync", source: null as string | null };
   }
 
-  const geo = await geocodeLocation(location.address, location.name);
+  const geo = await resolveLocationGeo(location);
   if (!geo) {
     return { synced: false, reason: "geocode_failed", source: null };
   }
 
+  const timeZone = geo.timezone ?? location.timezone ?? "America/New_York";
   const { source, forecasts } = await fetchWeatherForecast(geo.lat, geo.lon);
-  const today = startOfDay(new Date());
+  const today = startOfDayInTimezone(new Date(), timeZone);
 
   await prisma.externalFactor.deleteMany({
     where: {
@@ -46,7 +43,7 @@ export async function syncWeatherForecasts(
   });
 
   for (const f of forecasts) {
-    const date = startOfDay(new Date(`${f.date}T12:00:00`));
+    const date = startOfDayInTimezone(new Date(`${f.date}T12:00:00`), timeZone);
     const impactPct = f.isRainy ? 25 : f.precipitationPct > 40 ? 15 : 0;
     await prisma.externalFactor.create({
       data: {
@@ -60,4 +57,16 @@ export async function syncWeatherForecasts(
   }
 
   return { synced: true, reason: "ok", source, count: forecasts.length, geo: geo.label };
+}
+
+/** Weather + holidays — called from analytics, Crystal Ball, and location save. */
+export async function syncExternalFactorsForLocation(
+  locationId: string,
+  location: LocationGeoInput
+) {
+  const [weather, holidays] = await Promise.all([
+    syncWeatherForecasts(locationId, location),
+    syncHolidayCalendar(locationId, location),
+  ]);
+  return { weather, holidays };
 }

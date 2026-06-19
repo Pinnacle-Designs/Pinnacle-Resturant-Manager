@@ -12,6 +12,7 @@ import {
   Lock,
   Shield,
   User,
+  MapPin,
   CheckCircle2,
   AlertCircle,
   Users,
@@ -21,6 +22,7 @@ import { PageSectionShell, PageSection } from "@/components/layout/PageSections"
 import { Input, FormField } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PermissionsTab } from "@/components/account/PermissionsTab";
+import { LocationProfilePanel } from "@/components/account/LocationProfilePanel";
 import { BillingIntegrations } from "@/components/account/BillingIntegrations";
 import { IntegrationsPanel } from "@/components/account/IntegrationsPanel";
 import { PaymentSupportPanel } from "@/components/account/PaymentSupportPanel";
@@ -30,10 +32,11 @@ import { cn, formatCurrency } from "@/lib/utils";
 import type { PlanId } from "@/lib/plans";
 import type { AppRole } from "@prisma/client";
 
-type Tab = "profile" | "security" | "billing" | "integrations" | "support" | "permissions";
+type Tab = "profile" | "location" | "security" | "billing" | "integrations" | "support" | "permissions";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "profile", label: "Profile", icon: User },
+  { id: "location", label: "Location", icon: MapPin },
   { id: "security", label: "Security", icon: Lock },
   { id: "billing", label: "Billing & autopay", icon: CreditCard },
   { id: "integrations", label: "Integrations", icon: Link2 },
@@ -87,6 +90,7 @@ export function AccountClient() {
   const [error, setError] = useState<string | null>(null);
 
   const visibleTabs = BASE_TABS.filter((item) => {
+    if (item.id === "location") return user?.role === "OWNER";
     if (item.id === "permissions") return can("manage_permissions");
     if (item.id === "integrations") return user?.role === "OWNER";
     return true;
@@ -415,6 +419,19 @@ export function AccountClient() {
                   {profileSaving ? "Saving…" : "Save profile"}
                 </Button>
               </form>
+              </PageSection>
+            </PageSectionShell>
+          )}
+
+          {tab === "location" && user?.role === "OWNER" && (
+            <PageSectionShell pageId="account-location">
+              <PageSection
+                id="account-location-profile"
+                title="Restaurant location"
+                description="Postal code drives local time, public holidays, weather forecasts, and Crystal Ball prep adjustments."
+                defaultOpen
+              >
+                <LocationProfilePanel />
               </PageSection>
             </PageSectionShell>
           )}

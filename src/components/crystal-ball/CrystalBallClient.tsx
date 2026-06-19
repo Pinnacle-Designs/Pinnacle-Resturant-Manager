@@ -14,6 +14,8 @@ export function CrystalBallClient() {
     overlay: {
       weatherSource: string;
       geoLabel: string | null;
+      timezone: string | null;
+      localTime: string | null;
       learnedPatternCount: number;
       upcomingEvents: Array<{ date: string; description: string; impactPct: number }>;
       dailyOverlays: Array<{
@@ -151,6 +153,11 @@ export function CrystalBallClient() {
               label="Tomorrow multiplier"
               value={tomorrow ? `×${tomorrow.prepMultiplier}` : "—"}
               subtext={tomorrow?.condition}
+            />
+            <StatCard
+              label="Local time"
+              value={data?.overlay.localTime?.split(", ").pop() ?? "—"}
+              subtext={data?.overlay.timezone ?? "Set postal code in Account → Location"}
             />
             <StatCard
               label="Rain days (7d)"

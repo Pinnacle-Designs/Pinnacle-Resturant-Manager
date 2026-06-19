@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Users,
   Barcode,
+  Camera,
   UserCheck,
 } from "lucide-react";
 import { Button, Badge, StatCard } from "@/components/ui";
@@ -347,8 +348,18 @@ export function MonthlyCountClient() {
     [resolveBarcode]
   );
 
-  const { videoRef, active: scanning, start: startScanning, stop: stopScanning } =
-    useBarcodeScanner(onBarcode);
+  const {
+    videoRef,
+    active: scanning,
+    error: cameraError,
+    permissionDenied,
+    permissionState,
+    start: startScanning,
+    stop: stopScanning,
+    retry: retryCamera,
+    supported: scannerSupported,
+    nativeSupported,
+  } = useBarcodeScanner(onBarcode);
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -725,18 +736,67 @@ export function MonthlyCountClient() {
                   size="sm"
                   variant="secondary"
                   className="min-h-11 text-base"
-                  onClick={scanning ? stopScanning : startScanning}
+                  onClick={() => (scanning ? stopScanning() : void startScanning())}
                 >
                   <Barcode className="mr-2 h-4 w-4" />
                   {scanning ? "Stop camera" : "Scan barcode"}
                 </Button>
               </div>
 
-              {scanning && (
-                <div className="relative mb-4 aspect-video overflow-hidden rounded-lg bg-black">
-                  <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
-                  <canvas ref={canvasRef} className="hidden" />
-                </div>
+              <div
+                className="relative mb-4 overflow-hidden rounded-lg border bg-slate-950 aspect-video"
+              >
+                <video
+                  ref={videoRef}
+                  className="aspect-video w-full object-cover"
+                  playsInline
+                  muted
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                {!scanning && !cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/80 text-slate-300">
+                    <Camera className="h-8 w-8" />
+                    <p className="text-sm">Tap &quot;Scan barcode&quot; to open the camera</p>
+                  </div>
+                )}
+                {!scanning && cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/90 px-6 text-center text-slate-200">
+                    <Camera className="h-8 w-8 text-slate-400" />
+                    <p className="text-sm">{cameraError}</p>
+                    {permissionDenied ? (
+                      <div className="space-y-2">
+                        <Button type="button" size="sm" onClick={() => void retryCamera()}>
+                          Allow camera access
+                        </Button>
+                        <p className="text-xs text-slate-400">
+                          {permissionState === "denied"
+                            ? "Open your browser site settings and allow Camera for this page."
+                            : "Your browser will ask for camera permission."}
+                        </p>
+                      </div>
+                    ) : (
+                      <Button type="button" size="sm" variant="secondary" onClick={() => void retryCamera()}>
+                        Try again
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {scanning && (
+                  <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 px-8">
+                    <div className="mx-auto h-24 max-w-xs rounded-lg border-2 border-orange-400/80" />
+                  </div>
+                )}
+              </div>
+
+              {!nativeSupported && scannerSupported && scanning && (
+                <p className="mb-4 text-xs text-slate-600">
+                  Using compatibility scanning in this browser. Hold the barcode steady in the frame.
+                </p>
+              )}
+              {!scannerSupported && (
+                <p className="mb-4 text-xs text-amber-700">
+                  Automatic scanning is not available in this browser — type the barcode below or try Chrome.
+                </p>
               )}
 
               <form onSubmit={handleBarcodeSubmit} className="mb-4 flex gap-2">

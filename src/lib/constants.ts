@@ -42,6 +42,7 @@ export const NAV_ITEMS = [
   { href: "/tables", label: "Tables", icon: "layout-grid" },
   { href: "/finances", label: "Finances", icon: "dollar-sign" },
   { href: "/analytics", label: "Analytics", icon: "bar-chart-3" },
+  { href: "/reports", label: "Reports", icon: "file-text" },
   { href: "/back-office", label: "Back Office", icon: "pie-chart" },
   { href: "/crystal-ball", label: "Crystal Ball", icon: "sparkles" },
   { href: "/social", label: "Social", icon: "share-2" },
@@ -53,7 +54,7 @@ export const NAV_GROUPS = [
   {
     id: "overview",
     label: "Overview",
-    hrefs: ["/dashboard", "/photos", "/analytics", "/insights"],
+    hrefs: ["/dashboard", "/photos", "/analytics", "/reports", "/insights"],
   },
   {
     id: "service",
