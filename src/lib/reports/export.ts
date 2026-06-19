@@ -1,14 +1,16 @@
 import type { ReportResult } from "@/lib/reports/types";
+import { formatCurrencyAmount, getActiveLocationLocale, type LocationLocaleSettings } from "@/lib/location/locale";
 
 export function formatCellValue(
   value: string | number | null | undefined,
-  type: string
+  type: string,
+  locale?: LocationLocaleSettings
 ): string {
   if (value == null || value === "") return "—";
   if (type === "currency") {
     const n = typeof value === "number" ? value : parseFloat(String(value));
     return Number.isFinite(n)
-      ? n.toLocaleString(undefined, { style: "currency", currency: "USD" })
+      ? formatCurrencyAmount(n, locale)
       : String(value);
   }
   if (type === "percent") {
@@ -17,12 +19,14 @@ export function formatCellValue(
   }
   if (type === "number") {
     const n = typeof value === "number" ? value : parseFloat(String(value));
-    return Number.isFinite(n) ? n.toLocaleString() : String(value);
+    return Number.isFinite(n)
+      ? n.toLocaleString(locale?.locale)
+      : String(value);
   }
   return String(value);
 }
 
-export function reportToCsv(result: ReportResult): string {
+export function reportToCsv(result: ReportResult, locale?: LocationLocaleSettings): string {
   const header = result.columns.map((c) => escapeCsv(c.label)).join(",");
   const lines = result.rows.map((row) =>
     result.columns
@@ -47,10 +51,14 @@ export function downloadBlob(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadReportCsv(result: ReportResult) {
+export function downloadReportCsv(result: ReportResult, locale?: LocationLocaleSettings) {
   const slug = result.reportId.replace(/[^a-z0-9]+/gi, "-");
   const date = new Date().toISOString().slice(0, 10);
-  downloadBlob(reportToCsv(result), `pinnacle-${slug}-${date}.csv`, "text/csv;charset=utf-8");
+  downloadBlob(
+    reportToCsv(result, locale ?? getActiveLocationLocale()),
+    `pinnacle-${slug}-${date}.csv`,
+    "text/csv;charset=utf-8"
+  );
 }
 
 export function downloadReportJson(result: ReportResult) {

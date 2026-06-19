@@ -24,6 +24,31 @@ export interface ResolvedGeo {
   label: string;
   timezone: string | null;
   source: "stored" | "geocoded";
+  city?: string | null;
+  stateProvince?: string | null;
+}
+
+function normGeoField(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+/** True when postal/address fields changed and coordinates should be re-resolved. */
+export function locationGeoInputsChanged(
+  before: LocationGeoInput,
+  after: LocationGeoInput
+): boolean {
+  return (
+    normGeoField(before.postalCode) !== normGeoField(after.postalCode) ||
+    normGeoField(before.city) !== normGeoField(after.city) ||
+    normGeoField(before.stateProvince) !== normGeoField(after.stateProvince) ||
+    normGeoField(before.address) !== normGeoField(after.address) ||
+    normGeoField(before.countryCode ?? "US") !== normGeoField(after.countryCode ?? "US")
+  );
+}
+
+/** Strip stored coordinates so the next sync re-geocodes from postal/address. */
+export function locationForGeocoding(loc: LocationGeoInput): LocationGeoInput {
+  return { ...loc, latitude: null, longitude: null, timezone: null };
 }
 
 export async function fetchTimezoneFromCoords(
@@ -32,7 +57,7 @@ export async function fetchTimezoneFromCoords(
 ): Promise<string | null> {
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto&forecast_days=1`;
-    const res = await fetchWithTimeout(url, { next: { revalidate: 86400 } });
+    const res = await fetchWithTimeout(url, { cache: "no-store" });
     if (!res.ok) return null;
     const data = (await res.json()) as { timezone?: string };
     return data.timezone ?? null;
@@ -86,6 +111,8 @@ export async function resolveLocationGeo(
     label: geocoded.label,
     timezone: tz,
     source: "geocoded",
+    city: geocoded.city,
+    stateProvince: geocoded.stateProvince,
   };
 }
 
@@ -94,6 +121,8 @@ export interface SyncGeoResult {
   longitude: number;
   timezone: string | null;
   geoLabel: string;
+  city?: string | null;
+  stateProvince?: string | null;
 }
 
 /** Geocode from postal/address and return fields to persist on Location. */
@@ -107,5 +136,7 @@ export async function syncLocationGeoFields(
     longitude: resolved.lon,
     timezone: resolved.timezone,
     geoLabel: resolved.label,
+    city: resolved.city,
+    stateProvince: resolved.stateProvince,
   };
 }

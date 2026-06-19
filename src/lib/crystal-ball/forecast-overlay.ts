@@ -96,7 +96,9 @@ export async function computeForecastOverlay(locationId: string): Promise<Foreca
 
   if (geo) {
     geoLabel = geo.label;
-    const w = await fetchWeatherForecast(geo.lat, geo.lon);
+    const units: "imperial" | "metric" =
+      location.measurementSystem === "metric" ? "metric" : "imperial";
+    const w = await fetchWeatherForecast(geo.lat, geo.lon, units);
     weatherSource = w.source;
     forecast = w.forecasts;
   }

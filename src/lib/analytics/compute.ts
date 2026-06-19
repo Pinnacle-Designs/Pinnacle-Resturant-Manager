@@ -1998,7 +1998,9 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     if (geo) {
       weatherGeo = geo.label;
       try {
-        const w = await fetchWeatherForecast(geo.lat, geo.lon);
+        const units: "imperial" | "metric" =
+          location.measurementSystem === "metric" ? "metric" : "imperial";
+        const w = await fetchWeatherForecast(geo.lat, geo.lon, units);
         weatherForecast = w.forecasts;
         weatherSource = w.source;
       } catch {

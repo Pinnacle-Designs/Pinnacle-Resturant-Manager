@@ -2,6 +2,7 @@
 
 import type { ReportResult } from "@/lib/reports/types";
 import { formatCellValue } from "@/lib/reports/export";
+import { useLocationLocale } from "@/components/location/LocationLocaleProvider";
 
 interface ReportViewerProps {
   result: ReportResult | null;
@@ -9,6 +10,7 @@ interface ReportViewerProps {
 }
 
 export function ReportViewer({ result, loading }: ReportViewerProps) {
+  const { settings } = useLocationLocale();
   if (loading) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-slate-200 bg-white p-8 text-slate-500">
@@ -67,7 +69,7 @@ export function ReportViewer({ result, loading }: ReportViewerProps) {
                   <tr key={i} className="border-t border-slate-100 hover:bg-slate-50/50">
                     {result.columns.map((col) => (
                       <td key={col.id} className="whitespace-nowrap px-4 py-2 text-slate-800">
-                        {formatCellValue(row[col.id], col.type)}
+                        {formatCellValue(row[col.id], col.type, settings)}
                       </td>
                     ))}
                   </tr>
@@ -104,7 +106,7 @@ export function ReportViewer({ result, loading }: ReportViewerProps) {
               <tr key={i}>
                 {result.columns.map((col) => (
                   <td key={col.id} className="px-2 py-1">
-                    {formatCellValue(row[col.id], col.type)}
+                    {formatCellValue(row[col.id], col.type, settings)}
                   </td>
                 ))}
               </tr>

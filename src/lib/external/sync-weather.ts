@@ -3,13 +3,14 @@ import { resolveLocationGeo, type LocationGeoInput } from "@/lib/location/geo";
 import { startOfDayInTimezone } from "@/lib/location/time";
 import { fetchWeatherForecast } from "./weather";
 import { syncHolidayCalendar } from "./sync-holidays";
+import type { MeasurementSystem } from "@/lib/location/locale";
 
 const SYNC_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /** Sync 7-day weather forecast into ExternalFactor records. */
 export async function syncWeatherForecasts(
   locationId: string,
-  location: LocationGeoInput
+  location: LocationGeoInput & { measurementSystem?: string | null }
 ) {
   const recent = await prisma.externalFactor.findFirst({
     where: {
@@ -30,7 +31,9 @@ export async function syncWeatherForecasts(
   }
 
   const timeZone = geo.timezone ?? location.timezone ?? "America/New_York";
-  const { source, forecasts } = await fetchWeatherForecast(geo.lat, geo.lon);
+  const measurementSystem: MeasurementSystem =
+    location.measurementSystem === "metric" ? "metric" : "imperial";
+  const { source, forecasts } = await fetchWeatherForecast(geo.lat, geo.lon, measurementSystem);
   const today = startOfDayInTimezone(new Date(), timeZone);
 
   await prisma.externalFactor.deleteMany({
@@ -62,7 +65,7 @@ export async function syncWeatherForecasts(
 /** Weather + holidays — called from analytics, Crystal Ball, and location save. */
 export async function syncExternalFactorsForLocation(
   locationId: string,
-  location: LocationGeoInput
+  location: LocationGeoInput & { measurementSystem?: string | null; countryCode?: string }
 ) {
   const [weather, holidays] = await Promise.all([
     syncWeatherForecasts(locationId, location),

@@ -2,7 +2,12 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSecureAuth } from "@/lib/api-auth";
 import { privateJsonResponse } from "@/lib/secure-response";
-import { syncLocationGeoFields } from "@/lib/location/geo";
+import {
+  syncLocationGeoFields,
+  locationForGeocoding,
+  locationGeoInputsChanged,
+} from "@/lib/location/geo";
+import { resolveLocationLocale } from "@/lib/location/locale";
 import { syncExternalFactorsForLocation } from "@/lib/external/sync-weather";
 import { locationNowLabel } from "@/lib/location/time";
 
@@ -17,6 +22,9 @@ const locationSelect = {
   stateProvince: true,
   countryCode: true,
   timezone: true,
+  currencyCode: true,
+  measurementSystem: true,
+  locale: true,
   latitude: true,
   longitude: true,
 } as const;
@@ -87,7 +95,12 @@ export async function PATCH(request: NextRequest) {
     seatCount: seatCount ?? existing.seatCount,
   };
 
-  const geo = await syncLocationGeoFields(merged);
+  const geoInputsChanged = locationGeoInputsChanged(existing, merged);
+  // Always re-geocode from current form values so a corrected postal code replaces stale coordinates.
+  const geo = await syncLocationGeoFields(locationForGeocoding(merged));
+
+  const backfillFromGeo = Boolean(geo && merged.postalCode?.trim());
+  const regional = resolveLocationLocale(merged.countryCode);
 
   const updated = await prisma.location.update({
     where: { id: user!.locationId },
@@ -96,17 +109,26 @@ export async function PATCH(request: NextRequest) {
       ...(address !== undefined ? { address: address || null } : {}),
       ...(phone !== undefined ? { phone: phone || null } : {}),
       ...(postalCode !== undefined ? { postalCode: postalCode || null } : {}),
-      ...(city !== undefined ? { city: city || null } : {}),
-      ...(stateProvince !== undefined ? { stateProvince: stateProvince || null } : {}),
       ...(countryCode != null ? { countryCode } : {}),
       ...(seatCount != null ? { seatCount } : {}),
+      currencyCode: regional.currencyCode,
+      measurementSystem: regional.measurementSystem,
+      locale: regional.locale,
+      ...(backfillFromGeo && geo?.city ? { city: geo.city } : city !== undefined ? { city: city || null } : {}),
+      ...(backfillFromGeo && geo?.stateProvince
+        ? { stateProvince: geo.stateProvince }
+        : stateProvince !== undefined
+          ? { stateProvince: stateProvince || null }
+          : {}),
       ...(geo
         ? {
             latitude: geo.latitude,
             longitude: geo.longitude,
             timezone: geo.timezone,
           }
-        : {}),
+        : geoInputsChanged && merged.postalCode?.trim()
+          ? { latitude: null, longitude: null, timezone: null }
+          : {}),
     },
     select: locationSelect,
   });
@@ -123,10 +145,14 @@ export async function PATCH(request: NextRequest) {
   return privateJsonResponse({
     location: updated,
     geo: geo ? { label: geo.geoLabel, timezone: geo.timezone } : null,
+    geoResolved: Boolean(geo),
+    regional,
     localTime: locationNowLabel(updated.timezone),
     sync: syncResult,
     message: geo
-      ? "Location saved — local time, weather, and holidays synced"
-      : "Location saved — add a valid postal code to enable weather & holidays",
+      ? `Location saved — ${regional.currencyCode}, ${regional.measurementSystem} units, local time, weather, and holidays synced`
+      : merged.postalCode?.trim()
+        ? "Location saved — we couldn't verify that postal code. Check country and try again."
+        : "Location saved — add a valid postal code to enable weather & holidays",
   });
 }

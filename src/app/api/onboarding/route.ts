@@ -5,6 +5,7 @@ import { requireSecureAuth } from "@/lib/api-auth";
 import { enrichUserWithPlan } from "@/lib/location-plan";
 import { seedLocationData } from "@/lib/seed-data";
 import { syncLocationGeoFields } from "@/lib/location/geo";
+import { resolveLocationLocale } from "@/lib/location/locale";
 import { syncExternalFactorsForLocation } from "@/lib/external/sync-weather";
 import { stripeConfigured } from "@/lib/payments/providers";
 import { PLAN_BY_ID } from "@/lib/plans";
@@ -97,6 +98,7 @@ export async function PATCH(request: NextRequest) {
       timezone: null as string | null,
     };
     const geo = await syncLocationGeoFields(merged);
+    const regional = resolveLocationLocale(countryCode);
 
     const updated = await prisma.location.update({
       where: { id: user!.locationId },
@@ -105,13 +107,16 @@ export async function PATCH(request: NextRequest) {
         address: address || null,
         phone,
         postalCode,
-        city,
-        stateProvince,
+        city: geo?.city ?? city,
+        stateProvince: geo?.stateProvince ?? stateProvince,
         countryCode,
         seatCount: seatCount ?? undefined,
+        currencyCode: regional.currencyCode,
+        measurementSystem: regional.measurementSystem,
+        locale: regional.locale,
         ...(geo
           ? { latitude: geo.latitude, longitude: geo.longitude, timezone: geo.timezone }
-          : {}),
+          : { latitude: null, longitude: null, timezone: null }),
         onboardingStep: Math.max(1, 1),
       },
       select: { onboardingStep: true, setupComplete: true },

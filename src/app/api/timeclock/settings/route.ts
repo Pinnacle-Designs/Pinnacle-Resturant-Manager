@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLocationIdFromRequest } from "@/lib/location";
 import { requirePermission } from "@/lib/api-auth";
-import { resolveLocationGeo, syncLocationGeoFields } from "@/lib/location/geo";
+import { resolveLocationGeo, syncLocationGeoFields, locationForGeocoding } from "@/lib/location/geo";
 import { PUNCH_VERIFICATION_MODES } from "@/lib/timeclock/types";
 
 const locationSelect = {
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
       },
     });
     if (loc) {
-      const synced = await syncLocationGeoFields(loc);
+      const synced = await syncLocationGeoFields(locationForGeocoding(loc));
       if (synced) {
         data.latitude = synced.latitude;
         data.longitude = synced.longitude;

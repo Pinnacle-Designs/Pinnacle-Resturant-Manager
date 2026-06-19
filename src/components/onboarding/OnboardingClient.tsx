@@ -34,6 +34,10 @@ interface OnboardingState {
     seatCount: number;
     onboardingStep: number;
     autopayEnabled: boolean;
+    postalCode: string | null;
+    city: string | null;
+    stateProvince: string | null;
+    countryCode: string;
   };
   plan: { id: PlanId; name: string; monthlyAmount: number };
   stripeConfigured: boolean;
@@ -67,6 +71,10 @@ export function OnboardingClient() {
       setName(json.location.name || "");
       setAddress(json.location.address === "Add your address" ? "" : json.location.address || "");
       setPhone(json.location.phone || "");
+      setPostalCode(json.location.postalCode || "");
+      setCity(json.location.city || "");
+      setStateProvince(json.location.stateProvince || "");
+      setCountryCode(json.location.countryCode || "US");
       setSeatCount(String(json.location.seatCount || 40));
       const saved = Math.min(4, Math.max(1, (json.location.onboardingStep || 0) + 1)) as Step;
       setStep(saved);

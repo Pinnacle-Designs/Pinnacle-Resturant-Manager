@@ -1,3 +1,4 @@
+import type { MeasurementSystem } from "@/lib/location/locale";
 import type { WeatherForecastDay } from "@/lib/analytics/types";
 import { fetchWithTimeout } from "./fetch-timeout";
 
@@ -40,9 +41,15 @@ function isRainyCondition(condition: string) {
   return /rain|drizzle|shower|storm|snow/i.test(condition);
 }
 
-async function fetchWeatherCom(lat: number, lon: number, apiKey: string): Promise<WeatherForecastDay[] | null> {
+async function fetchWeatherCom(
+  lat: number,
+  lon: number,
+  apiKey: string,
+  measurementSystem: MeasurementSystem
+): Promise<WeatherForecastDay[] | null> {
   try {
-    const url = `https://api.weather.com/v3/wx/forecast/daily/7day?geocode=${lat},${lon}&format=json&apiKey=${apiKey}&units=e`;
+    const units = measurementSystem === "imperial" ? "e" : "m";
+    const url = `https://api.weather.com/v3/wx/forecast/daily/7day?geocode=${lat},${lon}&format=json&apiKey=${apiKey}&units=${units}`;
     const res = await fetchWithTimeout(url, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -75,9 +82,15 @@ async function fetchWeatherCom(lat: number, lon: number, apiKey: string): Promis
   }
 }
 
-async function fetchOpenWeather(lat: number, lon: number, apiKey: string): Promise<WeatherForecastDay[] | null> {
+async function fetchOpenWeather(
+  lat: number,
+  lon: number,
+  apiKey: string,
+  measurementSystem: MeasurementSystem
+): Promise<WeatherForecastDay[] | null> {
   try {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial&cnt=40`;
+    const units = measurementSystem === "imperial" ? "imperial" : "metric";
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=${units}&cnt=40`;
     const res = await fetchWithTimeout(url, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -112,8 +125,13 @@ async function fetchOpenWeather(lat: number, lon: number, apiKey: string): Promi
   }
 }
 
-async function fetchOpenMeteo(lat: number, lon: number): Promise<WeatherForecastDay[]> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=auto&forecast_days=7&temperature_unit=fahrenheit`;
+async function fetchOpenMeteo(
+  lat: number,
+  lon: number,
+  measurementSystem: MeasurementSystem
+): Promise<WeatherForecastDay[]> {
+  const tempUnit = measurementSystem === "imperial" ? "fahrenheit" : "celsius";
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=auto&forecast_days=7&temperature_unit=${tempUnit}`;
   const res = await fetchWithTimeout(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error("Open-Meteo forecast failed");
   const data = (await res.json()) as {
@@ -144,19 +162,23 @@ async function fetchOpenMeteo(lat: number, lon: number): Promise<WeatherForecast
 }
 
 /** Fetch 7-day local forecast — Weather.com (IBM) → OpenWeatherMap → Open-Meteo fallback. */
-export async function fetchWeatherForecast(lat: number, lon: number): Promise<WeatherFetchResult> {
+export async function fetchWeatherForecast(
+  lat: number,
+  lon: number,
+  measurementSystem: MeasurementSystem = "imperial"
+): Promise<WeatherFetchResult> {
   const weatherComKey = process.env.WEATHER_COM_API_KEY?.trim();
   if (weatherComKey) {
-    const forecasts = await fetchWeatherCom(lat, lon, weatherComKey);
+    const forecasts = await fetchWeatherCom(lat, lon, weatherComKey, measurementSystem);
     if (forecasts?.length) return { source: "weather.com", forecasts };
   }
 
   const openWeatherKey = process.env.OPENWEATHER_API_KEY?.trim();
   if (openWeatherKey) {
-    const forecasts = await fetchOpenWeather(lat, lon, openWeatherKey);
+    const forecasts = await fetchOpenWeather(lat, lon, openWeatherKey, measurementSystem);
     if (forecasts?.length) return { source: "openweathermap", forecasts };
   }
 
-  const forecasts = await fetchOpenMeteo(lat, lon);
+  const forecasts = await fetchOpenMeteo(lat, lon, measurementSystem);
   return { source: "open-meteo", forecasts };
 }

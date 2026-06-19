@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Globe, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Globe, Loader2, MapPin, RefreshCw, Coins, Ruler } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
+import { useLocationLocale } from "@/components/location/LocationLocaleProvider";
 
 interface LocationProfile {
   id: string;
@@ -16,6 +17,9 @@ interface LocationProfile {
   stateProvince: string | null;
   countryCode: string;
   timezone: string | null;
+  currencyCode: string;
+  measurementSystem: string;
+  locale: string;
   latitude: number | null;
   longitude: number | null;
 }
@@ -29,11 +33,13 @@ const COUNTRIES = [
 ];
 
 export function LocationProfilePanel() {
+  const { refresh: refreshLocale } = useLocationLocale();
   const [location, setLocation] = useState<LocationProfile | null>(null);
   const [localTime, setLocalTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"success" | "warning">("success");
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
@@ -45,6 +51,19 @@ export function LocationProfilePanel() {
   const [countryCode, setCountryCode] = useState("US");
   const [seatCount, setSeatCount] = useState("40");
 
+  const applyLocation = (loc: LocationProfile, time: string | null) => {
+    setLocation(loc);
+    setLocalTime(time);
+    setName(loc.name ?? "");
+    setAddress(loc.address ?? "");
+    setPhone(loc.phone ?? "");
+    setPostalCode(loc.postalCode ?? "");
+    setCity(loc.city ?? "");
+    setStateProvince(loc.stateProvince ?? "");
+    setCountryCode(loc.countryCode ?? "US");
+    setSeatCount(String(loc.seatCount ?? 40));
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,16 +71,7 @@ export function LocationProfilePanel() {
       const res = await fetch("/api/locations/current");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load location");
-      setLocation(data.location);
-      setLocalTime(data.localTime ?? null);
-      setName(data.location.name ?? "");
-      setAddress(data.location.address ?? "");
-      setPhone(data.location.phone ?? "");
-      setPostalCode(data.location.postalCode ?? "");
-      setCity(data.location.city ?? "");
-      setStateProvince(data.location.stateProvince ?? "");
-      setCountryCode(data.location.countryCode ?? "US");
-      setSeatCount(String(data.location.seatCount ?? 40));
+      applyLocation(data.location, data.localTime ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -94,9 +104,14 @@ export function LocationProfilePanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      setLocation(data.location);
-      setLocalTime(data.localTime ?? null);
-      setMessage(data.message ?? "Location saved");
+      applyLocation(data.location, data.localTime ?? null);
+      await refreshLocale();
+      setMessageTone(data.geoResolved ? "success" : "warning");
+      setMessage(
+        data.geo?.label
+          ? `${data.message ?? "Location saved"} (${data.geo.label})`
+          : (data.message ?? "Location saved")
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -111,12 +126,24 @@ export function LocationProfilePanel() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        Set your postal code to auto-sync local time, public holidays, and weather for Crystal Ball,
-        analytics, and prep forecasts.
+        Set your postal code to auto-sync local time, currency, units, public holidays, and weather
+        for Crystal Ball, analytics, and prep forecasts.
       </p>
 
-      {(location?.timezone || localTime) && (
+      {(location?.timezone || localTime || location?.currencyCode) && (
         <div className="flex flex-wrap gap-2">
+          {location?.currencyCode && (
+            <Badge className="bg-amber-100 text-amber-900">
+              <Coins className="mr-1 inline h-3.5 w-3.5" />
+              {location.currencyCode}
+            </Badge>
+          )}
+          {location?.measurementSystem && (
+            <Badge className="bg-purple-100 text-purple-800">
+              <Ruler className="mr-1 inline h-3.5 w-3.5" />
+              {location.measurementSystem === "metric" ? "Metric (kg, °C)" : "Imperial (lbs, °F)"}
+            </Badge>
+          )}
           {location?.timezone && (
             <Badge className="bg-blue-100 text-blue-800">
               <Globe className="mr-1 inline h-3.5 w-3.5" />
@@ -181,8 +208,18 @@ export function LocationProfilePanel() {
         </FormField>
       </div>
 
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && (
+        <p className={`text-sm ${messageTone === "success" ? "text-green-700" : "text-amber-700"}`}>
+          {message}
+        </p>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {!location?.latitude && postalCode.trim() && (
+        <p className="text-sm text-amber-700">
+          Postal code not verified yet — update city, state, and country if needed, then save again.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => void save()} disabled={saving}>

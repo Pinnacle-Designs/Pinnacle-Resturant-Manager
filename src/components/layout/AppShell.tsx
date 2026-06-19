@@ -8,6 +8,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { PrintReportStamp } from "@/components/layout/PrintReportStamp";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { LocationLocaleProvider } from "@/components/location/LocationLocaleProvider";
 import { GlobalSearchProvider } from "@/components/search/GlobalSearch";
 import { PageSearchStrip } from "@/components/search/PageSearchStrip";
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
@@ -57,18 +58,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <GlobalSearchProvider>
-        <NotificationProvider>
-          <div className="flex min-h-screen">
-            {showSidebar && <Sidebar />}
-            <div className={`flex flex-1 flex-col ${showMobileChrome ? "pb-20 md:pb-0" : ""}`}>
-              {showMobileChrome && <MobileHeader />}
-              {mainInner}
+      <LocationLocaleProvider>
+        <GlobalSearchProvider>
+          <NotificationProvider>
+            <div className="flex min-h-screen">
+              {showSidebar && <Sidebar />}
+              <div className={`flex flex-1 flex-col ${showMobileChrome ? "pb-20 md:pb-0" : ""}`}>
+                {showMobileChrome && <MobileHeader />}
+                {mainInner}
+              </div>
             </div>
-          </div>
-          {showMobileChrome && <MobileNav />}
-        </NotificationProvider>
-      </GlobalSearchProvider>
+            {showMobileChrome && <MobileNav />}
+          </NotificationProvider>
+        </GlobalSearchProvider>
+      </LocationLocaleProvider>
     </AuthProvider>
   );
 }

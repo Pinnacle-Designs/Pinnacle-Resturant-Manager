@@ -318,6 +318,12 @@ model Location {
   countryCode    String   @default("US")
   /// IANA timezone e.g. America/Chicago — synced from coordinates
   timezone       String?
+  /// ISO 4217 currency — synced from country/postal (e.g. USD, GBP, CAD)
+  currencyCode   String   @default("USD")
+  /// imperial (US) or metric — synced from country/postal
+  measurementSystem String @default("imperial")
+  /// BCP 47 locale for number/date formatting (e.g. en-US, en-GB)
+  locale         String   @default("en-US")
   geoFenceRadiusM Int     @default(150)
   geoClockInRequired Boolean @default(true)
   punchPhotoRequired Boolean @default(true)
