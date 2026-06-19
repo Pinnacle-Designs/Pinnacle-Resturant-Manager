@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
+import { DesktopTopBar } from "@/components/layout/DesktopTopBar";
 import { PrintReportStamp } from "@/components/layout/PrintReportStamp";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -67,6 +68,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               {showSidebar && <Sidebar />}
               <div className={`flex min-w-0 flex-1 flex-col ${showMobileChrome ? "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0" : ""}`}>
                 {showMobileChrome && <MobileHeader />}
+                <DesktopTopBar />
                 {mainInner}
               </div>
             </div>
