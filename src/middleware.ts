@@ -29,8 +29,6 @@ const PUBLIC_PATHS = [
   "/docs",
   "/api/auth/login",
   "/api/auth/register",
-  "/api/auth/seed",
-  "/api/auth/plan-demos",
   "/api/embed/launch",
   "/api/pitch-request",
   "/api/webhooks/stripe",

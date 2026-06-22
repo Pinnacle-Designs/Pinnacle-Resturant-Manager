@@ -1,6 +1,7 @@
 import type { AppRole } from "./app-role";
 import type { PlanId } from "./plans";
 import type { Permission } from "./permissions";
+import { getAuthSecret } from "./env";
 
 export const AUTH_COOKIE_NAME = "pinnacle_session";
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -16,20 +17,6 @@ export interface SessionUser {
   permissions?: Permission[];
   setupComplete?: boolean;
   isPlatformAdmin?: boolean;
-}
-
-function getSecret(): string {
-  const secret = process.env.AUTH_SECRET?.trim();
-  if (secret) {
-    if (process.env.NODE_ENV === "production" && secret.length < 32) {
-      throw new Error("AUTH_SECRET must be at least 32 characters in production");
-    }
-    return secret;
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("AUTH_SECRET must be set in production");
-  }
-  return "pinnacle-dev-secret-change-me";
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -50,7 +37,7 @@ function fromBase64Url(str: string): Uint8Array {
 async function importHmacKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(getSecret()),
+    new TextEncoder().encode(getAuthSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"]

@@ -2,21 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/hiring/utils";
 import { sendSms } from "@/lib/hiring/sms";
+import { validateTwilioSignature } from "@/lib/hiring/twilio-webhook";
 
 /** Twilio inbound SMS webhook — text-to-apply and replies. */
 export async function POST(request: NextRequest) {
   let from = "";
   let to = "";
   let body = "";
+  const params: Record<string, string> = {};
 
   const contentType = request.headers.get("content-type") || "";
   if (contentType.includes("application/x-www-form-urlencoded")) {
     const form = await request.formData();
-    from = String(form.get("From") || "");
-    to = String(form.get("To") || "");
-    body = String(form.get("Body") || "").trim();
+    for (const [key, value] of form.entries()) {
+      params[key] = String(value);
+    }
+    from = params.From || "";
+    to = params.To || "";
+    body = (params.Body || "").trim();
   } else {
-    const json = await request.json();
+    const json = (await request.json()) as Record<string, string>;
+    Object.assign(params, json);
     from = String(json.From || json.from || "");
     to = String(json.To || json.to || "");
     body = String(json.Body || json.body || "").trim();
@@ -24,6 +30,12 @@ export async function POST(request: NextRequest) {
 
   if (!from || !body) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const signature = request.headers.get("x-twilio-signature");
+  const webhookUrl = request.nextUrl.origin + request.nextUrl.pathname;
+  if (!validateTwilioSignature(webhookUrl, params, signature)) {
+    return NextResponse.json({ error: "Invalid Twilio signature" }, { status: 403 });
   }
 
   const fromPhone = normalizePhone(from);
