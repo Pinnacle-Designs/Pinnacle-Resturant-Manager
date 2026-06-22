@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Maximize2, X } from "lucide-react";
 import { embedLaunchUrl } from "@/lib/embed-config";
+import { useEmbedChrome } from "@/hooks/useEmbedChrome";
 import { cn } from "@/lib/utils";
 
 interface HeroAppEmbedProps {
@@ -25,6 +26,7 @@ export function HeroAppEmbed({
   className,
   height = "min(520px, 70vh)",
 }: HeroAppEmbedProps) {
+  const embedChrome = useEmbedChrome();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,15 @@ export function HeroAppEmbed({
   const readyRef = useRef(false);
   const loadCountRef = useRef(0);
 
-  const fullSrc = embedLaunchUrl(undefined, "full");
+  const launchSrc = embedLaunchUrl(undefined, embedChrome);
+
+  useEffect(() => {
+    readyRef.current = false;
+    loadCountRef.current = 0;
+    setError(null);
+    setLoading(true);
+    setIframeKey((k) => k + 1);
+  }, [embedChrome]);
 
   const retryEmbed = useCallback(() => {
     readyRef.current = false;
@@ -66,7 +76,7 @@ export function HeroAppEmbed({
       }
     }, 20000);
     return () => window.clearTimeout(timer);
-  }, [loading, fullSrc, expanded]);
+  }, [loading, launchSrc, expanded]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
     if (readyRef.current) return;
@@ -100,7 +110,7 @@ export function HeroAppEmbed({
   const frame = (expandedView: boolean) => (
     <iframe
       key={expandedView ? `modal-${iframeKey}` : `hero-${iframeKey}`}
-      src={`${expandedView ? fullSrc : fullSrc}${fullSrc.includes("?") ? "&" : "?"}_=${iframeKey}`}
+      src={`${launchSrc}${launchSrc.includes("?") ? "&" : "?"}_=${iframeKey}`}
       title={title}
       className={cn(
         "w-full border-0 bg-white",
@@ -125,7 +135,9 @@ export function HeroAppEmbed({
             <span className="h-3 w-3 shrink-0 rounded-full bg-red-400" />
             <span className="h-3 w-3 shrink-0 rounded-full bg-amber-400" />
             <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-400" />
-            <span className="ml-1 truncate text-xs text-slate-400">Live demo — full app</span>
+            <span className="ml-1 truncate text-xs text-slate-400">
+              Live demo — {embedChrome === "mobile" ? "mobile app" : "full app"}
+            </span>
           </div>
           <button
             type="button"
@@ -180,7 +192,9 @@ export function HeroAppEmbed({
                 <span className="h-3 w-3 rounded-full bg-amber-400" />
                 <span className="h-3 w-3 rounded-full bg-emerald-400" />
                 <span className="ml-1 text-sm font-medium text-slate-300">
-                  Full desktop app — sidebar & all modules
+                  {embedChrome === "mobile"
+                    ? "Mobile app — bottom nav & compact layout"
+                    : "Full desktop app — sidebar & all modules"}
                 </span>
               </div>
               <button

@@ -374,7 +374,11 @@
       return list;
     }
 
-    function mountHero() {
+  function preferredChrome() {
+    return window.matchMedia("(max-width: 1023px)").matches ? "mobile" : "full";
+  }
+
+  function mountHero() {
       if (!appUrl) {
         heroSlot.innerHTML = "";
         heroSlot.appendChild(
@@ -386,7 +390,7 @@
       }
       heroController = mountLiveEmbed(heroSlot, appUrl, {
         path: DEFAULT_PATH,
-        chrome: "full",
+        chrome: preferredChrome(),
         candidates: buildCandidates(appUrl),
       });
     }
@@ -414,7 +418,7 @@
       if (!modal || !modalBody || !appUrl) return;
       modalController = mountLiveEmbed(modalBody, appUrl, {
         path: DEFAULT_PATH,
-        chrome: "full",
+        chrome: preferredChrome(),
         candidates: buildCandidates(appUrl),
       });
       modal.classList.add("open");
