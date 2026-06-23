@@ -1,12 +1,12 @@
 import {
   PLAN_DEMO_USERS,
-  planDemoLoginEnabled,
+  planDemoUiEnabled,
   seedPlanDemoWorkspaces,
 } from "@/lib/demo-users";
 import { privateJsonResponse } from "@/lib/secure-response";
 
 export async function GET() {
-  if (!planDemoLoginEnabled()) {
+  if (!planDemoUiEnabled()) {
     return privateJsonResponse({ enabled: false, accounts: [] });
   }
 
@@ -22,7 +22,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  if (!planDemoLoginEnabled()) {
+  if (!planDemoUiEnabled()) {
     return privateJsonResponse({ error: "Not found" }, { status: 404 });
   }
 

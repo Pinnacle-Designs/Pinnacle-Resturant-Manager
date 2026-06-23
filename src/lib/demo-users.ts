@@ -63,6 +63,14 @@ export function planDemoLoginEnabled(): boolean {
   );
 }
 
+/** True when plan-tier demo buttons may appear on /login (never on public production). */
+export function planDemoUiEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === "development" ||
+    process.env.PLAN_DEMO_LOGIN_ENABLED === "true"
+  );
+}
+
 /** True when embed demo accounts (owner@pinnacle.com, etc.) may sign in via /login. */
 export function devDemoLoginEnabled(): boolean {
   return planDemoLoginEnabled();
