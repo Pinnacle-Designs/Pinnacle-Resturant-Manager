@@ -21,6 +21,7 @@ import { PinPad } from "@/components/staff/PinPad";
 import { PunchPhotoCapture } from "@/components/staff/PunchPhotoCapture";
 import { verifyBiometric } from "@/lib/timeclock/webauthn-client";
 import { punchVerificationLabel } from "@/lib/timeclock/types";
+import { clientFetch } from "@/lib/embed-api-client";
 import { formatCurrency } from "@/lib/utils";
 import { BREAK_WAIVER_TEXT, isMealBreakRequired } from "@/lib/compliance/break-enforcement";
 import { isTippedPunch } from "@/lib/compliance/tip-declaration";
@@ -106,7 +107,7 @@ export function TimeClockClient() {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch("/api/timeclock/kiosk");
+      const res = await clientFetch("/api/timeclock/kiosk");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load time clock");
       setLocation(data.location);
@@ -294,7 +295,7 @@ export function TimeClockClient() {
         }
       }
 
-      const res = await fetch("/api/timeclock/kiosk", {
+      const res = await clientFetch("/api/timeclock/kiosk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

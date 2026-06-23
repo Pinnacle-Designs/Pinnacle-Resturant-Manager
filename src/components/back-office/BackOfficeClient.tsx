@@ -10,6 +10,7 @@ import { PageSectionShell, PageSection } from "@/components/layout/PageSections"
 import { ForgottenClockOutAlert } from "@/components/staff/ForgottenClockOutAlert";
 import { ComplianceAlertsBanner } from "@/components/staff/ComplianceAlertsBanner";
 import { formatCurrency } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 import type { MenuEngineeringSnapshot } from "@/lib/menu/engineering";
 
 const QUADRANT_STYLES = {
@@ -67,12 +68,17 @@ export function BackOfficeClient() {
     menuEngineering: MenuEngineeringSnapshot;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch("/api/back-office");
-      setData(await res.json());
+      const payload = await apiFetch<NonNullable<typeof data>>("/api/back-office");
+      setData(payload);
+    } catch (err) {
+      setData(null);
+      setLoadError(err instanceof Error ? err.message : "Failed to load back office data");
     } finally {
       setLoading(false);
     }
@@ -90,12 +96,22 @@ export function BackOfficeClient() {
   ];
 
   const me = data?.menuEngineering;
-  const overLines = data?.avt.lines.filter((l) => l.flag === "OVER").length ?? 0;
+  const overLines = data?.avt?.lines?.filter((l) => l.flag === "OVER").length ?? 0;
 
   return (
     <div>
       <ForgottenClockOutAlert variant="banner" className="mb-6" />
       <ComplianceAlertsBanner variant="banner" className="mb-6" />
+
+      {loadError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="font-medium text-red-800">Back office unavailable</p>
+          <p className="mt-1 text-sm text-red-700">{loadError}</p>
+          <Button size="sm" className="mt-3" onClick={load}>
+            Retry
+          </Button>
+        </div>
+      )}
 
       <PageSectionShell pageId="back-office-metrics">
         <PageSection id="bo-key-metrics" title="Key metrics" defaultOpen>

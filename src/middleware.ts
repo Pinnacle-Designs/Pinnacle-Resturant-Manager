@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
+import { parseSessionToken } from "@/lib/session";
+import { getRequestSessionToken } from "@/lib/request-session";
 import { canAccessRoute } from "@/lib/permissions";
 import { canAccessPlanRoute } from "@/lib/plans";
 import { isPlatformAdmin } from "@/lib/platform-admin";
@@ -188,7 +189,7 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const token = getRequestSessionToken(request);
   const user = token ? await parseSessionToken(token) : null;
 
   if (!user) {

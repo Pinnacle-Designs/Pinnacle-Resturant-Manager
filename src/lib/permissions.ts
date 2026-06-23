@@ -275,11 +275,13 @@ export function canAccessRoute(
   pathname: string,
   permissions?: Permission[] | null
 ): boolean {
+  if (role === "OWNER") return true;
+
   if (permissions?.length) {
     return canAccessRouteWithPermissions(permissions, pathname);
   }
 
-  if (role === "OWNER" || role === "MANAGER") return true;
+  if (role === "MANAGER") return true;
   const base = routeBase(pathname);
   const required = ROUTE_PERMISSION_MAP[base] ?? ROUTE_PERMISSION_MAP[pathname];
   if (required) return false;

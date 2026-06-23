@@ -23,6 +23,32 @@ export { EMBED_SESSION_PARAM };
 const DEMO_EMAIL = "owner@pinnacle.com";
 const DEMO_PASSWORD = "demo1234";
 
+/** True when the iframe parent is on a different origin (needs SameSite=None cookies). */
+export function isCrossOriginEmbedRequest(request: NextRequest): boolean {
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite === "cross-site") return true;
+
+  const origin = request.headers.get("origin");
+  if (origin) {
+    try {
+      if (new URL(origin).origin !== request.nextUrl.origin) return true;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const referer = request.headers.get("referer");
+  if (referer) {
+    try {
+      if (new URL(referer).origin !== request.nextUrl.origin) return true;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return false;
+}
+
 export async function buildEmbedLaunchResponse(
   request: NextRequest,
   pathParam: string | null

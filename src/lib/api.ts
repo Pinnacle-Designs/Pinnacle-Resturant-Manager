@@ -1,10 +1,11 @@
 import { parseJsonResponse } from "@/lib/fetch-json";
+import { clientFetch } from "@/lib/embed-api-client";
 
 export async function apiFetch<T>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
-  const res = await fetch(url, options);
+  const res = await clientFetch(url, options);
   const data = await parseJsonResponse<{ error?: string } & T>(res);
   if (!res.ok) {
     throw new Error(data.error || "Request failed");

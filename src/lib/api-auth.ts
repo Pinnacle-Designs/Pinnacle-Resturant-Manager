@@ -9,6 +9,8 @@ import {
 } from "./permissions";
 import { userCan } from "./permission-resolve";
 
+import { isDemoAccountEmail, isPlanDemoAccountEmail } from "./demo-email";
+
 export function unauthorizedResponse() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
@@ -47,7 +49,13 @@ export async function requireActiveAccount(user: SessionUser | null) {
     return { user: null, error: unauthorizedResponse() };
   }
 
-  if ((user.sessionVersion ?? 0) !== (dbUser.sessionVersion ?? 0)) {
+  const isDemo =
+    isDemoAccountEmail(dbUser.email) || isPlanDemoAccountEmail(dbUser.email);
+
+  if (
+    !isDemo &&
+    (user.sessionVersion ?? 0) !== (dbUser.sessionVersion ?? 0)
+  ) {
     return { user: null, error: unauthorizedResponse() };
   }
 

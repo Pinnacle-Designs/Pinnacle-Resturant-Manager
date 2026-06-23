@@ -5,6 +5,7 @@ import { MapPin, Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input, FormField, Modal } from "@/components/ui/form";
 import { apiPost } from "@/lib/api";
+import { clientFetch } from "@/lib/embed-api-client";
 
 interface Location {
   id: string;
@@ -21,7 +22,7 @@ export function LocationSwitcher() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/locations")
+    clientFetch("/api/locations")
       .then((res) => res.json())
       .then((data) => {
         setLocations(data.locations || []);
@@ -31,7 +32,7 @@ export function LocationSwitcher() {
   }, []);
 
   const switchLocation = async (id: string) => {
-    await fetch("/api/locations/switch", {
+    await clientFetch("/api/locations/switch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locationId: id }),

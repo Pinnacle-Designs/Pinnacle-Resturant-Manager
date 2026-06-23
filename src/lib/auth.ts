@@ -1,12 +1,13 @@
+import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
-import type { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 import {
   type SessionUser,
   parseSessionToken,
   AUTH_COOKIE_NAME,
 } from "./session";
+import { getRequestSessionUser } from "./request-session";
 
 export type { SessionUser } from "./session";
 export {
@@ -43,9 +44,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 export async function getSessionUserFromRequest(
   request: NextRequest
 ): Promise<SessionUser | null> {
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (!token) return null;
-  return parseSessionToken(token);
+  return getRequestSessionUser(request);
 }
 
 export async function requireSessionUser(): Promise<SessionUser> {

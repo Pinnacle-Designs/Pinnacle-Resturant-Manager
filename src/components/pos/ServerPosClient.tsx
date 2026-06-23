@@ -17,6 +17,7 @@ import { PageSectionShell, PageSection } from "@/components/layout/PageSections"
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch, apiPatch, apiPost } from "@/lib/api";
+import { clientFetch } from "@/lib/embed-api-client";
 import { PayCheckScreen, type PayableOrder } from "@/components/orders/PayCheckScreen";
 import { SeatPicker } from "@/components/orders/SeatPicker";
 import { PosItemGrid, type PosMenuItem } from "@/components/pos/PosItemGrid";
@@ -98,7 +99,7 @@ export function ServerPosClient(props: ServerPosClientProps = {}) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/pos/config");
+      const res = await clientFetch("/api/pos/config");
       const data = await res.json();
       setConfig(data);
       if (!activeOrderId && data.openOrders?.length > 0) {

@@ -14,6 +14,7 @@ import {
   measurementSystemLabel,
 } from "@/lib/location/locale";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { clientFetch } from "@/lib/embed-api-client";
 
 interface LocationLocaleContextValue {
   settings: LocationLocaleSettings;
@@ -56,7 +57,7 @@ export function LocationLocaleProvider({ children }: { children: React.ReactNode
       return;
     }
     try {
-      const res = await fetch("/api/locations/current");
+      const res = await clientFetch("/api/locations/current");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       const ms = data.location.measurementSystem;

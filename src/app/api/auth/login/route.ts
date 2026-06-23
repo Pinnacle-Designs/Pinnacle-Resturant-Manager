@@ -13,6 +13,7 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { privateJsonResponse } from "@/lib/secure-response";
 import { createMfaPendingToken } from "@/lib/mfa-pending";
 import { requireActiveAccount } from "@/lib/api-auth";
+import { isCrossOriginEmbedRequest } from "@/lib/embed-launch";
 
 const LOGIN_FAILURE_DELAY_MS = 250;
 
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest) {
   }
   const prepared = await prepareAuthSession(activeUser);
   const response = privateJsonResponse({ user: prepared.sessionUser });
-  attachAuthCookies(response, prepared);
+  const forEmbed = isCrossOriginEmbedRequest(request);
+  attachAuthCookies(response, prepared, forEmbed ? { forEmbed: true, secure: true } : undefined);
   return response;
 }
 

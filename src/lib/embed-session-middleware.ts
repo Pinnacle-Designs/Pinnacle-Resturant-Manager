@@ -1,27 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { parseSessionToken, sessionCookieOptions } from "@/lib/session";
+import { parseSessionToken } from "@/lib/session";
+import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 import { LOCATION_COOKIE_NAME } from "@/lib/location-constants";
-
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
 
 export const EMBED_SESSION_PARAM = "_st";
-
-function requestIsHttps(request: NextRequest): boolean {
-  if (request.nextUrl.protocol === "https:") return true;
-  return request.headers.get("x-forwarded-proto") === "https";
-}
-
-function embedCookieFlags(request: NextRequest, forEmbed: boolean) {
-  const https = requestIsHttps(request);
-  if (forEmbed) {
-    return { sameSite: "none" as const, secure: true };
-  }
-  return {
-    sameSite: "lax" as const,
-    secure: https || process.env.NODE_ENV === "production",
-  };
-}
 
 /** Strip `_st` from embed URLs and persist session cookies for cross-origin iframes. */
 export async function applyEmbedSessionParam(
@@ -38,19 +22,13 @@ export async function applyEmbedSessionParam(
   clean.searchParams.delete(EMBED_SESSION_PARAM);
 
   const response = NextResponse.redirect(clean);
-  const forEmbed = true;
-  const flags = embedCookieFlags(request, forEmbed);
-  response.cookies.set(sessionCookieOptions(rawToken, forEmbed, flags.secure));
-
   const locationId =
-    request.cookies.get(LOCATION_COOKIE_NAME)?.value ?? user.locationId ?? undefined;
+    request.cookies.get(LOCATION_COOKIE_NAME)?.value ?? user.locationId ?? "";
+
   if (locationId) {
-    response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: flags.sameSite,
-      secure: flags.secure,
-    });
+    applyEmbedAuthCookies(response, request, rawToken, locationId, true);
+  } else if (user.locationId) {
+    applyEmbedAuthCookies(response, request, rawToken, user.locationId, true);
   }
 
   return response;

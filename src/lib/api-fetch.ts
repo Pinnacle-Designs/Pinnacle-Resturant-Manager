@@ -1,7 +1,2 @@
-/** Browser fetch that always sends session cookies (required in embedded iframes). */
-export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  return fetch(input, {
-    ...init,
-    credentials: init?.credentials ?? "include",
-  });
-}
+/** @deprecated Use `clientFetch` from `@/lib/embed-api-client` or `apiFetch` from `@/lib/api`. */
+export { clientFetch as apiFetch } from "@/lib/embed-api-client";

@@ -16,7 +16,8 @@ import {
   ANALYTICS_VIEW_OPTIONS,
   type DataViewMode,
 } from "@/components/charts";
-import { apiFetch } from "@/lib/api-fetch";
+import { parseJsonResponse } from "@/lib/fetch-json";
+import { apiFetch, apiPost } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   analyticsTabsForPlan,
@@ -75,13 +76,8 @@ export function AnalyticsClient({ plan }: { plan: PlanId }) {
   const loadAnalytics = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiFetch("/api/analytics")
-      .then(async (r) => {
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error || `Analytics failed (${r.status})`);
-        if (d.error) throw new Error(d.error);
-        return normalizeAnalyticsPayload(d);
-      })
+    apiFetch<AnalyticsPayload>("/api/analytics")
+      .then((d) => normalizeAnalyticsPayload(d))
       .then((d) => setData(d))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load analytics"))
       .finally(() => setLoading(false));
@@ -101,9 +97,7 @@ export function AnalyticsClient({ plan }: { plan: PlanId }) {
     setSeeding(true);
     setError(null);
     try {
-      const res = await apiFetch("/api/seed", { method: "POST" });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Failed to load sample data");
+      await apiPost("/api/seed", {});
       loadAnalytics();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load sample data");
@@ -117,9 +111,7 @@ export function AnalyticsClient({ plan }: { plan: PlanId }) {
     setWeatherSyncing(true);
     setError(null);
     try {
-      const res = await apiFetch("/api/external/weather/sync", { method: "POST" });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Weather sync failed");
+      await apiPost("/api/external/weather/sync", {});
       loadAnalytics();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Weather sync failed");

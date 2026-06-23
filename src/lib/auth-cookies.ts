@@ -1,6 +1,8 @@
 import type { NextResponse } from "next/server";
 import { enrichUserWithPlan } from "./location-plan";
 import { createSessionToken, sessionCookieOptions, type SessionUser } from "./session";
+import { EMBED_API_COOKIE_NAME } from "./embed-api-client";
+import { AUTH_COOKIE_MAX_AGE } from "./session";
 import {
   createWorkspaceCookieToken,
   workspaceCookieOptions,
@@ -39,6 +41,18 @@ export function attachAuthCookies(
   response.cookies.set(
     sessionCookieOptions(prepared.sessionToken, options?.forEmbed ?? false, options?.secure)
   );
+  if (options?.forEmbed) {
+    response.cookies.set({
+      name: EMBED_API_COOKIE_NAME,
+      value: prepared.sessionToken,
+      httpOnly: false,
+      secure: options?.secure ?? true,
+      sameSite: "none",
+      path: "/",
+      maxAge: AUTH_COOKIE_MAX_AGE,
+      partitioned: true,
+    });
+  }
   if (prepared.workspaceToken) {
     response.cookies.set(workspaceCookieOptions(prepared.workspaceToken, options?.secure));
   }

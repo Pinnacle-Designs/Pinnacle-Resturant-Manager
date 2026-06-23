@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from "next/server";
-import { sessionCookieOptions } from "@/lib/auth";
+import { sessionCookieOptions, AUTH_COOKIE_MAX_AGE } from "@/lib/auth";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import { EMBED_API_COOKIE_NAME } from "@/lib/embed-api-client";
 
 export function requestIsHttps(request: NextRequest): boolean {
   if (request.nextUrl.protocol === "https:") return true;
@@ -31,11 +32,25 @@ export function applyEmbedAuthCookies(
 ) {
   const flags = embedCookieFlags(request, forEmbed);
   response.cookies.set(sessionCookieOptions(token, forEmbed, flags.secure));
-  response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: flags.sameSite,
-    secure: flags.secure,
-  });
+  if (locationId) {
+    response.cookies.set(LOCATION_COOKIE_NAME, locationId, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: flags.sameSite,
+      secure: flags.secure,
+    });
+  }
+  if (forEmbed) {
+    response.cookies.set({
+      name: EMBED_API_COOKIE_NAME,
+      value: token,
+      httpOnly: false,
+      secure: flags.secure,
+      sameSite: flags.sameSite,
+      path: "/",
+      maxAge: AUTH_COOKIE_MAX_AGE,
+      partitioned: true,
+    });
+  }
   return response;
 }

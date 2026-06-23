@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { clientFetch } from "@/lib/embed-api-client";
 
 const POLL_MS = 5000;
 
@@ -25,7 +26,7 @@ export function useMenuSync(
 
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/boh/sync?since=${revisionRef.current}`);
+      const res = await clientFetch(`/api/boh/sync?since=${revisionRef.current}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.changed) {
