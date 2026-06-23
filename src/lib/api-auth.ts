@@ -31,19 +31,31 @@ export async function requireActiveAccount(user: SessionUser | null) {
     return { user: null, error: unauthorizedResponse() };
   }
 
-  const dbUser = await prisma.user.findUnique({
+  const userSelect = {
+    id: true,
+    email: true,
+    name: true,
+    role: true,
+    locationId: true,
+    avatarUrl: true,
+    active: true,
+    sessionVersion: true,
+  } as const;
+
+  let dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      locationId: true,
-      avatarUrl: true,
-      active: true,
-      sessionVersion: true,
-    },
+    select: userSelect,
   });
+
+  const isDemoEmail =
+    isDemoAccountEmail(user.email) || isPlanDemoAccountEmail(user.email);
+
+  if (!dbUser?.active && isDemoEmail) {
+    dbUser = await prisma.user.findFirst({
+      where: { email: user.email.toLowerCase(), active: true },
+      select: userSelect,
+    });
+  }
 
   if (!dbUser?.active) {
     return { user: null, error: unauthorizedResponse() };
@@ -62,6 +74,7 @@ export async function requireActiveAccount(user: SessionUser | null) {
   return {
     user: {
       ...user,
+      id: dbUser.id,
       email: dbUser.email,
       name: dbUser.name,
       role: dbUser.role,

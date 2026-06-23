@@ -5,6 +5,7 @@ import {
   getSessionUserFromRequest,
 } from "@/lib/auth";
 import { prepareAuthSession, attachAuthCookies } from "@/lib/auth-cookies";
+import { createCompactSessionToken } from "@/lib/session";
 import { isDemoAccountEmail } from "@/lib/demo-email";
 import {
   ensureFullDemoWorkspace,
@@ -58,11 +59,12 @@ async function buildEmbedRedirect(
   await ensureFullDemoWorkspace(locationId, user.id);
 
   const prepared = await prepareAuthSession({ ...user, locationId });
+  const embedToken = await createCompactSessionToken(prepared.sessionUser);
   const redirectUrl = new URL(`${path}?embed=${embedValue}`, request.url);
-  redirectUrl.searchParams.set(EMBED_SESSION_PARAM, prepared.sessionToken);
+  redirectUrl.searchParams.set(EMBED_SESSION_PARAM, embedToken);
 
   const response = NextResponse.redirect(redirectUrl);
-  applyEmbedAuthCookies(response, request, prepared.sessionToken, locationId, true);
+  applyEmbedAuthCookies(response, request, embedToken, locationId, true);
   attachAuthCookies(response, prepared, { forEmbed: true, secure: true });
   return response;
 }

@@ -33,7 +33,13 @@ export function injectEmbedSessionHeaders(
 export async function applyEmbedSessionParam(
   request: NextRequest
 ): Promise<NextResponse | null> {
-  const rawToken = request.nextUrl.searchParams.get(EMBED_SESSION_PARAM);
+  let rawToken = request.nextUrl.searchParams.get(EMBED_SESSION_PARAM);
+  if (!rawToken) {
+    const auth = request.headers.get("authorization");
+    if (auth?.toLowerCase().startsWith("bearer ")) {
+      rawToken = auth.slice(7).trim();
+    }
+  }
   if (!rawToken) return null;
 
   const embedParam = request.nextUrl.searchParams.get("embed");

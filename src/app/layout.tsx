@@ -1,5 +1,6 @@
 import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -33,15 +34,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=new URLSearchParams(location.search);var st=p.get("_st");var e=p.get("embed");if(st&&(e==="mobile"||e==="full"||e==="1")){window.__PINNACLE_EMBED_ST__=st;}}catch(x){}})();`,
-          }}
-        />
-      </head>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased`}>
+        <Script src="/embed-bootstrap.js" strategy="beforeInteractive" />
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -80,6 +80,20 @@ export function getEmbedSessionToken(): string | null {
   return null;
 }
 
+/** Append Authorization header + optional `_st` for embed API requests. */
+function embedFetchInit(init?: RequestInit): RequestInit {
+  const token = getEmbedSessionToken();
+  const next: RequestInit = { ...init, credentials: init?.credentials ?? "include" };
+  if (!token) return next;
+
+  const headers = new Headers(init?.headers);
+  if (!headers.has("authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  next.headers = headers;
+  return next;
+}
+
 /** Append embed session token for API requests when httpOnly cookies are not sent. */
 export function withEmbedSession(url: string): string {
   const token = getEmbedSessionToken();
@@ -146,18 +160,18 @@ export function installEmbedFetchPatch(): void {
   const originalFetch = window.fetch.bind(window);
 
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-    const credentials = init?.credentials ?? "include";
+    const patchedInit = embedFetchInit(init);
 
     if (typeof input === "string") {
       const url = input.startsWith("/api/") ? withEmbedSession(input) : input;
-      return originalFetch(url, { ...init, credentials });
+      return originalFetch(url, patchedInit);
     }
 
     if (input instanceof URL) {
       const url = input.pathname.startsWith("/api/")
         ? withEmbedSession(input.toString())
         : input.toString();
-      return originalFetch(url, { ...init, credentials });
+      return originalFetch(url, patchedInit);
     }
 
     if (input instanceof Request) {
@@ -165,28 +179,29 @@ export function installEmbedFetchPatch(): void {
         const parsed = new URL(input.url);
         if (parsed.origin === window.location.origin && parsed.pathname.startsWith("/api/")) {
           const patched = withEmbedSession(`${parsed.pathname}${parsed.search}`);
-          return originalFetch(new Request(patched, input), { ...init, credentials });
+          return originalFetch(new Request(patched, input), patchedInit);
         }
       } catch {
         /* ignore malformed URLs */
       }
     }
 
-    return originalFetch(input, { ...init, credentials });
+    return originalFetch(input, patchedInit);
   };
 }
 
 export function clientFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   installEmbedFetchPatch();
+  const patchedInit = embedFetchInit(init);
 
   if (typeof input === "string") {
-    return fetch(withEmbedSession(input), { ...init, credentials: init?.credentials ?? "include" });
+    return fetch(withEmbedSession(input), patchedInit);
   }
   if (input instanceof URL) {
     const url = input.pathname.startsWith("/api/") ? withEmbedSession(input.toString()) : input.toString();
-    return fetch(url, { ...init, credentials: init?.credentials ?? "include" });
+    return fetch(url, patchedInit);
   }
-  return fetch(input, { ...init, credentials: init?.credentials ?? "include" });
+  return fetch(input, patchedInit);
 }
 
 /** True when the demo iframe has (or can restore) an embed session token. */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
+import { clientFetch } from "@/lib/embed-api-client";
 
 type Warning = {
   entryId: string;
@@ -38,7 +39,7 @@ export function ForgottenClockOutAlert({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/timeclock/forgotten-clock-outs");
+      const res = await clientFetch("/api/timeclock/forgotten-clock-outs");
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 403) {
@@ -66,7 +67,7 @@ export function ForgottenClockOutAlert({
     setActing(entryId);
     setError(null);
     try {
-      const res = await fetch("/api/timeclock/forgotten-clock-outs", {
+      const res = await clientFetch("/api/timeclock/forgotten-clock-outs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "clock_out_at_shift_end", entryId }),

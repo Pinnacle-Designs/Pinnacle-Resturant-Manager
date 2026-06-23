@@ -81,6 +81,30 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
   return `${payload}.${sig}`;
 }
 
+/** Smaller JWT for embed `_st` — permissions resolved server-side from role. */
+export async function createCompactSessionToken(user: SessionUser): Promise<string> {
+  const payload = toBase64Url(
+    new TextEncoder().encode(
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        locationId: user.locationId,
+        plan: user.plan,
+        setupComplete: user.setupComplete,
+        isPlatformAdmin: user.isPlatformAdmin,
+        sessionVersion: user.sessionVersion,
+        mfaEnabled: user.mfaEnabled,
+        emailVerifiedAt: user.emailVerifiedAt,
+        exp: Date.now() + AUTH_COOKIE_MAX_AGE * 1000,
+      })
+    )
+  );
+  const sig = await signPayload(payload);
+  return `${payload}.${sig}`;
+}
+
 export async function parseSessionToken(token: string): Promise<SessionUser | null> {
   try {
     const [payload, sig] = token.split(".");

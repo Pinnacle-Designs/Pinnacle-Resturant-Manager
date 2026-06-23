@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clientFetch } from "@/lib/embed-api-client";
 
 type MealBreakAlert = {
   entryId: string;
@@ -35,7 +36,7 @@ export function ComplianceAlertsBanner({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/compliance/alerts");
+      const res = await clientFetch("/api/compliance/alerts");
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 403) {

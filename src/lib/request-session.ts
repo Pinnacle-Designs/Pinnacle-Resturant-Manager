@@ -10,13 +10,13 @@ export function getRequestSessionToken(request: NextRequest): string | undefined
   const embedSt = request.nextUrl.searchParams.get(EMBED_SESSION_PARAM);
   if (embedSt) return embedSt;
 
-  const cookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  if (cookie) return cookie;
-
   const auth = request.headers.get("authorization");
   if (auth?.toLowerCase().startsWith("bearer ")) {
     return auth.slice(7).trim();
   }
+
+  const cookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  if (cookie) return cookie;
 
   return undefined;
 }
