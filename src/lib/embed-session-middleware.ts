@@ -26,11 +26,7 @@ export async function applyEmbedSessionParam(
   const locationId =
     request.cookies.get(LOCATION_COOKIE_NAME)?.value ?? user.locationId ?? "";
 
-  if (locationId) {
-    applyEmbedAuthCookies(response, request, rawToken, locationId, true);
-  } else if (user.locationId) {
-    applyEmbedAuthCookies(response, request, rawToken, user.locationId, true);
-  }
+  applyEmbedAuthCookies(response, request, rawToken, locationId, true);
 
   return response;
 }

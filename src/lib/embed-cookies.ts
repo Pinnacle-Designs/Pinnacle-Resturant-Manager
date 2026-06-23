@@ -1,6 +1,9 @@
 import type { NextRequest, NextResponse } from "next/server";
-import { sessionCookieOptions, AUTH_COOKIE_MAX_AGE } from "@/lib/auth";
-import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import {
+  sessionCookieOptions,
+  AUTH_COOKIE_MAX_AGE,
+} from "@/lib/session";
+import { LOCATION_COOKIE_NAME } from "@/lib/location-constants";
 import { EMBED_API_COOKIE_NAME } from "@/lib/embed-constants";
 
 export function requestIsHttps(request: NextRequest): boolean {

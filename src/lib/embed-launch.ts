@@ -13,7 +13,7 @@ import {
   resolveOwnerDemoLocationId,
 } from "@/lib/demo-location";
 import { seedDemoUsers } from "@/lib/demo-users";
-import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import { LOCATION_COOKIE_NAME } from "@/lib/location-constants";
 import { resolveEmbedPath, resolveEmbedChrome, embedQueryValue } from "@/lib/embed-config";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 import { EMBED_SESSION_PARAM } from "@/lib/embed-constants";

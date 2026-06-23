@@ -154,6 +154,21 @@ async function resolveEffectivePlan(
 }
 
 export async function middleware(request: NextRequest) {
+  try {
+    return await runMiddleware(request);
+  } catch (err) {
+    console.error("[middleware] unhandled error:", err);
+    return applyFramePolicy(
+      request,
+      NextResponse.json(
+        { error: "Service temporarily unavailable" },
+        { status: 503 }
+      )
+    );
+  }
+}
+
+async function runMiddleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const embedParam = request.nextUrl.searchParams.get("embed");
 
