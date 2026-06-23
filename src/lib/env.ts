@@ -52,9 +52,13 @@ export function validateProductionEnv(): void {
 
   if (!process.env.DATABASE_URL?.trim()) {
     errors.push("DATABASE_URL must be set in production");
-  } else if (isSqliteDatabase() && process.env.ALLOW_SQLITE_PRODUCTION !== "true") {
+  } else if (
+    isSqliteDatabase() &&
+    process.env.ALLOW_SQLITE_PRODUCTION !== "true" &&
+    process.env.SEED_DEMO_DATA !== "true"
+  ) {
     errors.push(
-      "DATABASE_URL uses SQLite — use PostgreSQL in production (set ALLOW_SQLITE_PRODUCTION=true only for previews)"
+      "DATABASE_URL uses SQLite — use PostgreSQL in production (set ALLOW_SQLITE_PRODUCTION=true or SEED_DEMO_DATA=true for demo deploys)"
     );
   }
 
