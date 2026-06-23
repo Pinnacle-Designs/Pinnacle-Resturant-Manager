@@ -81,10 +81,16 @@ export async function resolveDemoAccountLocationId(
   return resolveOwnerDemoLocationId(userId, currentLocationId);
 }
 
-/** Fill in sample data when the runtime SQLite copy is empty (e.g. missed build seed). */
+/** Fill in sample data when the runtime DB is empty or thin (e.g. missed build seed). */
 export async function ensureSeededDemoData(locationId: string): Promise<void> {
-  const menuCount = await prisma.menuItem.count({ where: { locationId } });
-  if (menuCount >= 5) return;
+  const [menuCount, orderCount, insightCount] = await Promise.all([
+    prisma.menuItem.count({ where: { locationId } }),
+    prisma.order.count({ where: { locationId } }),
+    prisma.businessInsight.count({ where: { locationId } }),
+  ]);
+
+  if (menuCount >= 5 && orderCount >= 20 && insightCount >= 3) return;
+
   const { seedLocationData } = await import("./seed-data");
   await seedLocationData(locationId);
 }

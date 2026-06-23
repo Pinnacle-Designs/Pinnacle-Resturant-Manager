@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import type { ComponentProps } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback } from "react";
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
 import { EMBED_SESSION_PARAM } from "@/lib/embed-constants";
 import { getEmbedSessionToken, persistEmbedSessionToken } from "@/lib/embed-api-client";
 
-/** Preserve `?embed=` and `&_st=` when navigating inside an iframe demo. */
-export function useEmbedHref(href: string): string {
-  const searchParams = useSearchParams();
+/** Preserve `?embed=` and `&_st=` on a path (for Link, router.push, etc.). */
+export function appendEmbedParams(
+  href: string,
+  searchParams: URLSearchParams
+): string {
   const embed = searchParams.get("embed");
   if (!isEmbeddableEmbedParam(embed)) return href;
 
@@ -18,8 +21,7 @@ export function useEmbedHref(href: string): string {
     ? href
     : `${href}${href.includes("?") ? "&" : "?"}embed=${value}`;
 
-  const st =
-    searchParams.get(EMBED_SESSION_PARAM) ?? getEmbedSessionToken();
+  const st = searchParams.get(EMBED_SESSION_PARAM) ?? getEmbedSessionToken();
   if (st) {
     if (searchParams.get(EMBED_SESSION_PARAM)) {
       persistEmbedSessionToken(st);
@@ -30,6 +32,29 @@ export function useEmbedHref(href: string): string {
   }
 
   return url;
+}
+
+/** Preserve `?embed=` and `&_st=` when navigating inside an iframe demo. */
+export function useEmbedHref(href: string): string {
+  const searchParams = useSearchParams();
+  return appendEmbedParams(href, searchParams);
+}
+
+export function useEmbedRouter() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const push = useCallback(
+    (href: string) => router.push(appendEmbedParams(href, searchParams)),
+    [router, searchParams]
+  );
+
+  const replace = useCallback(
+    (href: string) => router.replace(appendEmbedParams(href, searchParams)),
+    [router, searchParams]
+  );
+
+  return { push, replace };
 }
 
 export function EmbedNavLink({

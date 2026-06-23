@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { EmbedNavLink } from "@/components/layout/useEmbedHref";
+import { clientFetch } from "@/lib/embed-api-client";
 import { useSearchParams } from "next/navigation";
 import {
   Camera,
@@ -58,7 +59,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     setSeeding(true);
     setSeedMessage(null);
     try {
-      const res = await fetch("/api/seed", { method: "POST" });
+      const res = await clientFetch("/api/seed", { method: "POST" });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || body.hint || "Seed failed");
       setSeedMessage(body.message);
@@ -76,13 +77,13 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         title="Dashboard"
         description={`${data.locationName} — overview of your restaurant operations`}
       >
-        <Link
+        <EmbedNavLink
           href="/photos"
           className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
         >
           <Camera className="h-4 w-4" />
           Capture Photo
-        </Link>
+        </EmbedNavLink>
       </PageHeader>
 
       {canManageSchedule && <div className="no-print"><ForgottenClockOutAlert variant="banner" /></div>}
@@ -100,12 +101,12 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               ? `Upgrade to ${PLAN_BY_ID[requiredPlanForRoute(`/${upgradeFeature}`)!].name} or higher.`
               : "Choose a higher plan to get access."}
           </p>
-          <Link
+          <EmbedNavLink
             href="/account?tab=billing"
             className="mt-3 inline-flex text-sm font-medium text-orange-600 hover:text-orange-500"
           >
             Upgrade plan →
-          </Link>
+          </EmbedNavLink>
         </div>
       )}
 
@@ -192,12 +193,12 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                 </li>
               ))}
             </ul>
-            <Link
+            <EmbedNavLink
               href="/inventory"
               className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-900"
             >
               View inventory <ArrowRight className="h-4 w-4" />
-            </Link>
+            </EmbedNavLink>
           </CollapsibleSection>
         )}
 
@@ -209,33 +210,33 @@ export function DashboardClient({ data }: { data: DashboardData }) {
 
         <CollapsibleSection id="quick-actions" title="Quick Actions" className="mt-4" defaultOpen>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Link href="/photos" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+            <EmbedNavLink href="/photos" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
               <Camera className="h-5 w-5 text-orange-500" />
               <span className="text-sm font-medium">Upload Photo</span>
-            </Link>
-            <Link href="/inventory" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+            </EmbedNavLink>
+            <EmbedNavLink href="/inventory" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
               <Package className="h-5 w-5 text-blue-500" />
               <span className="text-sm font-medium">Check Inventory</span>
-            </Link>
-            <Link href="/staff" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+            </EmbedNavLink>
+            <EmbedNavLink href="/staff" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
               <Users className="h-5 w-5 text-purple-500" />
               <span className="text-sm font-medium">View Staff</span>
-            </Link>
+            </EmbedNavLink>
             {canViewFinances ? (
-              <Link href="/finances" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+              <EmbedNavLink href="/finances" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
                 <DollarSign className="h-5 w-5 text-green-500" />
                 <span className="text-sm font-medium">View Finances</span>
-              </Link>
+              </EmbedNavLink>
             ) : canAnalytics ? (
-              <Link href="/analytics" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+              <EmbedNavLink href="/analytics" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
                 <DollarSign className="h-5 w-5 text-green-500" />
                 <span className="text-sm font-medium">View Analytics</span>
-              </Link>
+              </EmbedNavLink>
             ) : (
-              <Link href="/orders" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
+              <EmbedNavLink href="/orders" className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-slate-50">
                 <Package className="h-5 w-5 text-green-500" />
                 <span className="text-sm font-medium">Place Orders</span>
-              </Link>
+              </EmbedNavLink>
             )}
           </div>
         </CollapsibleSection>

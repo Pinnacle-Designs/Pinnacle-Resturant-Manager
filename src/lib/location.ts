@@ -1,8 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { getSessionUserFromRequest } from "./auth";
 import { isDemoAccountEmail, isPlanDemoAccountEmail } from "./demo-email";
 import { findSeededDemoLocationId } from "./demo-location";
+import { EMBED_LOCATION_HEADER } from "./embed-constants";
 import { isProductionRuntime } from "./env";
 import { resolveAuthorizedLocationId } from "./location-access";
 import { prisma } from "./prisma";
@@ -50,6 +51,12 @@ export async function getLocationId(): Promise<string> {
 
   if (cookieId && (await locationExists(cookieId))) {
     return cookieId;
+  }
+
+  const hdrs = await headers();
+  const headerLocationId = hdrs.get(EMBED_LOCATION_HEADER);
+  if (headerLocationId && (await locationExists(headerLocationId))) {
+    return headerLocationId;
   }
 
   if (user?.locationId && (await locationExists(user.locationId))) {

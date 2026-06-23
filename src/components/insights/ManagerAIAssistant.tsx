@@ -23,6 +23,7 @@ import {
   STARTER_AI_DAILY_LIMIT,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
+import { clientFetch } from "@/lib/embed-api-client";
 
 interface DashboardCommand {
   id: string;
@@ -173,7 +174,7 @@ export function ManagerAIAssistant() {
   >([]);
 
   useEffect(() => {
-    fetch("/api/ai/status")
+    clientFetch("/api/ai/status")
       .then((r) => r.json())
       .then((data) => {
         setLiveSignals(data.signals ?? []);
@@ -181,7 +182,7 @@ export function ManagerAIAssistant() {
       })
       .finally(() => setStatusLoading(false));
 
-    fetch("/api/ai/prompts")
+    clientFetch("/api/ai/prompts")
       .then((r) => r.json())
       .then((data) => {
         setCommands(data.dashboardCommands ?? []);
@@ -203,7 +204,7 @@ export function ManagerAIAssistant() {
   const loadCategory = useCallback(
     async (id: string) => {
       if (categoryPrompts[id]) return;
-      const res = await fetch(`/api/ai/prompts?category=${id}`);
+      const res = await clientFetch(`/api/ai/prompts?category=${id}`);
       const data = await res.json();
       if (data.prompts) {
         setCategoryPrompts((prev) => ({ ...prev, [id]: data.prompts }));
@@ -219,7 +220,7 @@ export function ManagerAIAssistant() {
     setQuestion(trimmed);
     setAnswer(null);
     try {
-      const res = await fetch("/api/ai/ask", {
+      const res = await clientFetch("/api/ai/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
@@ -238,7 +239,7 @@ export function ManagerAIAssistant() {
       return;
     }
     const timer = setTimeout(() => {
-      fetch(`/api/ai/prompts?q=${encodeURIComponent(search)}`)
+      clientFetch(`/api/ai/prompts?q=${encodeURIComponent(search)}`)
         .then((r) => r.json())
         .then((data) => {
           setSearchResults(

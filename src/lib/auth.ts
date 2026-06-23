@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import {
@@ -8,6 +8,10 @@ import {
   AUTH_COOKIE_NAME,
 } from "./session";
 import { getRequestSessionUser } from "./request-session";
+import {
+  EMBED_API_COOKIE_NAME,
+  EMBED_SESSION_HEADER,
+} from "./embed-constants";
 
 export type { SessionUser } from "./session";
 export {
@@ -36,7 +40,15 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  let token =
+    cookieStore.get(AUTH_COOKIE_NAME)?.value ??
+    cookieStore.get(EMBED_API_COOKIE_NAME)?.value;
+
+  if (!token) {
+    const hdrs = await headers();
+    token = hdrs.get(EMBED_SESSION_HEADER) ?? undefined;
+  }
+
   if (!token) return null;
   return parseSessionToken(token);
 }

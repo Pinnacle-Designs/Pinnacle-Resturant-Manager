@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import { PageSectionShell, PageSection } from "@/components/layout/PageSections";
 import { InsightPanel } from "@/components/insights/InsightPanel";
 import { ManagerAIAssistant } from "@/components/insights/ManagerAIAssistant";
+import { clientFetch } from "@/lib/embed-api-client";
 
 interface Insight {
   id: string;
@@ -22,7 +23,7 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchInsights = useCallback(async () => {
-    const res = await fetch("/api/insights/analyze");
+    const res = await clientFetch("/api/insights/analyze");
     const data = await res.json();
     setInsights(data);
     setLoading(false);

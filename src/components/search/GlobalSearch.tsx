@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEmbedRouter } from "@/components/layout/useEmbedHref";
+import { clientFetch } from "@/lib/embed-api-client";
 import {
   Search,
   Loader2,
@@ -64,7 +65,7 @@ function groupResults(results: SearchResult[]) {
 }
 
 export function GlobalSearchProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const { push: embedPush } = useEmbedRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -117,7 +118,7 @@ export function GlobalSearchProvider({ children }: { children: React.ReactNode }
         const params = new URLSearchParams();
         if (query.trim()) params.set("q", query.trim());
         params.set("limit", "24");
-        const res = await fetch(`/api/search?${params}`);
+        const res = await clientFetch(`/api/search?${params}`);
         const data = await parseJsonResponse<{ results: SearchResult[] }>(res);
         setResults(data.results ?? []);
       } catch {
@@ -134,7 +135,7 @@ export function GlobalSearchProvider({ children }: { children: React.ReactNode }
 
   const navigate = (href: string) => {
     closeSearch();
-    router.push(href);
+    embedPush(href);
   };
 
   const grouped = groupResults(results);
