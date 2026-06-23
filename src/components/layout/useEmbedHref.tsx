@@ -4,15 +4,32 @@ import Link from "next/link";
 import type { ComponentProps } from "react";
 import { useSearchParams } from "next/navigation";
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
+import { EMBED_SESSION_PARAM } from "@/lib/embed-constants";
+import { getEmbedSessionToken, persistEmbedSessionToken } from "@/lib/embed-api-client";
 
-/** Preserve ?embed=mobile|full when navigating inside an iframe demo. */
+/** Preserve `?embed=` and `&_st=` when navigating inside an iframe demo. */
 export function useEmbedHref(href: string): string {
   const searchParams = useSearchParams();
   const embed = searchParams.get("embed");
   if (!isEmbeddableEmbedParam(embed)) return href;
+
   const value = embed === "1" ? "mobile" : embed;
-  if (href.includes("embed=")) return href;
-  return `${href}${href.includes("?") ? "&" : "?"}embed=${value}`;
+  let url = href.includes("embed=")
+    ? href
+    : `${href}${href.includes("?") ? "&" : "?"}embed=${value}`;
+
+  const st =
+    searchParams.get(EMBED_SESSION_PARAM) ?? getEmbedSessionToken();
+  if (st) {
+    if (searchParams.get(EMBED_SESSION_PARAM)) {
+      persistEmbedSessionToken(st);
+    }
+    if (!url.includes(`${EMBED_SESSION_PARAM}=`)) {
+      url = `${url}${url.includes("?") ? "&" : "?"}${EMBED_SESSION_PARAM}=${encodeURIComponent(st)}`;
+    }
+  }
+
+  return url;
 }
 
 export function EmbedNavLink({

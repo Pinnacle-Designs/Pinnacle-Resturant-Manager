@@ -14,6 +14,8 @@ import { GlobalSearchProvider } from "@/components/search/GlobalSearch";
 import { PageSearchStrip } from "@/components/search/PageSearchStrip";
 import { isEmbeddableEmbedParam } from "@/lib/embed-config";
 import { MOBILE_EMBED_MEDIA } from "@/hooks/useEmbedChrome";
+import { bootstrapEmbedSession } from "@/lib/embed-api-client";
+import { EmbedSessionBootstrap } from "@/components/layout/EmbedSessionBootstrap";
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -42,6 +44,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     embedParam === "mobile" ||
     embedParam === "1" ||
     (isEmbed && narrowViewport);
+
+  if (typeof window !== "undefined" && isEmbed) {
+    bootstrapEmbedSession(embedParam);
+  }
 
   if (isLogin || isSignup || isOnboarding || isDownload || isLegal || isMarketing || isEmbedRoute || isTableside) {
     return <>{children}</>;
@@ -79,6 +85,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <LocationLocaleProvider>
         <GlobalSearchProvider>
           <NotificationProvider>
+            {isEmbed && <EmbedSessionBootstrap />}
             <div className="flex min-h-screen min-w-0 overflow-x-hidden">
               {showSidebar && <Sidebar />}
               <div

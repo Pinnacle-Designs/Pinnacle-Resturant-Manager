@@ -6,7 +6,7 @@ import type { PlanId } from "@/lib/plans";
 import type { Permission } from "@/lib/permissions";
 import { hasPermissionInList } from "@/lib/permissions";
 import { parseJsonResponse } from "@/lib/fetch-json";
-import { clientFetch } from "@/lib/embed-api-client";
+import { clientFetch, getEmbedSessionToken } from "@/lib/embed-api-client";
 
 export interface AuthUser {
   id: string;
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await clientFetch("/api/auth/login");
       const data = await parseJsonResponse<{ user: AuthUser | null }>(res);
       setUser(data.user ?? null);
+      getEmbedSessionToken();
     } catch {
       setUser(null);
     } finally {

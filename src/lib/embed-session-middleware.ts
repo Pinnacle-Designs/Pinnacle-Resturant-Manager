@@ -8,7 +8,10 @@ import { isEmbeddableEmbedParam } from "@/lib/embed-config";
 
 export { EMBED_SESSION_PARAM } from "@/lib/embed-constants";
 
-/** Strip `_st` from embed URLs and persist session cookies for cross-origin iframes. */
+/**
+ * When `_st` is present on an embed URL, refresh cookies but keep `_st` in the URL.
+ * Iframes often block third-party cookies — the query param must survive navigation.
+ */
 export async function applyEmbedSessionParam(
   request: NextRequest
 ): Promise<NextResponse | null> {
@@ -19,14 +22,10 @@ export async function applyEmbedSessionParam(
   const user = await parseSessionToken(rawToken);
   if (!user) return null;
 
-  const clean = new URL(request.url);
-  clean.searchParams.delete(EMBED_SESSION_PARAM);
-
-  const response = NextResponse.redirect(clean);
   const locationId =
     request.cookies.get(LOCATION_COOKIE_NAME)?.value ?? user.locationId ?? "";
 
+  const response = NextResponse.next();
   applyEmbedAuthCookies(response, request, rawToken, locationId, true);
-
   return response;
 }

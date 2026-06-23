@@ -90,8 +90,14 @@ export async function buildEmbedLaunchResponse(
     }
 
     const response = NextResponse.redirect(redirectUrl);
-    if (token && locationId) {
-      applyEmbedAuthCookies(response, request, token, locationId, true);
+    if (token) {
+      applyEmbedAuthCookies(
+        response,
+        request,
+        token,
+        locationId || existing.locationId || "",
+        true
+      );
     }
     return response;
   }
