@@ -103,10 +103,14 @@ function NavLink({
 
 export function MobileNav({ forceShow = false }: { forceShow?: boolean }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, embedSession } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const navItems = user ? filterNavForUser(user.role, user.plan, NAV_ITEMS) : NAV_ITEMS;
+  const navItems = user
+    ? filterNavForUser(user.role, user.plan, NAV_ITEMS, user.permissions)
+    : embedSession
+      ? filterNavForUser("OWNER", "PRO", NAV_ITEMS)
+      : NAV_ITEMS;
   const mobileNavItems = useMemo(() => getMobileNavItems(navItems), [navItems]);
   const moreNavItems = useMemo(() => getMoreNavItems(navItems), [navItems]);
   const isMoreNavScreen = moreNavItems.some((item) => item.href === pathname);

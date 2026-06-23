@@ -81,16 +81,62 @@ export async function resolveDemoAccountLocationId(
   return resolveOwnerDemoLocationId(userId, currentLocationId);
 }
 
+/** Idempotently ensure Smoky Oak has full demo data + Pro billing for embed/live demo. */
+export async function ensureFullDemoWorkspace(
+  locationId: string,
+  ownerUserId: string
+): Promise<void> {
+  const { seedLocationData } = await import("./seed-data");
+  await seedLocationData(locationId);
+
+  const { ensurePlanDemoWorkspaceReady } = await import("./demo-owner-billing");
+  await ensurePlanDemoWorkspaceReady(locationId, ownerUserId, "PRO");
+
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: { plan: true, setupComplete: true },
+  });
+  if (location?.plan !== "PRO" || !location.setupComplete) {
+    const { seedDemoExtras } = await import("./seed-extras");
+    await seedDemoExtras(locationId);
+  }
+}
+
 /** Fill in sample data when the runtime DB is empty or thin (e.g. missed build seed). */
 export async function ensureSeededDemoData(locationId: string): Promise<void> {
-  const [menuCount, orderCount, insightCount] = await Promise.all([
-    prisma.menuItem.count({ where: { locationId } }),
-    prisma.order.count({ where: { locationId } }),
-    prisma.businessInsight.count({ where: { locationId } }),
-  ]);
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: { plan: true, setupComplete: true },
+  });
 
-  if (menuCount >= 5 && orderCount >= 20 && insightCount >= 3) return;
+  const [menuCount, orderCount, insightCount, staffCount, subscription] =
+    await Promise.all([
+      prisma.menuItem.count({ where: { locationId } }),
+      prisma.order.count({ where: { locationId } }),
+      prisma.businessInsight.count({ where: { locationId } }),
+      prisma.staffMember.count({ where: { locationId } }),
+      prisma.paymentProviderConnection.findUnique({
+        where: { locationId_purpose: { locationId, purpose: "SUBSCRIPTION" } },
+        select: { status: true },
+      }),
+    ]);
+
+  const dataThin =
+    menuCount < 5 ||
+    orderCount < 20 ||
+    insightCount < 3 ||
+    staffCount < 3;
+  const billingMissing = subscription?.status !== "connected";
+  const profileIncomplete =
+    location?.plan !== "PRO" || location?.setupComplete !== true;
+
+  if (!dataThin && !billingMissing && !profileIncomplete) return;
 
   const { seedLocationData } = await import("./seed-data");
   await seedLocationData(locationId);
+
+  if (billingMissing || profileIncomplete) {
+    const { seedDemoExtras } = await import("./seed-extras");
+    await seedDemoExtras(locationId);
+  }
 }

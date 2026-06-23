@@ -104,10 +104,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const can = (permission: Permission) => {
-    if (!user) return false;
-    if (user.permissions?.length) {
+    if (user?.permissions?.length) {
       return hasPermissionInList(user.permissions, permission);
     }
+    if (user?.role === "OWNER" || user?.role === "MANAGER") return true;
+    if (isEmbed && hasEmbedSession()) return true;
     return false;
   };
 

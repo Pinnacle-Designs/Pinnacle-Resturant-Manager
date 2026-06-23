@@ -3,20 +3,19 @@ import { NextResponse } from "next/server";
 import {
   loginUser,
   getSessionUserFromRequest,
-  AUTH_COOKIE_NAME,
 } from "@/lib/auth";
-import { prepareAuthSession } from "@/lib/auth-cookies";
+import { prepareAuthSession, attachAuthCookies } from "@/lib/auth-cookies";
 import { isDemoAccountEmail } from "@/lib/demo-email";
 import {
-  ensureSeededDemoData,
+  ensureFullDemoWorkspace,
   resolveDemoAccountLocationId,
   resolveOwnerDemoLocationId,
 } from "@/lib/demo-location";
 import { seedDemoUsers } from "@/lib/demo-users";
-import { LOCATION_COOKIE_NAME } from "@/lib/location-constants";
 import { resolveEmbedPath, resolveEmbedChrome, embedQueryValue } from "@/lib/embed-config";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
 import { EMBED_SESSION_PARAM } from "@/lib/embed-constants";
+import type { SessionUser } from "@/lib/session";
 
 export { EMBED_SESSION_PARAM } from "@/lib/embed-constants";
 
@@ -49,6 +48,25 @@ export function isCrossOriginEmbedRequest(request: NextRequest): boolean {
   return false;
 }
 
+async function buildEmbedRedirect(
+  request: NextRequest,
+  path: string,
+  embedValue: string,
+  user: SessionUser,
+  locationId: string
+): Promise<NextResponse> {
+  await ensureFullDemoWorkspace(locationId, user.id);
+
+  const prepared = await prepareAuthSession({ ...user, locationId });
+  const redirectUrl = new URL(`${path}?embed=${embedValue}`, request.url);
+  redirectUrl.searchParams.set(EMBED_SESSION_PARAM, prepared.sessionToken);
+
+  const response = NextResponse.redirect(redirectUrl);
+  applyEmbedAuthCookies(response, request, prepared.sessionToken, locationId, true);
+  attachAuthCookies(response, prepared, { forEmbed: true, secure: true });
+  return response;
+}
+
 export async function buildEmbedLaunchResponse(
   request: NextRequest,
   pathParam: string | null
@@ -59,9 +77,7 @@ export async function buildEmbedLaunchResponse(
   const existing = await getSessionUserFromRequest(request);
 
   if (existing) {
-    const redirectUrl = new URL(`${path}?embed=${embedValue}`, request.url);
-    let locationId =
-      request.cookies.get(LOCATION_COOKIE_NAME)?.value ?? existing.locationId ?? "";
+    let locationId = existing.locationId ?? "";
 
     if (isDemoAccountEmail(existing.email)) {
       locationId =
@@ -70,36 +86,13 @@ export async function buildEmbedLaunchResponse(
           existing.email,
           locationId || existing.locationId
         )) ?? locationId;
-      await ensureSeededDemoData(locationId);
     }
 
-    let token = request.cookies.get(AUTH_COOKIE_NAME)?.value ?? "";
-    try {
-      const prepared = await prepareAuthSession({
-        ...existing,
-        locationId: locationId || existing.locationId,
-      });
-      token = prepared.sessionToken;
-    } catch (err) {
-      console.error("Embed session refresh failed:", err);
+    if (!locationId) {
+      return NextResponse.json({ error: "Demo workspace not found" }, { status: 500 });
     }
 
-    // Iframes need _st on every launch so middleware can refresh SameSite=None cookies.
-    if (token) {
-      redirectUrl.searchParams.set(EMBED_SESSION_PARAM, token);
-    }
-
-    const response = NextResponse.redirect(redirectUrl);
-    if (token) {
-      applyEmbedAuthCookies(
-        response,
-        request,
-        token,
-        locationId || existing.locationId || "",
-        true
-      );
-    }
-    return response;
+    return buildEmbedRedirect(request, path, embedValue, existing, locationId);
   }
 
   let user = await loginUser(DEMO_EMAIL, DEMO_PASSWORD);
@@ -119,7 +112,6 @@ export async function buildEmbedLaunchResponse(
   let locationId: string;
   try {
     locationId = await resolveOwnerDemoLocationId(user.id, user.locationId);
-    await ensureSeededDemoData(locationId);
   } catch (err) {
     console.error("Embed launch demo setup failed:", err);
     return NextResponse.json(
@@ -128,10 +120,8 @@ export async function buildEmbedLaunchResponse(
     );
   }
 
-  let token: string;
   try {
-    const prepared = await prepareAuthSession({ ...user, locationId });
-    token = prepared.sessionToken;
+    return await buildEmbedRedirect(request, path, embedValue, user, locationId);
   } catch (err) {
     console.error("Embed session token failed:", err);
     return NextResponse.json(
@@ -139,13 +129,4 @@ export async function buildEmbedLaunchResponse(
       { status: 503 }
     );
   }
-
-  const redirectUrl = new URL(`${path}?embed=${embedValue}`, request.url);
-
-  // Iframes often drop Set-Cookie on redirect — pass the session once in the URL.
-  redirectUrl.searchParams.set(EMBED_SESSION_PARAM, token);
-
-  const response = NextResponse.redirect(redirectUrl);
-  applyEmbedAuthCookies(response, request, token, locationId, true);
-  return response;
 }

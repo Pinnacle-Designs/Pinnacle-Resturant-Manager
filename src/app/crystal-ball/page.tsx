@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import { getEnrichedSessionUser } from "@/lib/location-plan";
 import { hasPermissionInList } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui";
 import { CrystalBallClient } from "@/components/crystal-ball/CrystalBallClient";
+import { getEmbedAwarePageUser } from "@/lib/embed-page-auth";
 
 export default async function CrystalBallPage() {
-  const user = await getEnrichedSessionUser();
-  if (!user || !hasPermissionInList(user.permissions, "view_analytics")) {
+  const user = await getEmbedAwarePageUser();
+  if (user && !hasPermissionInList(user.permissions, "view_analytics")) {
     redirect("/dashboard");
   }
 

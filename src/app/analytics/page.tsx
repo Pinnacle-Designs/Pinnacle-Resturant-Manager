@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
-import { getEnrichedSessionUser } from "@/lib/location-plan";
 import { hasPermissionInList } from "@/lib/permissions";
 import { AnalyticsClient } from "@/components/analytics/AnalyticsClient";
-import type { PlanId } from "@/lib/plans";
+import { getDemoPagePlan, getEmbedAwarePageUser } from "@/lib/embed-page-auth";
 
 export default async function AnalyticsPage() {
-  const user = await getEnrichedSessionUser();
-  if (!user || !hasPermissionInList(user.permissions, "view_analytics")) {
+  const user = await getEmbedAwarePageUser();
+  const plan = await getDemoPagePlan();
+
+  if (user && !hasPermissionInList(user.permissions, "view_analytics")) {
     redirect("/dashboard");
   }
 
-  return <AnalyticsClient plan={(user.plan ?? "STARTER") as PlanId} />;
+  return <AnalyticsClient plan={plan} />;
 }

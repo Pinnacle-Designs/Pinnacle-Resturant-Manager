@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
-import { getEnrichedSessionUser } from "@/lib/location-plan";
 import { hasPermissionInList } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { SocialClient } from "@/components/social/SocialClient";
+import { getEmbedAwarePageUser } from "@/lib/embed-page-auth";
 
 export default async function SocialPage() {
-  const user = await getEnrichedSessionUser();
-  if (!user || !hasPermissionInList(user.permissions, "manage_social")) {
+  const user = await getEmbedAwarePageUser();
+  if (user && !hasPermissionInList(user.permissions, "manage_social")) {
     redirect("/dashboard");
   }
 

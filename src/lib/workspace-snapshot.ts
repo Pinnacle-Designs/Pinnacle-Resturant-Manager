@@ -28,8 +28,10 @@ export async function buildWorkspaceSnapshot(
   });
 
   const stripeSubscriptionActive =
-    subscription?.provider === "STRIPE" &&
-    isActiveStripeSubscriptionStatus(subscription.status);
+    subscription?.status === "connected" &&
+    (subscription.provider === "STRIPE"
+      ? isActiveStripeSubscriptionStatus(subscription.status)
+      : subscription.provider === "MANUAL");
 
   const plan = location.plan as PlanId;
   const required = billingRequired();

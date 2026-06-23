@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { launchDemo } from "@/lib/demo-launch";
-import { needsCrossOriginEmbedCookies, resolveEmbedPath } from "@/lib/embed-config";
+import { resolveEmbedPath } from "@/lib/embed-config";
 
 export function EmbedBootstrap() {
   const searchParams = useSearchParams();
@@ -17,26 +16,9 @@ export function EmbedBootstrap() {
     startedRef.current = true;
 
     const path = resolveEmbedPath(pathParam);
-    const target = `${path}?embed=mobile`;
-    const crossOrigin = needsCrossOriginEmbedCookies();
-
-    // Cross-origin iframes (docs site, GitHub Pages) cannot rely on fetch + client redirect.
-    if (crossOrigin) {
-      window.location.replace(
-        `/api/embed/launch?path=${encodeURIComponent(path)}`
-      );
-      return;
-    }
-
-    launchDemo("owner@pinnacle.com", "demo1234", "seeded", { embed: false })
-      .then(() => {
-        // Hard navigation — avoids client-router loops re-running this bootstrap.
-        window.location.replace(target);
-      })
-      .catch((err) => {
-        startedRef.current = false;
-        setError(err instanceof Error ? err.message : "Demo failed to load");
-      });
+    window.location.replace(
+      `/api/embed/launch?path=${encodeURIComponent(path)}&chrome=mobile`
+    );
   }, [pathParam]);
 
   if (error) {

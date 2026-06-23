@@ -30,31 +30,35 @@ async function main() {
 
   const { seedDemoUsers, seedPlanDemoWorkspaces } = await import("../src/lib/demo-users");
   const { setupDemoWorkspace } = await import("../src/lib/seed-data");
+  const { ensurePlanDemoWorkspaceReady } = await import("../src/lib/demo-owner-billing");
 
   await seedDemoUsers();
   const workspace = await setupDemoWorkspace("seeded");
 
   const { prisma } = await import("../src/lib/prisma");
-  await prisma.user.update({
+  const owner = await prisma.user.update({
     where: { email: "owner@pinnacle.com" },
     data: { locationId: workspace.locationId },
   });
 
+  await ensurePlanDemoWorkspaceReady(workspace.locationId, owner.id, "PRO");
+
   await seedPlanDemoWorkspaces();
 
-  const userCount = await prisma.user.count();
-  const planDemoCount = await prisma.user.count({
-    where: {
-      email: {
-        in: [
-          "demo-starter@pinnacle.com",
-          "demo-growth@pinnacle.com",
-          "demo-pro@pinnacle.com",
-        ],
-      },
-    },
-  });
-  console.log(`[db] Users: ${userCount} total, ${planDemoCount} plan-tier demos`);
+  const [userCount, menuCount, orderCount, location] = await Promise.all([
+    prisma.user.count(),
+    prisma.menuItem.count({ where: { locationId: workspace.locationId } }),
+    prisma.order.count({ where: { locationId: workspace.locationId } }),
+    prisma.location.findUnique({
+      where: { id: workspace.locationId },
+      select: { name: true, plan: true, setupComplete: true },
+    }),
+  ]);
+
+  console.log(
+    `[db] Smoky Oak BBQ: ${location?.name} (${location?.plan}, setup=${location?.setupComplete})`
+  );
+  console.log(`[db] Menu items: ${menuCount}, orders: ${orderCount}, users: ${userCount}`);
 
   await prisma.$disconnect();
 

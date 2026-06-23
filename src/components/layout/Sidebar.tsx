@@ -67,11 +67,13 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, embedSession } = useAuth();
 
   const navItems = user
     ? filterNavForUser(user.role, user.plan, NAV_ITEMS, user.permissions)
-    : NAV_ITEMS;
+    : embedSession
+      ? filterNavForUser("OWNER", "PRO", NAV_ITEMS)
+      : NAV_ITEMS;
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-slate-900 md:flex">
