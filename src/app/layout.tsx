@@ -34,6 +34,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=new URLSearchParams(location.search);var st=p.get("_st");var e=p.get("embed");if(st&&(e==="mobile"||e==="full"||e==="1")){window.__PINNACLE_EMBED_ST__=st;}}catch(x){}})();`,
+          }}
+        />
+      </head>
       <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased`}>
         <AppShell>{children}</AppShell>
       </body>

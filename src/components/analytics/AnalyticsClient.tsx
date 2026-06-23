@@ -18,6 +18,7 @@ import {
 } from "@/components/charts";
 import { parseJsonResponse } from "@/lib/fetch-json";
 import { apiFetch, apiPost } from "@/lib/api";
+import { hasEmbedSession } from "@/lib/embed-api-client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   analyticsTabsForPlan,
@@ -85,7 +86,7 @@ export function AnalyticsClient({ plan }: { plan: PlanId }) {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!user && !hasEmbedSession()) {
       setError("Session expired. Refresh the demo or sign in again.");
       setLoading(false);
       return;

@@ -5,23 +5,49 @@ export { EMBED_API_COOKIE_NAME, EMBED_SESSION_PARAM } from "./embed-constants";
 
 const STORAGE_KEY = "pinnacle_embed_st";
 
+declare global {
+  interface Window {
+    __PINNACLE_EMBED_ST__?: string;
+  }
+}
+
+/** In-memory cache — survives when third-party iframes block sessionStorage/cookies. */
+let memoryCachedToken: string | null = null;
+
+export function isEmbedMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const embed = new URLSearchParams(window.location.search).get("embed");
+  return isEmbeddableEmbedParam(embed);
+}
+
 export function persistEmbedSessionToken(token: string | null | undefined): void {
   if (typeof window === "undefined" || !token?.trim()) return;
+  const trimmed = token.trim();
+  memoryCachedToken = trimmed;
+  if (typeof window !== "undefined") {
+    window.__PINNACLE_EMBED_ST__ = trimmed;
+  }
   try {
-    sessionStorage.setItem(STORAGE_KEY, token.trim());
+    sessionStorage.setItem(STORAGE_KEY, trimmed);
   } catch {
-    /* private mode / blocked storage */
+    /* blocked in third-party iframes */
   }
 }
 
 export function getEmbedSessionToken(): string | null {
   if (typeof window === "undefined") return null;
 
-  try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored) return stored;
-  } catch {
-    /* ignore */
+  if (memoryCachedToken) return memoryCachedToken;
+
+  if (window.__PINNACLE_EMBED_ST__) {
+    memoryCachedToken = window.__PINNACLE_EMBED_ST__;
+    return memoryCachedToken;
+  }
+
+  const fromUrl = new URLSearchParams(window.location.search).get(EMBED_SESSION_PARAM);
+  if (fromUrl) {
+    persistEmbedSessionToken(fromUrl);
+    return fromUrl;
   }
 
   const match = document.cookie.match(
@@ -33,10 +59,14 @@ export function getEmbedSessionToken(): string | null {
     return token;
   }
 
-  const fromUrl = new URLSearchParams(window.location.search).get(EMBED_SESSION_PARAM);
-  if (fromUrl) {
-    persistEmbedSessionToken(fromUrl);
-    return fromUrl;
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      memoryCachedToken = stored;
+      return stored;
+    }
+  } catch {
+    /* ignore */
   }
 
   return null;
@@ -56,6 +86,20 @@ export function withEmbedSession(url: string): string {
   return `${resolved.pathname}${resolved.search}`;
 }
 
+/** Keep `_st` in the address bar so SSR and full reloads stay authenticated. */
+export function ensureEmbedUrlHasSession(): void {
+  if (typeof window === "undefined" || !isEmbedMode()) return;
+
+  const token = getEmbedSessionToken();
+  if (!token) return;
+
+  const url = new URL(window.location.href);
+  if (url.searchParams.get(EMBED_SESSION_PARAM) === token) return;
+
+  url.searchParams.set(EMBED_SESSION_PARAM, token);
+  window.history.replaceState(window.history.state, "", url.toString());
+}
+
 /** Persist `_st` from the URL/cookie and patch fetch for iframe demos. */
 export function bootstrapEmbedSession(embedParam: string | null): void {
   if (!isEmbeddableEmbedParam(embedParam)) return;
@@ -64,6 +108,7 @@ export function bootstrapEmbedSession(embedParam: string | null): void {
   if (st) persistEmbedSessionToken(st);
   else getEmbedSessionToken();
   installEmbedFetchPatch();
+  ensureEmbedUrlHasSession();
 }
 
 let fetchPatched = false;
@@ -71,8 +116,7 @@ let fetchPatched = false;
 /** Ensure every `/api/*` call in an embed carries credentials + `_st`. */
 export function installEmbedFetchPatch(): void {
   if (typeof window === "undefined" || fetchPatched) return;
-  const params = new URLSearchParams(window.location.search);
-  if (!isEmbeddableEmbedParam(params.get("embed"))) return;
+  if (!isEmbedMode()) return;
 
   fetchPatched = true;
   const originalFetch = window.fetch.bind(window);
@@ -119,4 +163,9 @@ export function clientFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     return fetch(url, { ...init, credentials: init?.credentials ?? "include" });
   }
   return fetch(input, { ...init, credentials: init?.credentials ?? "include" });
+}
+
+/** True when the demo iframe has (or can restore) an embed session token. */
+export function hasEmbedSession(): boolean {
+  return isEmbedMode() && Boolean(getEmbedSessionToken());
 }

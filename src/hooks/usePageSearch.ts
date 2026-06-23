@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEmbedRouter } from "@/components/layout/useEmbedHref";
 import { matchesSearchQuery } from "@/lib/search/text-match";
 
 export function usePageSearch(param = "q") {
-  const router = useRouter();
+  const { replace: embedReplace } = useEmbedRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get(param) ?? "";
@@ -24,9 +25,10 @@ export function usePageSearch(param = "q") {
       if (trimmed) params.set(param, trimmed);
       else params.delete(param);
       const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      const href = qs ? `${pathname}?${qs}` : pathname;
+      embedReplace(href);
     },
-    [param, pathname, router, searchParams]
+    [param, pathname, embedReplace, searchParams]
   );
 
   const clearQuery = useCallback(() => setQuery(""), [setQuery]);
