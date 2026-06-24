@@ -186,6 +186,9 @@
     if (!wrap || !toggle) return;
     mobileNavOpen = nextOpen;
     wrap.hidden = !mobileNavOpen;
+    if (mobileNavOpen) {
+      document.body.appendChild(wrap);
+    }
     toggle.classList.toggle("is-open", mobileNavOpen);
     toggle.setAttribute("aria-expanded", mobileNavOpen ? "true" : "false");
     toggle.setAttribute("aria-label", mobileNavOpen ? "Close menu" : "Open menu");
